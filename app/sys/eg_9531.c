@@ -35,6 +35,7 @@ int cfg_reader_RD(char *filename)
     char *mem;
     FILE *fd;
     int i;
+    char cmd[200];
     long file_len;
     short type,length;
     reader_cfg_t *p_reader_cfg;
@@ -52,7 +53,6 @@ int cfg_reader_RD(char *filename)
 
     file_len = get_file_len(fd);
     
-    //controll_eg.reader_cfg[i].reader_no = 
 
 //    fread((char *) &n1, sizeof(int), 1, fd );
 //    fread((char *) &n2, sizeof(int), 1, fd );
@@ -60,23 +60,33 @@ int cfg_reader_RD(char *filename)
     for(i = READER1_CFG;i < READER8_CFG; i++ ){
         
         //p_reader_cfg = &(controll_eg.reader_cfg[i]);
+
+        
+        p_reader_cfg = &controll_eg.reader_cfg[i];
         
         //fseek(fd,4,SEEK_SET);
-        
-        fread((char *)p_reader_cfg, sizeof(int), 1, fd );
+        fread((char *)&type, sizeof(short), 1, fd );
+        fread((char *)&length, sizeof(short), 1, fd );      
+        fread((char *)p_reader_cfg, 5, 1, fd );
 
     }
+
+    fread((char*)&controll_eg.sys_ctrl,sizeof(char),1,fd);
+    fread((char*)&controll_eg.legacy_WG,sizeof(char),1,fd);
 
     fclose(fd);
 
     printf("Done\n");
     fflush(stdout);
+  //todo 添加异常处理  
+    sprintf(cmd, "mv %s /root/cfg_reader", filename);
+    system(cmd);
 
-    system(cfg_pathname,);
+    sprintf(cmd, "rm %s", filename);
+    system(cmd);
 
-    return (newptr);
+    return 1;
 }
-
 
 
 static struct ubus_context *ctx;
@@ -149,7 +159,6 @@ static void client_main(void)
 
 void* eg_ubus_thread_entry(void *parameter)
 {
-/*
 	printf("main Start");
 	const char *ubus_socket = NULL;
 	int ch;
@@ -171,7 +180,6 @@ void* eg_ubus_thread_entry(void *parameter)
 
 	printf("main End");
 	return 0;
-*/
     sleep(10);
 }
 

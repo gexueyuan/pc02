@@ -329,12 +329,23 @@ typedef struct _usb_ccid_322 {
     
 } usb_ccid_322_t;
 
+typedef struct _msg_manager {
+        /*os task start*/
+    osal_task_t   *task_msg;
+    osal_queue_t *queue_msg;
+
+    osal_timer_t *timer_msg;
+
+    osal_sem_t *sem_msg;
+    /*os task end*/
+} msg_manager_t;
 
 
 typedef struct _Controller {
 
 /*322 obj */
     usb_ccid_322_t usb_ccid_322[4];
+    msg_manager_t msg_manager;
 /*obj end*/
 
 /*cfg*/

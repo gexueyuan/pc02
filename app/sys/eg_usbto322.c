@@ -267,7 +267,7 @@ void *eg_usb_thread_entry(void *parameter)
     
 while(1){
 
-#if 1
+#if 0
     memset(output,0,sizeof(output));
 
     switch (p_usb_ccid->usb_state) {
@@ -314,7 +314,7 @@ while(1){
 
             
           }
-          usb_state = USB_COMM_STATE_IDLE;
+          p_usb_ccid->usb_state = USB_COMM_STATE_IDLE;
           break;
           
    case USB_COMM_STATE_ACL:

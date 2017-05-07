@@ -33,4 +33,15 @@ OSAL_DEBUG_ENTRY_DEFINE(msg_manager);
 /*****************************************************************************
  * implementation of functions                                               *
 *****************************************************************************/
+void msg_manager_init(void)
+{
+
+    msg_manager_t *p_msg = &p_controll_eg->msg_manager;
+
+
+    
+
+
+}
+
 

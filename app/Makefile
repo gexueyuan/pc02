@@ -8,7 +8,7 @@ SUBDIRS += $(TOPDIR)/app/sys
 
 
 OBJ_FILES=$(SUBDIRS:%=%/*.o)
-LDFLAGS = -lm -lrt -pthread  -L$(LIBDIR)  -lreader  
+LDFLAGS = -lm -lrt -pthread  -L$(LIBDIR)  -lreader  -lblobmsg_json -lubox -lubus
 
 .PHONY: all clean app install
 all: app install 
