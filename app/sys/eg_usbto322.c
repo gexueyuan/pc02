@@ -973,7 +973,8 @@ while(1){
             }           
 
             printf("log return\n");
-            print_rec(output,ret);
+            print_rec(output,ret);            
+            ubus_client_process(UBUS_CLIENT_LOG,NULL,output,ret);
 
             
           }

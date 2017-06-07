@@ -438,11 +438,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
             OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "send 322 ce\n");
         }
         break;
-
-    case SYS_MSG_STOP_ALERT:               
-        break;
-        
-        
+                
     case SYS_MSG_UPDATE_MACKEY:
         //printf("update mackey,cnt is %d\n",p_msg->argc);
         //update_mackey();
