@@ -1,12 +1,12 @@
 /*****************************************************************************
- Copyright(C) Beijing Carsmart Technology Co., Ltd.
+ Copyright(C) Tendyron Corporation
  All rights reserved.
  
  @file   : cv_cms_def.h
- @brief  : This file include the cms global definition 
- @author : wangyifeng
+ @brief  : struct and enum define
+ @author : gexueyuan
  @history:
-           2014-6-16    wangyifeng    Created file
+           2017-5-17    gexueyuan    Created file
            ...
 ******************************************************************************/
 #ifndef __CV_CMS_DEF_H__
@@ -56,15 +56,25 @@
 #define QUEUE_MSG_SIZE 512
 #define VAM_MQ_MSG_SIZE 128
 #define VSA_MQ_MSG_SIZE 128
-#define SYS_MQ_MSG_SIZE 128
+#define SYS_MQ_MSG_SIZE 2048
 #define WNET_MQ_MSG_SIZE 1280
 
 enum SYSTEM_MSG_TYPE{
     SYS_MSG_BASE = 0x0000,
     SYS_MSG_INITED,
-    SYS_MSG_KEY_PRESSED,
-    SYS_MSG_KEY_RELEASED,
-    SYS_MSG_START_ALERT,
+    SYS_MSG_ACL_CHECK,
+    SYS_MSG_COS_UPDATE,
+    SYS_MSG_CHECK_VERSION,
+
+    SYS_MSG_SEND_VERSION,
+    
+    SYS_MSG_UPDATE_MACKEY,    
+    SYS_MSG_UPDATE_P2PKEY,    
+    SYS_MSG_UPDATE_BASECFG,
+    SYS_MSG_UPDATE_TIMECFG,    
+    SYS_MSG_UPDATE_ALERTCFG,    
+    SYS_MSG_UPDATE_READERCFG,    
+    
     SYS_MSG_STOP_ALERT,
     SYS_MSG_ALARM_ACTIVE,
     SYS_MSG_ALARM_CANCEL,
@@ -73,31 +83,6 @@ enum SYSTEM_MSG_TYPE{
     SYS_MSG_HI_IN_UPDATE,
     SYS_MSG_HI_OUT_UPDATE,
     SYS_MSG_XXX,
-
-    VAM_MSG_BASE = 0x0200,
-    VAM_MSG_START,
-    VAM_MSG_STOP,
-    VAM_MSG_RCPTX,
-    VAM_MSG_RCPRX,
-    VAM_MSG_NEIGH_TIMEOUT,
-    VAM_MSG_GPSDATA,
-
-
-    VSA_MSG_BASE = 0x0300,
-    VSA_MSG_MANUAL_BC,   
-    VSA_MSG_EEBL_BC,
-    VSA_MSG_AUTO_BC,
-    
-    VSA_MSG_CFCW_ALARM,
-    VSA_MSG_CRCW_ALARM,
-    VSA_MSG_OPPOSITE_ALARM,
-    VSA_MSG_SIDE_ALARM,
-
-    VSA_MSG_ACC_RC,
-    VSA_MSG_EEBL_RC,
-    VSA_MSG_X_RC,
-    VSA_MSG_XX_RC,
-    VSA_MSG_XXX_RC
 };
 
 enum HI_OUT_TYPE{
@@ -215,18 +200,105 @@ typedef enum _DOOR_CFG_INDEX {
 
 
 typedef enum _USB_COMM_STATE {
-
-    USB_COMM_STATE_IDLE = 0,
+    
+    USB_COMM_STATE_DEFAULT = 0,
+    USB_COMM_STATE_IDLE,
     USB_COMM_STATE_INIT,
+    USB_COMM_STATE_INIT_END,
     USB_COMM_STATE_POLL,
     USB_COMM_STATE_CFG,
+    USB_COMM_STATE_RDCFG,
     USB_COMM_STATE_PUSH,        
     USB_COMM_STATE_TRANSFER,
+    USB_COMM_STATE_REMOTE,
     USB_COMM_STATE_ACL ,
     USB_COMM_STATE_INVALID,
     USB_COMM_STATE_LOG,
+    
+    USB_COMM_STATE_MACKEY,
+    USB_COMM_STATE_P2P,
+    USB_COMM_STATE_VERSION,
+    
 } E_USB_COMM_STATE;
 
+typedef enum _DOOR_STATE {
+    
+    DOOR_STATE_INIT = 0,
+    DOOR_STATE_OPEN,
+    DOOR_STATE_CLOSE,
+    DOOR_STATE_NORMAL,
+    
+} E_DOOR_STATE;
+
+typedef enum _DAY {
+    
+    DAY_MON,
+    DAY_TUE,
+    DAY_WEN,
+    DAY_THU,
+    DAY_FRI,
+    DAY_SAT,
+    DAY_SUN,
+    DAY_HOL,
+} E_DAY;
+
+typedef enum _UBUS_INTERFACE {
+    
+    UBUS_SERVER_MACKEY = 0x0101,
+    UBUS_SERVER_P2P = 0x0102,
+    UBUS_SERVER_BASE_CFG = 0x0201,
+    UBUS_SERVER_TIME_CFG = 0x0301,
+    UBUS_SERVER_ALARM_CFG = 0x0401,
+    UBUS_SERVER_READER_CFG = 0x0601,
+   
+} E_UBUS_INTERFACE;
+
+
+typedef enum _UBUS_CLIENT {
+
+    UBUS_CLIENT_SENDCE = 0x2002,
+    UBUS_CLIENT_GETWL = 0x3001,
+    UBUS_CLIENT_GETWLCFG = 0x3002,
+    
+    UBUS_CLIENT_SENDVERSION = 0x3003,
+
+    UBUS_CLIENT_LOG = 0x4001,
+} E_UBUS_CLIENT;
+
+
+typedef enum _SN_322 {
+    
+    SN_322_1 = 0,
+    SN_322_2,
+    SN_322_3,
+    SN_322_4,
+    
+    SN_322_MX,
+} E_SN_322;
+
+typedef enum _INIT_MASK {
+    
+    INIT_MASK_CE  = 0x01,
+    INIT_MASK_MAC = 0x02,
+    INIT_MASK_P2P = 0x04,
+    INIT_MASK_VERSION = 0x08,
+    INIT_MASK_BASECFG = 0x10,    
+    INIT_MASK_CRLCFG = 0x20,
+
+    
+} E_INIT_MASK;
+
+
+
+#define MAX_322_NUM SN_322_MX
+
+#define CEPATH_PR11 "/tmp/322ce/pr11ce"
+#define CEPATH_322 "/tmp/322ce/322ce"
+#define msleep(n) usleep(n*1000)
+typedef struct _key_buffer {
+    int len;
+    unsigned char *data;
+} key_buffer_t;
 
 
 typedef struct _config_base_door {
@@ -246,9 +318,9 @@ typedef struct _config_time_door {
 
     uint8_t days;/*0~6 = week1~week7 7 = holiday*/
 
-    uint16_t len;
+    short len;
 
-    uint8_t * data_buffer;
+    unsigned char  *data_buffer;
     
 } config_time_door_t;
 
@@ -291,7 +363,12 @@ typedef struct _reader_cfg {
     uint16_t reader_area;    
 } reader_cfg_t;
 
-
+typedef struct _card_data {
+    uint8_t card_type;
+    uint8_t card_auth;
+    //uint8_t cardid_len;
+    uint8_t carid[64];
+} card_data_t;
 
 
 
@@ -311,11 +388,13 @@ typedef struct _usb_ccid_322 {
     unsigned char usb_port[16];
     uint8_t ccid322_index;
     uint8_t door_cfg_index;
+    uint8_t init_flag;//init mask
     
     /*state machine*/
     E_USB_COMM_STATE usb_state;
     uint8_t  toggle;
     uint8_t toggle_transmit;
+    uint8_t toggle_ubus;
     /**/
     
     /*os task start*/
@@ -325,6 +404,8 @@ typedef struct _usb_ccid_322 {
     osal_timer_t *timer_322;
     
     osal_sem_t *sem_322;
+
+    osal_sem_t *sem_state;
     /*os task end*/
     
 } usb_ccid_322_t;
@@ -344,9 +425,23 @@ typedef struct _msg_manager {
 typedef struct _Controller {
 
 /*322 obj */
-    usb_ccid_322_t usb_ccid_322[4];
+    usb_ccid_322_t usb_ccid_322[MAX_322_NUM];
+    uint8_t cnt_322;
     msg_manager_t msg_manager;
+
 /*obj end*/
+
+/*key*/
+    key_buffer_t mackey;
+    key_buffer_t p2pkey;
+
+    key_buffer_t basecfg;
+    key_buffer_t ctlcfg;
+
+//    unsigned char mackey[5];
+//    unsigned char p2pkey[32];
+/*key*/
+
 
 /*cfg*/
     config_door_t door_cfg[4];
@@ -444,7 +539,11 @@ osal_status_t hi_add_event_queue(sys_envar_t *p_sys,
                              uint32_t msg_argc,
                              void    *msg_argv);
 */
-
+osal_status_t sys_add_event_queue(msg_manager_t *p_sys, 
+                             uint16_t msg_id, 
+                             uint16_t msg_len, 
+                             uint32_t msg_argc,
+                             void    *msg_argv);
 
 #endif /* __CV_CMS_DEF_H__ */
 

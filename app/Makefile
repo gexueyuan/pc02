@@ -1,6 +1,6 @@
 include $(TOPDIR)/config.mk
 
-TARGET := pc02
+TARGET := pc02322
 
 SUBDIRS += $(TOPDIR)/osal/linux
 SUBDIRS += $(TOPDIR)/osal
@@ -8,7 +8,7 @@ SUBDIRS += $(TOPDIR)/app/sys
 
 
 OBJ_FILES=$(SUBDIRS:%=%/*.o)
-LDFLAGS = -lm -lrt -pthread  -L$(LIBDIR)  -lreader  -lblobmsg_json -lubox -lubus
+LDFLAGS = -lm -lrt -pthread  -L$(LIBDIR)  -lreader  -lblobmsg_json -lubox -lubus -levent
 
 .PHONY: all clean app install
 all: app install 

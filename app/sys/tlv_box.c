@@ -236,6 +236,21 @@ tlv_box_serialize (tlv_box_t * box)
   return 0;
 }
 
+
+int
+tlv_box_get_length (tlv_box_t * box, short type)
+{
+  value_t object;
+  if (key_list_get (box->m_list, type, &object) != 0)
+    {
+      return -1;
+    }
+  tlv_t *tlv = (tlv_t *) object.value;
+  return tlv->length;
+}
+
+
+
 int
 tlv_box_get_char (tlv_box_t * box, short type, char *value)
 {
@@ -359,7 +374,6 @@ tlv_box_get_object (tlv_box_t * box, short type, tlv_box_t ** object)
 #define TEST_TYPE_8 0x609
 #define TEST_TYPE_9 0x60a
 
-#define LOG(format,...) printf(format,##__VA_ARGS__)
 
 int
 main_test (void)

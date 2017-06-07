@@ -39,8 +39,10 @@ extern void osal_dbg_init(void);
 
 extern  void eg_usbto322_init();
 
-
-
+extern  void ubus_interface_init(void);
+extern void eg_comm_init();
+extern void msg_manager_init(void);
+extern void ubus_server_thread_entry(void * parameter);
 //extern    void eg_net_init(void);
 
 //extern    void acl_local_init(void);
@@ -60,6 +62,11 @@ void global_init(void)
     p_controll_eg = &controll_eg;
 
     memset(p_controll_eg,0,sizeof(Controller_t));
+
+    
+    system("rm -rf /tmp/322ce");
+
+    system("mkdir /tmp/322ce");
     
     
 }
@@ -68,9 +75,19 @@ int main(int argc, char *argv[])
 {
 //    system("./hostapd -d /etc/hostapd.conf -B");
     global_init();
+    ubus_interface_init();
+    msg_manager_init();
     eg_usbto322_init();
     //eg_net_init();
     //acl_local_init();
+    //eg_comm_init();
+    //ubus_server_thread_entry(NULL);
+    //msg_manager_init();
+    printf("\ncome in main thread\n");
+	signal(SIGINT, SIG_DFL);
+    
+	signal(SIGTERM, SIG_DFL);
+    
     while (1){
         osal_sleep(1000);
 		//hidapi_test();

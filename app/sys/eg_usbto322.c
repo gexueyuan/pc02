@@ -33,17 +33,18 @@ OSAL_DEBUG_ENTRY_DEFINE(eg_usbto322);
 
 #define USB_FAILED    0x6E00
 #define USB_OK        0x9000 
-#define EUSB_SEND_PERIOD  500 
+#define EUSB_SEND_PERIOD  50 
 
 
 
 #define VENDOR_ID 0x1780  
 #define PRODUCT_ID 0x0312
 
-
+extern   void get_wl(uint8_t *id_lv,uint8_t *data_wl,int *wlen);
+extern    void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int strlen);
+extern     void update_ce(void);
 const static int TIMEOUT=1000; /* timeout in ms */  
 
-#define msleep(n) usleep(n*1000)
 
 
 typedef enum _USB_CMD {
@@ -58,27 +59,25 @@ typedef enum _USB_CMD {
 typedef enum _CARDPOLLEVENT {
     CARDPOLLEVENT_TEST_WG = 0,
     CARDPOLLEVENT_NO_EVENT,
-    CARDPOLLEVENT_TRUE_CARD_CPU_NO_LOGEVENT,
-    CARDPOLLEVENT_TRUE_CARD_15693_NO_LOGEVENT,
-    CARDPOLLEVENT_TRUE_CARD_ID_NO_LOGEVENT,
-    CARDPOLLEVENT_TRUE_CARD_CPU_WITH_LOGEVENT,
-    CARDPOLLEVENT_TRUE_CARD_15693_WITH_LOGEVENT,
-    CARDPOLLEVENT_TRUE_CARD_ID_WITH_LOGEVENT,
-    CARDPOLLEVENT_FALSE_CARD_CPU_WITH_LOGEVENT,
-    CARDPOLLEVENT_FALSE_CARD_CPU_NO_LOGEVENT,
+    CARDPOLLEVENT_GET_CNT,
+    CARDPOLLEVENT_GET_LOGNUM,
+    CARDPOLLEVENT_GET_LOG,
+    CARDPOLLEVENT_BTN,
+    CARDPOLLEVENT_POWER,
+    CARDPOLLEVENT_WLNUM,
+    CARDPOLLEVENT_WL,
 } E_CARDPOLLEVENT;
 
+const unsigned char test1[] = {0xFC,0xA0,0x00,0x00,0x05,0x80,0xCA,0xCE,0x52,0x00};//{0xe0,0xfd,0x00,0x00,0x00,0x00,0x20,0xB1,0xC8,0xFE,0xF7,0x63,0x81,0xF6,0xB6,0x75,0x80,0xEF,0xD2,0xC3,0xAA,0xC4,0x7E,0x5A,0x58,0xC0,0xDD,0x5F,0x66,0x96,0x61,0x5C,0xC1,0x26,0x8B,0xA1,0xB1,0xF4,0x86};
 
-
-
+const unsigned char check[] = {0x00,0xA4,0x04,0x00,0x00};//+len+data
 
 const uint8_t car_detect[] = {0xFC,0xA0,0x00,0x00,0x05,0x80,0x30,0x00,0x00,0x00};
 
-const uint8_t time_head[] = {0x80,0xA0,0x00,0x00,0x18,0x80,0x34,0x00,0x00,0x13};
 
 const uint8_t refuse_enter[] = {0xFC,0xA0,0x04,0x00,0x09,0x80,0x32,0x80,0x00,0x04,  0x01,0x00,0x01,0x00};
 
-uint8_t test_all[] = {0xFC,0xA0,0x04,0x00,  /*总长*/0x23  ,0x80,0x34,0x00,0x00, /*长度*/0x18 /**温度范围**/ ,0x02,0x00,0x09,0x32,0x38,0xA1,0xE6,0x2F,0x31,0x35,0xA1,0xE6,\
+uint8_t test_all[] = {0xFC,0xA0,0x00,0x00,  /*总长*/0x23  ,0x80,0x34,0x00,0x00, /*长度*/0x18 /**温度范围**/ ,0x02,0x00,0x09,0x32,0x38,0xA1,0xE6,0x2F,0x31,0x35,0xA1,0xE6,\
                       0x03,0x00,0x04  ,0x32,0x35,0xA1,0xE6,/*天气*/0x04,0x00,0x01,0x01,/*位置北京*/0x05,0x00,0x04,0xB1,0xB1,0xBE,0xA9};
 
 unsigned char  change_app[25] = {0xFC,0xA0,0x04,0x00,0x14,0x00,0xA4,0x04,0x00,0x0F,0x74,0x64,0x72,0x6F,0x6E,0x99,0x05,0x69,0x64,0x52,0x64,0x51,0x34,0x42,0x31};
@@ -92,20 +91,157 @@ uint8_t  test_cmd[] = {0xFC,0xC1, 0x01 ,0x00, 0x06,0x80,0xB0,0x55,0xAF,0x01,0x00
 
 const uint8_t cfg_base_head[] = {0x00,0x25,0x00,0x00};//+len+data
 
+const uint8_t p2pkey_head[] = {0xE0,0xFD,0x00,0x00};//+len+data
 
-typedef enum _SN_322 {
-    
-    SN_322_1 = 0,
-    SN_322_2,
-    SN_322_3,
-    SN_322_4,
-    
-    SN_322_MX,
-} E_SN_322;
+const uint8_t mackey_head[] = {0x00,0x2A,0x00,0x00};//+len+data
 
-#define MAX_322_NUM SN_322_MX
-                                            /*0*/   /*1*/   /*2*/   /*3*/
-unsigned char* usb_port_def[MAX_322_NUM] = {"1-1.2","1-1.3","1-1.4","1-1.5"};
+const uint8_t basecfg_head[] = {0x00,0x25,0x00,0x00};//+len+data
+
+const uint8_t ctlcfg_head[] = {0x00,0x29,0x00,0x00};//+len+data
+
+const uint8_t result_head[] = {0x00,0x22,0x00,0x00};//+len+data
+
+const uint8_t ce_pr11[] = {0xFC,0xA0,0x00,0x00,0x05,0x80,0xCA,0xCE,0x53,0x00,};
+
+const uint8_t serial_pr11[] = {0xFC,0xA0,0x00,0x00,0x05,0x80,0xCA,0xCE,0x0E,0x00,};
+
+const uint8_t ce_322[] = {0x80,0xCA,0xCE,0x42,0x00};
+
+const uint8_t change_mode[] = {0xFC,0xDE,0x00,0xAA,0x00};
+
+const uint8_t v_322[] = {0x00,0x26,0x01,0x00,0x00};
+const uint8_t v_322_d21[] = {0x00,0x26,0x01,0x81,0x00};
+const uint8_t v_pr11[] = {0x00,0x26,0x02,0x00,0x00};
+const uint8_t v_pr11_d21[] = {0x00,0x26,0x02,0x81,0x00};
+
+osal_sem_t *sem_pr11ce;
+
+osal_sem_t *sem_322ce;
+
+const uint8_t test_p2p[] = {0xE0,0xFD,0x00,0x00,0x21,0x08,0xF8,0x19,0x94,0x85,0x3C,0x1D,0xBC,0x72,0xCA,0x6B,0x95,0xA7,0xAE,0xB5,0x6F,0xA8,0x84,0xC9,0x99,0x62,0x50,0x46,0x7F,0x06,0xBD,0x40,0xC4,0xC2,0x24,0x50,0x04,0xE7};
+                                            /*0*/   /*1*/   /*2*/   /*3*/   /*4*/
+unsigned char* usb_port_def[MAX_322_NUM] = {"1-1.1","1-1.2","1-1.3","1-1.4","1-1.5"};
+
+
+/*
+* 函数说明: 写二进制文件
+* 参数描述: _fileName, 文件名称
+*           _buf, 要写的内存缓冲。
+*           _bufLen, 内存缓冲的长度
+*   返回值: 0, 成功
+*           -1, 失败
+*
+*/
+int writeFile(const char* _fileName, void* _buf, int _bufLen)
+{
+    FILE * fp = NULL;
+    if( NULL == _buf || _bufLen <= 0 ) return (-1);
+
+    fp = fopen(_fileName, "ab+"); // 必须确保是以 二进制写入的形式打开
+
+    if( NULL == fp )
+    {
+        return (-1);
+    }
+
+    fwrite(_buf, _bufLen, 1, fp); //二进制写
+
+    fclose(fp);
+    fp = NULL;
+
+    return 0;    
+}
+
+/*
+ * 函数说明:  读二进制文件
+*  参数描述: _fileName, 文件名称
+*             _buf, 读出来的数据存放位置
+*             _bufLen, 数据的长度信息
+*    返回值:  0, 成功
+*             -1, 失败
+*
+*/
+int readFile(const char* _fileName, void* _buf, int _bufLen)
+{
+    FILE* fp = NULL;
+    if( NULL == _buf || _bufLen <= 0 ) return (-1);
+
+    fp = fopen(_fileName, "rb"); // 必须确保是以 二进制读取的形式打开 
+
+    if( NULL == fp )
+    {
+        return (-1);
+    }
+
+    fread(_buf, _bufLen, 1, fp); // 二进制读
+
+    fclose(fp);
+    return 0;        
+}
+
+int usb_transmit(void *context, const unsigned char * apdu,
+            int apdu_len, unsigned char * resp, int max_resp_size,usb_ccid_322_t  *usb_322)
+{
+
+    int ret = 0;
+
+    int error;
+
+	unsigned char output[64] = {0};
+
+    /* Take the semaphore. */
+    if(osal_sem_take(usb_322->sem_322, OSAL_WAITING_FOREVER) != OSAL_EOK)
+    {
+       printf("\n%s Semaphore return failed. \n",usb_322->usb_port);
+       return;
+    }
+    ret = luareader_transmit(context, apdu, apdu_len, resp, max_resp_size);
+
+    osal_sem_release(usb_322->sem_322);
+
+    if(ret < 0){
+    
+        
+        memset(output, 0, sizeof(output));
+        error = luareader_pop_value(context, (char *)output, sizeof(output));
+        printf("luareader_pop_value(%p)=%d(%s)\n", context, error, output);
+        
+ 
+    }
+
+    return ret;
+
+
+}
+
+
+
+
+E_DOOR_STATE judge_time_state(uint8_t doorno)
+{
+
+    time_t   now;
+    struct   tm  *timenow;
+
+    time(&now);
+    timenow   =   localtime(&now);
+
+    
+
+    /*holiday*/
+    //p_controll_eg->door_cfg[doorno].cfg_time_door[].data_buffer
+    
+    /*workday*/
+
+    
+
+
+    return DOOR_STATE_NORMAL;
+
+}
+
+
+
 
 
 /*alloc index for 322*/
@@ -149,6 +285,9 @@ void eg_usb_main_proc(char *data,int len)
 //}
  @return  : 
 *****************************************************************************/
+//const uint8_t time_head[] = {0xFC,0xA0,0x00,0x00,0x19,0x80,0x34,0x00,0x00,0x13};
+const uint8_t time_head[] = {0xFC,0xA0,0x00,0x00,0x19,0x80,0x34,0x00,0x00,0x0A};
+#if 0
 uint8_t   get_sys_time(unsigned char *time_ptr)//len must be more than 19
 {
     time_t   now;
@@ -197,42 +336,246 @@ uint8_t   get_sys_time(unsigned char *time_ptr)//len must be more than 19
     //sprintf(&time_acs[10],"%X",ascDay);
     memcpy(&time_acs[10],&ascDay,sizeof(ascDay));
     sprintf(&time_acs[12],"%02d:%02d",timenow->tm_hour,timenow->tm_min);
-    printf("Local   time   is   %s\n",asctime(timenow));
+    //printf("Local   time   is   %s\n",asctime(timenow));
 
-    printf("time is %s\n",time_acs);
+   // printf("time is %s\n",time_acs);
     memcpy(time_ptr,time_head,sizeof(time_head));
-    memcpy(time_ptr + sizeof(time_head),time_acs,sizeof(time_acs));
+    time_ptr[sizeof(time_head)] = 0x01;
+    time_ptr[sizeof(time_head) + 1] = 0x00;
+    time_ptr[sizeof(time_head) + 2] = 0x11;//TLV
+    memcpy(time_ptr + sizeof(time_head) + 3,time_acs,sizeof(time_acs));
     return 0;
 }
+#else
+uint8_t   get_sys_time(unsigned char *time_ptr)//len must be more than 19
+{
+    time_t   now;
+    struct   tm  *timenow;
+    unsigned char time_acs[7];
+    short int ascDay;
+
+    if(time_ptr == NULL){
+
+        printf("F[%s] L[%d] ptr is NULL!!!", __FILE__, __LINE__);
+        return 0;
+    }
+    memset(time_acs,0,sizeof(time_acs));
+    time(&now);
+    timenow   =   localtime(&now);
+    
+    memcpy(time_ptr,time_head,sizeof(time_head));//head
+    
+    time_ptr[sizeof(time_head)] = 0x01;//T
+    time_ptr[sizeof(time_head) + 1] = 0x00;
+    time_ptr[sizeof(time_head) + 2] = 0x07;//L
+    //v
+    time_ptr[sizeof(time_head) + 3] = ((unsigned char)timenow-> tm_year) > 100 ? (unsigned char)timenow-> tm_year - 100:17;
+    time_ptr[sizeof(time_head) + 4] = (unsigned char)timenow-> tm_mon + 1;
+    time_ptr[sizeof(time_head) + 5] = (unsigned char)timenow-> tm_mday;
+    time_ptr[sizeof(time_head) + 6] = (unsigned char)timenow-> tm_wday;
+    time_ptr[sizeof(time_head) + 7] = (unsigned char)timenow-> tm_hour;
+    time_ptr[sizeof(time_head) + 8] = (unsigned char)timenow-> tm_min;
+    time_ptr[sizeof(time_head) + 9] = (unsigned char)timenow-> tm_sec;
+    //memcpy(time_ptr + sizeof(time_head) + 3,time_acs,sizeof(time_acs));//V
+    return 0;
+}
+#endif
 
 void print_rec(unsigned char* rec,int len)
 {
+#if 1
     int i;
-    printf("\nrecv data len is :%d\n\r",len);
-    for(i = 0;i < len;i++){
-    
-        printf("%02X",rec[i]);
-    }
-    printf("\n\r");
 
+    if(osal_module_debug_level <= OSAL_DEBUG_INFO){
+        printf("\nrecv data len is :%d\n\r",len);
+        for(i = 0;i < len;i++){
+        
+            printf("%02X ",rec[i]);
+            
+        }
+        printf("\n\r");
+    }
+#endif
 
 }
 
 
 void print_send(unsigned char* send,int len)
 {
+#if 1
     int i;
-    printf("\nsend data len is :%d\n\r",len);
-    for(i = 0;i < len;i++){
-    
-        printf("%02X ",send[i]);
-    }
-    printf("\n\r");
 
+    if(osal_module_debug_level <= OSAL_DEBUG_INFO){
+        
+        printf("\nsend data len is :%d\n\r",len);
+        for(i = 0;i < len;i++){
+        
+            printf("%02X ",send[i]);
+        }
+        printf("\n\r");
+        
+    }
+#endif
+}
+
+int check_card(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_len)
+{
+    unsigned char *read_buffer;
+    int len;
+    uint8_t resp_code[] = {0x90,0x00};
+    uint8_t resp_code_nocard[] = {0x90,0x01,0x90,0x00};
+
+    read_buffer = (unsigned char*)malloc(buffer_len);
+
+    memcpy(read_buffer,rd_data,buffer_len);
+
+    if(buffer_len == 4){
+        if(memcmp(read_buffer,resp_code_nocard,sizeof(resp_code_nocard)) == 0){
+            
+            //OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_INFO, "nocard\n");
+            free(read_buffer);
+            return 0;
+        }
+    }
+    
+
+    if(buffer_len < 5){
+
+        OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_INFO, "reader return short\n");
+        free(read_buffer);
+        return -2;
+    }
+
+    if((memcmp(&read_buffer[buffer_len - 2],resp_code,2)) ||
+        (memcmp(&read_buffer[buffer_len - 4],resp_code,2))){
+        OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "reader return error\n");
+        free(read_buffer);
+        return -1;
+    }
+    free(read_buffer);
+    return 1;
 
 }
 
+uint8_t *cardtype[] = {"none","15693","sfz","ID cards","cpu","12.5K","MIFARE"};
+int parse_data(unsigned char* rd_data,int buffer_len,unsigned char* wl_data,int *wl_len)
+{
+    unsigned char *read_buffer;
+    int len;
+    int card_event;
+    card_data_t card;
+    int i;
+    len = buffer_len;
+
+    //card id 4Byte 20170531
+    unsigned char card_id[4] = {0};
+
+    read_buffer = (unsigned char*)malloc(buffer_len);
+
+    memcpy(read_buffer,rd_data,buffer_len);
+    
+    card_event = read_buffer[0];
+
+    switch(card_event)
+    {
+        case CARDPOLLEVENT_NO_EVENT:
+            
+/*
+            if(len < 64){
+
+                memcpy(&card,&read_buffer[1],len - 5);
+
+                OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "card type is %s\n",cardtype[card.card_type]);
+                
+                if(card.card_auth == 0x5A){    
+                    
+                    OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "true card\n");
+
+                    //get_wl(&card.carid,wl_data,wl_len);
+                    print_rec(card.carid,len - 5 -2);
+                    
+                }
+                else{
+                    OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "invalid card\n");
+
+                }
+            }
+*/
+
+            if(len < 64){
+
+                memcpy(card_id,&read_buffer[2],4);
+
+                printf("card id is \n");
+                print_rec(card_id,4);
+                
+                get_wl_4(card_id,wl_data,&wl_len);
+                printf("wl len is %d\n",wl_len);
+                print_rec(wl_data,wl_len);
+
+
+            }
+            break;
+
+            
+        case CARDPOLLEVENT_GET_CNT:
+            break;
+
+            
+        case CARDPOLLEVENT_GET_LOGNUM:
+            break;
+
+            
+        case CARDPOLLEVENT_GET_LOG:
+            break;
+
+            
+        case CARDPOLLEVENT_BTN:
+            break;
+
+            
+        case CARDPOLLEVENT_POWER:
+            OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "card power on\n");
+            break;
+            
+        case CARDPOLLEVENT_WLNUM:
+            break;
+            
+        case CARDPOLLEVENT_WL:
+            break;            
+
+        default:
+            OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_WARN, "error data,%d\n",card_event);
+            break;
+
+    }
+
+
+end:
+    free(read_buffer);
+
+    return 0;
+
+}
+
+int state_alternate(E_USB_COMM_STATE state_d,usb_ccid_322_t * ccid)
+{
+    /* Take the semaphore. */
+    if(osal_sem_take(ccid->sem_state, OSAL_WAITING_FOREVER) != OSAL_EOK){
+        
+        printf("Semaphore return failed. \n");
+        return -1;
+    }
+
+    ccid->usb_state = state_d;
+
+    return 0;
+}
+
 unsigned char lu_test[] = {0x00,0x84,0x00,0x00,0x08};
+volatile  int cnt = 0;
+volatile static uint8_t sw_version = 0;
+
 /*****************************************************************************
  @funcname: eg_usb_thread_entry
  @brief   : thread function
@@ -243,19 +586,24 @@ void *eg_usb_thread_entry(void *parameter)
 {
     int ret = 0;
     int i = 0;
-    unsigned char acl_data[256] = {0};
+    unsigned char acl_data[1024] = {0};
     unsigned char acl_cfg[256] = {0};
 	unsigned char output[2048] = {0};
     unsigned char usb_port[32] = {0};
-    int acl_len = 0;
-    unsigned char send_data[64] = {0};
-    unsigned char recv_data[64] = {0};
+    int acl_len = 1024;
+    unsigned char send_data[1024] = {0};
+    unsigned char recv_data[1024] = {0};
+
+    unsigned char apud_data[1024] = {0};
+    unsigned char apud_len;
 
     usb_ccid_322_t *p_usb_ccid;
 
     p_usb_ccid = (usb_ccid_322_t*)parameter;
     
 	void * context = luareader_new(0, NULL, NULL);
+
+    OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "context is %p\n",context);
 
     //strcpy(usb_port,(const char*)parameter);
     ret = luareader_connect(context, p_usb_ccid->usb_port);
@@ -267,24 +615,347 @@ void *eg_usb_thread_entry(void *parameter)
     
 while(1){
 
-#if 0
+#if 1
     memset(output,0,sizeof(output));
+    memset(apud_data,0,sizeof(apud_data));
+    apud_len = 1024;
+    if(p_usb_ccid->toggle_ubus == 0xAA){
 
+        
+
+    }
+    
+    //printf("\n%d\n",p_usb_ccid->usb_state);
     switch (p_usb_ccid->usb_state) {
+
+        
+
+    case USB_COMM_STATE_P2P:
+
+        
+        if(p_usb_ccid->init_flag & INIT_MASK_P2P){
+            
+            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "send p2pkey\n");
+/*
+            memcpy(apud_data,p2pkey_head,sizeof(p2pkey_head));
+            apud_data[sizeof(p2pkey_head)] = (unsigned char)(0x00FF&controll_eg.p2pkey.len);
+            memcpy(&apud_data[sizeof(p2pkey_head) + 1],&controll_eg.p2pkey.data,controll_eg.p2pkey.len);
+
+            print_send(apud_data,sizeof(p2pkey_head) + 1 + controll_eg.p2pkey.len);
+            ret = usb_transmit(context,apud_data,sizeof(p2pkey_head) + 1 + controll_eg.p2pkey.len,output,sizeof(output),p_usb_ccid);
+            print_rec(output,ret);
+*/
+            print_send(&controll_eg.p2pkey.data,controll_eg.p2pkey.len);
+            ret = usb_transmit(context,&controll_eg.p2pkey.data,controll_eg.p2pkey.len,output,sizeof(output),p_usb_ccid);
+            print_rec(output,ret);
+            
+            p_usb_ccid->usb_state = USB_COMM_STATE_MACKEY;//USB_COMM_STATE_RDCFG;//USB_COMM_STATE_MACKEY;//USB_COMM_STATE_CFG;//USB_COMM_STATE_MACKEY;
+            
+            }
+        else{
+
+            
+            
+            msleep(50);
+
+        }
+        break;
+        
+    case USB_COMM_STATE_MACKEY:
+
+        if(p_usb_ccid->init_flag & INIT_MASK_MAC){
+            
+            //p_usb_ccid->usb_state = USB_COMM_STATE_DEFAULT;
+            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "send MACKEY\n");
+            
+/*
+            memcpy(apud_data,mackey_head,sizeof(mackey_head));
+            apud_data[sizeof(mackey_head)] = (unsigned char)(0x00FF&controll_eg.mackey.len);
+            memcpy(&apud_data[sizeof(mackey_head) + 1],&controll_eg.mackey.data,controll_eg.mackey.len);
+            
+            ret = usb_transmit(context,apud_data,sizeof(mackey_head) + 1 + controll_eg.mackey.len,output,sizeof(output),p_usb_ccid);
+            print_rec(output,ret);
+*/
+
+            print_send(&controll_eg.mackey.data,controll_eg.mackey.len);
+            ret = usb_transmit(context,&controll_eg.mackey.data,controll_eg.mackey.len,output,sizeof(output),p_usb_ccid);
+            print_rec(output,ret);
+            
+            p_usb_ccid->usb_state = USB_COMM_STATE_RDCFG;//USB_COMM_STATE_CFG;//USB_COMM_STATE_INIT_END;//USB_COMM_STATE_CFG;//USB_COMM_STATE_VERSION;//USB_COMM_STATE_P2P;
+        }
+        else{
+
+            msleep(50);
+
+
+        }
+        break;
+
+    case USB_COMM_STATE_CFG:
+
+        if(p_usb_ccid->init_flag & INIT_MASK_BASECFG){
+            
+            memset(apud_data,0,sizeof(apud_data));
+            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "send base cfg\n");
+            
+            memcpy(apud_data,basecfg_head,sizeof(basecfg_head));
+            apud_data[sizeof(basecfg_head)] = controll_eg.basecfg.len;//(unsigned char)(0x00FF&controll_eg.mackey.len);
+            memcpy(&apud_data[sizeof(basecfg_head) + 1],&controll_eg.basecfg.data[0],controll_eg.basecfg.len);  
+            
+/*
+            printf("cfg len is %d\n",controll_eg.basecfg.len);
+            printf("\n===========cfg==============\n");
+            for(i = 0; i< controll_eg.basecfg.len;i++){
+                printf("%02x ",controll_eg.basecfg.data[i]);
+            }
+            printf("\n===========cfg==============\n");
+*/
+            print_send(apud_data,sizeof(basecfg_head) + 1 + controll_eg.basecfg.len);
+            ret = usb_transmit(context,apud_data,sizeof(basecfg_head) + 1 + controll_eg.basecfg.len,output,sizeof(output),p_usb_ccid);
+            
+            //print_send(&controll_eg.basecfg.data,controll_eg.basecfg.len);
+            //ret = usb_transmit(context,&controll_eg.basecfg.data,controll_eg.basecfg.len,output,sizeof(output),p_usb_ccid);
+            print_rec(output,ret);
+            p_usb_ccid->usb_state = USB_COMM_STATE_RDCFG;
+        }
+        else{
+
+            msleep(50);
+            //OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "ready for base cfg\n");
+        }
+        
+        break;
+        
+    case USB_COMM_STATE_RDCFG:
+
+        if(p_usb_ccid->init_flag & INIT_MASK_CRLCFG){
+            
+            memset(apud_data,0,sizeof(apud_data));
+            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "send ctrl cfg\n");
+            
+            memcpy(apud_data,ctlcfg_head,sizeof(ctlcfg_head));
+            apud_data[sizeof(ctlcfg_head)] = controll_eg.ctlcfg.len;//(unsigned char)(0x00FF&controll_eg.mackey.len);
+            memcpy(&apud_data[sizeof(ctlcfg_head) + 1],&controll_eg.ctlcfg.data[0],controll_eg.ctlcfg.len); 
+
+
+            
+            print_send(apud_data,sizeof(ctlcfg_head) + 1 + controll_eg.ctlcfg.len);
+            ret = usb_transmit(context,apud_data,sizeof(ctlcfg_head) + 1 + controll_eg.ctlcfg.len,output,sizeof(output),p_usb_ccid);
+           // print_rec(output,ret);
+            //ret = usb_transmit(context,&controll_eg.ctlcfg.data,controll_eg.ctlcfg.len,output,sizeof(output),p_usb_ccid);
+            print_rec(output,ret);
+            
+            p_usb_ccid->usb_state = USB_COMM_STATE_VERSION;
+            
+            }
+        else{
+
+            msleep(50);
+
+        }
+        break;
+        
+
+    case USB_COMM_STATE_VERSION:
+
+        if(sw_version == 0){
+            
+            sw_version = 0xAA;
+            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get 322 version\n");
+            ret = usb_transmit(context,v_322,sizeof(v_322),&output[1],sizeof(output) - 1,p_usb_ccid);
+            output[0] = 0x01;
+            print_rec(output,ret + 1);
+            if(ret > 0)
+                ubus_client_process(UBUS_CLIENT_SENDVERSION,NULL,output,ret);
+
+            
+            memset(output,0,sizeof(output));
+            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get 322-d21 version\n");
+            ret = usb_transmit(context,v_322_d21,sizeof(v_322_d21),&output[1],sizeof(output) - 1,p_usb_ccid);      
+            output[0] = 0x02;
+            print_rec(output,ret + 1);
+            if(ret > 0)
+                ubus_client_process(UBUS_CLIENT_SENDVERSION,NULL,output,ret);
+            
+            memset(output,0,sizeof(output));
+            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get pr11 version\n");
+            ret = usb_transmit(context,v_pr11,sizeof(v_pr11),&output[1],sizeof(output) - 1,p_usb_ccid);
+            output[0] = 0x03;
+            print_rec(output,ret);
+            if(ret > 0)
+                ubus_client_process(UBUS_CLIENT_SENDVERSION,NULL,output,ret);
+            
+            memset(output,0,sizeof(output));
+            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get pr11-d21 version\n");
+            ret = usb_transmit(context,v_pr11_d21,sizeof(v_pr11_d21),&output[1],sizeof(output) - 1,p_usb_ccid);
+            output[0] = 0x04;
+            print_rec(output,ret);
+            if(ret > 0)
+                ubus_client_process(UBUS_CLIENT_SENDVERSION,NULL,output,ret);
+        }
+        p_usb_ccid->usb_state = USB_COMM_STATE_INIT_END;//;
+        break;
         
     case USB_COMM_STATE_INIT:
         
-        OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "%s init fished\n",p_usb_ccid->usb_port);
+        OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_TRACE, "%s init begin\n");
+
+        OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "%s chane mode\n",p_usb_ccid->usb_port);
+        usb_transmit(context,check,sizeof(check),output,sizeof(output),p_usb_ccid);        
+        print_rec(output,ret);
+
+        //read 322 ce
+        ret = usb_transmit(context,ce_322,sizeof(ce_322),&output[3],sizeof(output) - 3,p_usb_ccid);
+        
+        if(ret <= 0){
+        
+            
+            memset(output, 0, sizeof(output));
+            ret = luareader_pop_value(context, (char *)output, sizeof(output));
+            printf("luareader_pop_value(%p)=%d(%s)\n", context, ret, output);
+            break;
+            
+        
+        }
+        OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "322 ce,len is %d\n",ret - 2);//minus 90 00
+        //print_rec(&output[3],ret);
+        output[0] = p_usb_ccid->ccid322_index + 1;
+        output[1] = (unsigned char)(((ret - 2)&0xFF00)>>8);
+        output[2] = (unsigned char)(((ret - 2)&0x00FF));
+        
+        /* Take the semaphore. */
+        if(osal_sem_take(sem_322ce, OSAL_WAITING_FOREVER) != OSAL_EOK){
+            
+            printf("Semaphore return failed. \n");
+            return;
+        }
+        writeFile(CEPATH_322,output,ret - 2 + 3);
+        osal_sem_release(sem_322ce);
+        print_rec(output,ret + 3);
+
+    //test 
+   // test_p2p
+
+/*
+        printf("test p2p\n");
+        print_send(test_p2p,sizeof(test_p2p));
+        ret = usb_transmit(context,test_p2p,sizeof(test_p2p),output,sizeof(output),p_usb_ccid);
+        print_rec(output,ret);
+*/
+
+#if 0
+        memset(output,0,sizeof(output));
+
+        //read pr11 ce
+        ret = usb_transmit(context,ce_pr11,sizeof(ce_pr11),&output[3],sizeof(output) - 3,p_usb_ccid);
+        if(ret <= 0){
+        
+            
+            memset(output, 0, sizeof(output));
+            ret = luareader_pop_value(context, (char *)output, sizeof(output));
+            printf("luareader_pop_value(%p)=%d(%s)\n", context, ret, output);
+            break;
+            
+        
+        }
+        OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "pr11 ce,len is %d\n",ret -4);//minus 90 00 90 00
+        //print_rec(&output[3],ret);
+        output[0] = p_usb_ccid->ccid322_index + 1;
+        output[1] = (unsigned char)(((ret - 4)&0xFF00)>>8);
+        output[2] = (unsigned char)(((ret - 4)&0x00FF));
+        /* Take the semaphore. */
+        if(osal_sem_take(sem_pr11ce, OSAL_WAITING_FOREVER) != OSAL_EOK){
+            
+            printf("Semaphore return failed. \n");
+            return;
+        }
+        printf("\n%s\n",p_usb_ccid->usb_port);
+        writeFile(CEPATH_PR11,output,ret - 4 + 3);
+        osal_sem_release(sem_pr11ce);
+        print_rec(output,ret + 3);
+#endif
+/*
+        OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "%s chane mode\n",p_usb_ccid->usb_port);
+        usb_transmit(context,change_mode,sizeof(change_mode),output,sizeof(output),p_usb_ccid);        
+        print_rec(output,ret);
+*/
+        p_usb_ccid->init_flag |= INIT_MASK_CE;
+        //update_ce();       
+        sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_SEND_VERSION,0,0,NULL);
+        
+        //sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_UPDATE_BASECFG,0,0,NULL);
+        p_usb_ccid->usb_state = USB_COMM_STATE_P2P;//USB_COMM_STATE_CFG;//USB_COMM_STATE_P2P;//USB_COMM_STATE_CFG;//USB_COMM_STATE_P2P;
+        break;
 
 
+    case USB_COMM_STATE_INIT_END:
+
+        msleep(100);
         p_usb_ccid->usb_state = USB_COMM_STATE_POLL;
+        osal_timer_start(p_usb_ccid->timer_322);//begin to poll,init finished
+        printf("poll process START!!!\n");
         break;
         
     case USB_COMM_STATE_POLL:
-          ret = luareader_transmit(context, car_detect, sizeof(car_detect), output, sizeof(output));
-          OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_TRACE, "polling\n");
-          print_rec(output,ret);
+            
+          //OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "poll start\n");
+          ret = usb_transmit(context,car_detect,sizeof(car_detect),output,sizeof(output),p_usb_ccid);
+          //OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "poll end\n");
+          //print_rec(output,ret);
+          if(ret < 0){
           
+              
+              memset(output, 0, sizeof(output));
+              ret = luareader_pop_value(context, (char *)output, sizeof(output));
+              printf("luareader_pop_value(%p)=%d(%s)\n", context, ret, output);
+              
+          
+          }
+          if(check_card(p_usb_ccid,output,ret) == 1){
+            
+                parse_data(output,ret,acl_data,&acl_len);
+
+            if(acl_len == 17){
+
+                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_WARN, "not passed\n");
+                
+                memcpy(apud_data,result_head,sizeof(result_head));
+
+                apud_data[sizeof(result_head)] = 17;
+
+                memcpy(&apud_data[sizeof(result_head) + 1],acl_data,acl_len);
+                
+                ret = usb_transmit(context,apud_data,sizeof(result_head) + 1 + 17,output,sizeof(output),p_usb_ccid);
+            }
+            else{
+
+                memcpy(apud_data,result_head,sizeof(result_head));
+                
+                apud_data[sizeof(result_head)] = 17 + 1 + acl_data[207] + 168;//len
+
+                printf("data len is %d\n",apud_data[sizeof(result_head)]);
+                
+
+                memcpy(&apud_data[sizeof(result_head) + 1],acl_data,17);//result:1 + RTC:16
+
+                memcpy(&apud_data[sizeof(result_head) + 1 + 17],&acl_data[207],1);//name-L:1
+                
+                memcpy(&apud_data[sizeof(result_head) + 1 + 17 + 1],&acl_data[208],acl_data[207]);//name-V:v
+
+                memcpy(&apud_data[sizeof(result_head) + 1 + 17 + 1 + acl_data[207]],&acl_data[17],168);
+
+                print_send(apud_data,sizeof(result_head) + 1 + 17 + 1 + acl_data[207] + 168);
+                
+                ret = usb_transmit(context,apud_data,sizeof(result_head) + 1 + 17 + 1 + acl_data[207] + 168,output,sizeof(output),p_usb_ccid);
+
+            }           
+
+            printf("log return\n");
+            print_rec(output,ret);
+
+            
+          }
+          #if 0
           if(output[1] == 0x01){//[0] =  reader num,
             
             if(output[2] != 0x02){
@@ -314,7 +985,11 @@ while(1){
 
             
           }
-          p_usb_ccid->usb_state = USB_COMM_STATE_IDLE;
+          #endif
+          
+          //msleep(100);
+        if(p_usb_ccid->usb_state == USB_COMM_STATE_POLL)
+            p_usb_ccid->usb_state = USB_COMM_STATE_IDLE;//USB_COMM_STATE_POLL;//
           break;
           
    case USB_COMM_STATE_ACL:
@@ -326,41 +1001,56 @@ while(1){
               
         break;
 
-   case USB_COMM_STATE_CFG:
-
-        
-        break;
-
     case USB_COMM_STATE_PUSH:
         
 
         get_sys_time(send_data);
         //x_TransmitApdu_hid_hs(&USB_HID_1,send_data,sizeof(time_head)+20,recv_data,&rec_len,timeout);
-        ret = luareader_transmit(context, send_data, sizeof(time_head)+20, output, sizeof(output));
-        OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_TRACE, "push time\n");
-        print_send(send_data,sizeof(time_head)+20);
+       // ret = luareader_transmit(context, send_data, sizeof(time_head)+20, output, sizeof(output));
+        ret = usb_transmit(context,send_data,sizeof(time_head)+10,output,sizeof(output),p_usb_ccid);
+        OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "push time\n");
+        print_send(send_data,sizeof(time_head)+10);
         print_rec(output,ret);
         
-        //x_TransmitApdu_hid_hs(&USB_HID_1,test_all,sizeof(test_all),recv_data,&rec_len,timeout);
+/*
         ret = luareader_transmit(context, test_all, sizeof(test_all), output, sizeof(output));
-        printf("send weather data!\n");
+        OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_TRACE, "send weather data!\n");
         print_send(test_all,sizeof(test_all));
         print_rec(recv_data,ret);
+*/
+
+        
+/*
+        printf(" port %s\n",p_usb_ccid->usb_port);
+        cnt++;
+        sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_UPDATE_MACKEY,0,cnt,NULL);
+*/
         
         p_usb_ccid->usb_state = USB_COMM_STATE_IDLE;
         break;
         
     case USB_COMM_STATE_IDLE:
-        msleep(100);
-        printf("IDLE!\n");
+        msleep(10);
+        //printf("IDLE!\n");
         //x_TransmitApdu_hid_hs(&USB_HID_1,usb_poll,sizeof(usb_poll),recv_data,&rec_len,timeout);
-        //usb_state = USB_COMM_STATE_POLL;
+        //p_usb_ccid->usb_state = USB_COMM_STATE_POLL;
         continue;
         break;
     case USB_COMM_STATE_TRANSFER:
         msleep(100);
         p_usb_ccid->usb_state = USB_COMM_STATE_TRANSFER;
-        printf("in transfer mode\n");
+        //printf("in transfer mode\n");
+        break;
+    case USB_COMM_STATE_DEFAULT:
+        
+        if(0){
+
+        }
+        else{
+            
+            msleep(50);
+
+        }
         break;
     default:
         break;
@@ -373,200 +1063,11 @@ sleep(2);
 
 
 
-
-//{
-
-//	ret = luareader_transmit(context, lu_test, sizeof(lu_test), output, sizeof(output));
-//    
-//    OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "luareader_transmit(%p)=%d\n", context, ret);
-
-//    sleep(2);
-
-//}
-
-
 out: 
         ret = luareader_disconnect(context);
-    
-        memset(output, 0, sizeof(output));
-        ret = luareader_pop_value(context, (char *)output, sizeof(output));
-        printf("luareader_pop_value(%p)=%d(%s)\n", context, ret, output);
-    
+       
         luareader_term(context);
-        return ret;
-
-
-}
-
-
-
-
-
-
-/*****************************************************************************
- @funcname: eg_usbto322_thread_entry
- @brief   : thread function
- @param   : void *parameter  
- @return  : void
-*****************************************************************************/
-void *eg_usb12_thread_entry(void *parameter)
-{
-    int ret = 0;
-    int i = 0;  
-	unsigned char output[2048] = {0};
-    const static int timeout=2000; /* timeout in ms */ 
-    
-	void * context = luareader_new(0, NULL, NULL);
-	
-    ret = luareader_connect(context, "1-1.2");
-    if(ret < 0){
-
-    goto out;
-    }
-	printf("luareader_connect to 1-1.2(%p)=%d\n", context, ret);
-while(1){
-
-	ret = luareader_transmit(context, lu_test, sizeof(lu_test), output, sizeof(output));
-	printf("luareader_transmit(%p)=%d\n", context, ret);
-	for(i = 0 ; i < ret;i++){
-	printf("1-1.2 return is 0x%X \n",output[i]);
-    }
-
-    sleep(2);
-
-}
-
-
-out: 
-        ret = luareader_disconnect(context);
-    
-        memset(output, 0, sizeof(output));
-        ret = luareader_pop_value(context, (char *)output, sizeof(output));
-        printf("luareader_pop_value(%p)=%d(%s)\n", context, ret, output);
-    
-        luareader_term(context);
-        return ret;
-
-
-}
-
-void *eg_usb13_thread_entry(void *parameter)
-{
-    int ret = 0;
-    int i = 0;  
-	unsigned char output[2048] = {0};
-    const static int timeout=2000; /* timeout in ms */ 
-    
-	void * context = luareader_new(0, NULL, NULL);
-	
-    ret = luareader_connect(context, "1-1.3");
-    if(ret < 0){
-
-    goto out;
-    }
-	printf("luareader_connect to 1-1.3(%p)=%d\n", context, ret);
-while(1){
-
-	ret = luareader_transmit(context, (unsigned char*)"\x00\x84\x00\x00\x08", 5, output, sizeof(output));
-	printf("luareader_transmit(%p)=%d\n", context, ret);
-	for(i = 0 ; i < ret;i++){
-	printf("1-1.3 return is 0x%X \n",output[i]);
-    }
-
-    sleep(2);
-
-}
-
-
-out: 
-        ret = luareader_disconnect(context);
-    
-        memset(output, 0, sizeof(output));
-        ret = luareader_pop_value(context, (char *)output, sizeof(output));
-        printf("luareader_pop_value(%p)=%d(%s)\n", context, ret, output);
-    
-        luareader_term(context);
-        return ret;
-
-
-}    
-void *eg_usb14_thread_entry(void *parameter)
-{
-    int ret = 0;
-    int i = 0;  
-    unsigned char output[2048] = {0};
-    const static int timeout=2000; /* timeout in ms */ 
-    
-    void * context = luareader_new(0, NULL, NULL);
-    
-    ret = luareader_connect(context, "1-1.4");
-    if(ret < 0){
-
-    goto out;
-    }
-    printf("luareader_connect to 1-1.4(%p)=%d\n", context, ret);
-while(1){
-
-    ret = luareader_transmit(context, (unsigned char*)"\x00\x84\x00\x00\x08", 5, output, sizeof(output));
-    printf("luareader_transmit(%p)=%d\n", context, ret);
-    for(i = 0 ; i < ret;i++){
-    printf("1-1.4 return is 0x%X \n",output[i]);
-    }
-
-    sleep(2);
-
-}
-
-
-out: 
-        ret = luareader_disconnect(context);
-    
-        memset(output, 0, sizeof(output));
-        ret = luareader_pop_value(context, (char *)output, sizeof(output));
-        printf("luareader_pop_value(%p)=%d(%s)\n", context, ret, output);
-    
-        luareader_term(context);
-        return ret;
-
-
-}
-
-void *eg_usb15_thread_entry(void *parameter)
-{
-    int ret = 0;
-    int i = 0;  
-    unsigned char output[2048] = {0};
-    const static int timeout=2000; /* timeout in ms */ 
-    
-    void * context = luareader_new(0, NULL, NULL);
-    
-    ret = luareader_connect(context, "1-1.5");
-    if(ret < 0){
-
-    goto out;
-    }
-    printf("luareader_connect to 1-1.5(%p)=%d\n", context, ret);
-while(1){
-
-    ret = luareader_transmit(context, (unsigned char*)"\x00\x84\x00\x00\x08", 5, output, sizeof(output));
-    printf("luareader_transmit(%p)=%d\n", context, ret);
-    for(i = 0 ; i < ret;i++){
-    printf("1-1.5 return is 0x%X \n",output[i]);
-    }
-
-    sleep(2);
-
-}
-
-
-out: 
-        ret = luareader_disconnect(context);
-    
-        memset(output, 0, sizeof(output));
-        ret = luareader_pop_value(context, (char *)output, sizeof(output));
-        printf("luareader_pop_value(%p)=%d(%s)\n", context, ret, output);
-    
-        luareader_term(context);
+        
         return ret;
 
 
@@ -581,16 +1082,17 @@ void timer_usb_callback(void* parameter)
 
     usb_ccid_322_t *p_usb_timer = (usb_ccid_322_t *)parameter;
     
-    printf("timer in port %s,index is %d\n",p_usb_timer->usb_port,p_usb_timer->ccid322_index);
+    //printf("timer in port %s,index is %d\n",p_usb_timer->usb_port,p_usb_timer->ccid322_index);
+    
     if(p_usb_timer->usb_state == USB_COMM_STATE_IDLE){
 
         
-        if(p_usb_timer->toggle >= 10){
+        if(p_usb_timer->toggle >= 100){
 
             p_usb_timer->toggle = 0;
             p_usb_timer->usb_state = USB_COMM_STATE_PUSH;
            // back_poll();
-           printf("timer in port %s,index is %d\n",p_usb_timer->usb_port);
+           //printf("timer in port %s,index is %d,push\n",p_usb_timer->usb_port);
         }
         else{
             
@@ -601,7 +1103,7 @@ void timer_usb_callback(void* parameter)
 
     if(p_usb_timer->usb_state == USB_COMM_STATE_TRANSFER){
 
-        if(p_usb_timer->toggle_transmit >= 8){
+        if(p_usb_timer->toggle_transmit >= 80){
 
             //back_poll();
             p_usb_timer->toggle_transmit = 0;
@@ -609,6 +1111,8 @@ void timer_usb_callback(void* parameter)
         else
             p_usb_timer->toggle_transmit++;
     }
+
+    
 }
 
 
@@ -638,14 +1142,14 @@ void eg_usbto322_init()
     
     for(i = 0;i < ret - 1;i++){
 
-        if(dev_index >= MAX_322_NUM){
+        if(dev_index >= MAX_322_NUM + 1){
 
             OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "number of device is over %d\n",MAX_322_NUM);
             break;
         }
 
         
-        if((output[i] == 0)&&(dev_index <= MAX_322_NUM)){
+        if((output[i] == 0)&&(dev_index <= MAX_322_NUM + 1)){
             
             memcpy(device_str[dev_index++],&output[j],i - j + 1);
             j = i + 1;
@@ -656,22 +1160,41 @@ void eg_usbto322_init()
     OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "there is  %d devices on pc02\n",dev_index);
 
     /*max device = 4*/
-    dev_index = (dev_index < MAX_322_NUM ? dev_index : MAX_322_NUM);
+    dev_index = (dev_index < (MAX_322_NUM + 1) ? dev_index : (MAX_322_NUM + 1));
     /**/
+    
+    sem_pr11ce = osal_sem_create("sem_pr11ce", 1);
+    osal_assert(sem_pr11ce != NULL);
+    //printf("\n%p\n",sem_pr11ce);
+
+    sem_322ce = osal_sem_create("sem_322ce", 1);
+    osal_assert(sem_322ce != NULL);
+    //printf("\n%p\n",sem_322ce);
     
     for(i = 0;i < dev_index;i++){
 
         
         ret = alloc_322_index(device_str[i]);
-        
+
+        if(ret == 0)
+            continue;
+
+        controll_eg.cnt_322++;
         p_usb_ccid = &(controll_eg.usb_ccid_322[ret]);
         p_usb_ccid->ccid322_index = ret;
-        p_usb_ccid->usb_state = USB_COMM_STATE_INIT;
+        p_usb_ccid->usb_state = USB_COMM_STATE_INIT;//USB_COMM_STATE_INIT_END;//USB_COMM_STATE_INIT;//USB_COMM_STATE_INIT_END;//USB_COMM_STATE_INIT_END;//USB_COMM_STATE_INIT;//USB_COMM_STATE_INIT_END;//USB_COMM_STATE_INIT;//USB_COMM_STATE_DEFAULT;//USB_COMM_STATE_VERSION;//USB_COMM_STATE_INIT;
         p_usb_ccid->ccid322_exist = 1;
+        p_usb_ccid->init_flag = 0;
         
         strcpy(&(p_usb_ccid->usb_port),device_str[i]);
             
         OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "create device pthread %s\n",device_str[i]);
+
+        p_usb_ccid->sem_322 = osal_sem_create(device_str[i], 1);
+        osal_assert(p_usb_ccid->sem_322 != NULL);
+
+        p_usb_ccid->sem_state = osal_sem_create(device_str[i], 1);
+        osal_assert(p_usb_ccid->sem_state != NULL);
         
         tid = osal_task_create(device_str[i],
                             eg_usb_thread_entry,
@@ -679,15 +1202,15 @@ void eg_usbto322_init()
         
         osal_assert(tid != NULL);
 
-        p_usb_ccid->timer_322 = osal_timer_create("tm-usb",timer_usb_callback,p_usb_ccid,\
+        p_usb_ccid->timer_322 = osal_timer_create(device_str[i],timer_usb_callback,p_usb_ccid,\
                             EUSB_SEND_PERIOD, TIMER_INTERVAL|TIMER_STOPPED, TIMER_PRIO_NORMAL);
         osal_assert(p_usb_ccid->timer_322 != NULL);
-        
+        OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_WARN, "create timer %s\n",device_str[i]);
         //osal_timer_start(p_usb_ccid->timer_322);
     
 
     }  
-    
+    printf("322 num:%d\n",controll_eg.cnt_322);
     
 /*
     tid = osal_task_create("tk_usb_1.2",

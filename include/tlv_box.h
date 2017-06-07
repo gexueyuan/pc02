@@ -14,6 +14,7 @@
 
 #include "key_list.h"
 
+#define LOG(format,...) printf(format,##__VA_ARGS__)
 
 enum TLV_DATA_TYPE
 {
