@@ -402,7 +402,19 @@ osal_status_t sys_add_event_queue(msg_manager_t *p_sys,
     return err;
 }
 
+int state_alternate(E_USB_COMM_STATE state_d,usb_ccid_322_t * ccid)
+{
+    /* Take the semaphore. */
+    if(osal_sem_take(ccid->sem_state, OSAL_WAITING_FOREVER) != OSAL_EOK){
+        
+        printf("Semaphore return failed. \n");
+        return -1;
+    }
 
+    ccid->usb_state = state_d;
+
+    return 0;
+}
 
 
 
@@ -410,6 +422,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
 {
 
     uint32_t type = 0; 
+    int i;
     //msg_manager_t *p_sys = &p_controll_eg->msg_manager;
     
     switch(p_msg->id){
@@ -436,6 +449,18 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
         break;
             
     case SYS_MSG_UPDATE_P2PKEY:
+        
+        for(i = 0;i < MAX_322_NUM;i++ ){
+        
+            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+
+                
+                                
+                controll_eg.usb_ccid_322[i].init_flag |= INIT_MASK_P2P;
+            }
+            
+        
+        }
 
         break;        
 

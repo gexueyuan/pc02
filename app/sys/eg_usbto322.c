@@ -622,7 +622,6 @@ while(1){
     if(p_usb_ccid->toggle_ubus == 0xAA){
 
         
-
     }
     
     //printf("\n%d\n",p_usb_ccid->usb_state);
@@ -843,37 +842,6 @@ while(1){
         print_rec(output,ret);
 */
 
-#if 0
-        memset(output,0,sizeof(output));
-
-        //read pr11 ce
-        ret = usb_transmit(context,ce_pr11,sizeof(ce_pr11),&output[3],sizeof(output) - 3,p_usb_ccid);
-        if(ret <= 0){
-        
-            
-            memset(output, 0, sizeof(output));
-            ret = luareader_pop_value(context, (char *)output, sizeof(output));
-            printf("luareader_pop_value(%p)=%d(%s)\n", context, ret, output);
-            break;
-            
-        
-        }
-        OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "pr11 ce,len is %d\n",ret -4);//minus 90 00 90 00
-        //print_rec(&output[3],ret);
-        output[0] = p_usb_ccid->ccid322_index + 1;
-        output[1] = (unsigned char)(((ret - 4)&0xFF00)>>8);
-        output[2] = (unsigned char)(((ret - 4)&0x00FF));
-        /* Take the semaphore. */
-        if(osal_sem_take(sem_pr11ce, OSAL_WAITING_FOREVER) != OSAL_EOK){
-            
-            printf("Semaphore return failed. \n");
-            return;
-        }
-        printf("\n%s\n",p_usb_ccid->usb_port);
-        writeFile(CEPATH_PR11,output,ret - 4 + 3);
-        osal_sem_release(sem_pr11ce);
-        print_rec(output,ret + 3);
-#endif
 /*
         OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "%s chane mode\n",p_usb_ccid->usb_port);
         usb_transmit(context,change_mode,sizeof(change_mode),output,sizeof(output),p_usb_ccid);        
@@ -896,101 +864,6 @@ while(1){
         printf("poll process START!!!\n");
         break;
         
-    case USB_COMM_STATE_POLL:
-            
-          //OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "poll start\n");
-          ret = usb_transmit(context,car_detect,sizeof(car_detect),output,sizeof(output),p_usb_ccid);
-          //OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "poll end\n");
-          //print_rec(output,ret);
-          if(ret < 0){
-          
-              
-              memset(output, 0, sizeof(output));
-              ret = luareader_pop_value(context, (char *)output, sizeof(output));
-              printf("luareader_pop_value(%p)=%d(%s)\n", context, ret, output);
-              
-          
-          }
-          if(check_card(p_usb_ccid,output,ret) == 1){
-            
-                parse_data(output,ret,acl_data,&acl_len);
-
-            if(acl_len == 17){
-
-                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_WARN, "not passed\n");
-                
-                memcpy(apud_data,result_head,sizeof(result_head));
-
-                apud_data[sizeof(result_head)] = 17;
-
-                memcpy(&apud_data[sizeof(result_head) + 1],acl_data,acl_len);
-                
-                ret = usb_transmit(context,apud_data,sizeof(result_head) + 1 + 17,output,sizeof(output),p_usb_ccid);
-            }
-            else{
-
-                memcpy(apud_data,result_head,sizeof(result_head));
-                
-                apud_data[sizeof(result_head)] = 17 + 1 + acl_data[207] + 168;//len
-
-                printf("data len is %d\n",apud_data[sizeof(result_head)]);
-                
-
-                memcpy(&apud_data[sizeof(result_head) + 1],acl_data,17);//result:1 + RTC:16
-
-                memcpy(&apud_data[sizeof(result_head) + 1 + 17],&acl_data[207],1);//name-L:1
-                
-                memcpy(&apud_data[sizeof(result_head) + 1 + 17 + 1],&acl_data[208],acl_data[207]);//name-V:v
-
-                memcpy(&apud_data[sizeof(result_head) + 1 + 17 + 1 + acl_data[207]],&acl_data[17],168);
-
-                print_send(apud_data,sizeof(result_head) + 1 + 17 + 1 + acl_data[207] + 168);
-                
-                ret = usb_transmit(context,apud_data,sizeof(result_head) + 1 + 17 + 1 + acl_data[207] + 168,output,sizeof(output),p_usb_ccid);
-
-            }           
-
-            printf("log return\n");
-            print_rec(output,ret);
-
-            
-          }
-          #if 0
-          if(output[1] == 0x01){//[0] =  reader num,
-            
-            if(output[2] != 0x02){
-
-                memset(acl_data,0,sizeof(acl_data));
-                //get acl data
-                //get_sd(recv_data[0],recv_data[2],&recv_data[5],acl_data,&acl_len);//recv_data[4] = id length
-                if(0 == acl_len){
-                    printf("this card is not in acl,refuse!\n");
-                    p_usb_ccid->usb_state = USB_COMM_STATE_IDLE;
-                    break;
-                }else{
-                    print_rec(acl_data,acl_len);
-                    p_usb_ccid->usb_state = USB_COMM_STATE_ACL;
-                }
-                printf("other card!\n");
-                break;
-            }
-            else{//身份证
-
-                printf("身份证\n");
-                //check_IDcard();
-                
-                p_usb_ccid->usb_state = USB_COMM_STATE_TRANSFER;
-                break;
-            }
-
-            
-          }
-          #endif
-          
-          //msleep(100);
-        if(p_usb_ccid->usb_state == USB_COMM_STATE_POLL)
-            p_usb_ccid->usb_state = USB_COMM_STATE_IDLE;//USB_COMM_STATE_POLL;//
-          break;
           
    case USB_COMM_STATE_ACL:
 
@@ -1055,6 +928,68 @@ while(1){
     default:
         break;
     }
+
+    /***************POLL***************/
+            
+          //OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "poll start\n");
+          ret = usb_transmit(context,car_detect,sizeof(car_detect),output,sizeof(output),p_usb_ccid);
+          //OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "poll end\n");
+          //print_rec(output,ret);
+          if(ret < 0){
+          
+              
+              memset(output, 0, sizeof(output));
+              ret = luareader_pop_value(context, (char *)output, sizeof(output));
+              printf("luareader_pop_value(%p)=%d(%s)\n", context, ret, output);
+              
+          
+          }
+          if(check_card(p_usb_ccid,output,ret) == 1){
+            
+                parse_data(output,ret,acl_data,&acl_len);
+
+            if(acl_len == 17){
+
+                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_WARN, "not passed\n");
+                
+                memcpy(apud_data,result_head,sizeof(result_head));
+
+                apud_data[sizeof(result_head)] = 17;
+
+                memcpy(&apud_data[sizeof(result_head) + 1],acl_data,acl_len);
+                
+                ret = usb_transmit(context,apud_data,sizeof(result_head) + 1 + 17,output,sizeof(output),p_usb_ccid);
+            }
+            else{
+
+                memcpy(apud_data,result_head,sizeof(result_head));
+                
+                apud_data[sizeof(result_head)] = 17 + 1 + acl_data[207] + 168;//len
+
+                printf("data len is %d\n",apud_data[sizeof(result_head)]);
+                
+
+                memcpy(&apud_data[sizeof(result_head) + 1],acl_data,17);//result:1 + RTC:16
+
+                memcpy(&apud_data[sizeof(result_head) + 1 + 17],&acl_data[207],1);//name-L:1
+                
+                memcpy(&apud_data[sizeof(result_head) + 1 + 17 + 1],&acl_data[208],acl_data[207]);//name-V:v
+
+                memcpy(&apud_data[sizeof(result_head) + 1 + 17 + 1 + acl_data[207]],&acl_data[17],168);
+
+                print_send(apud_data,sizeof(result_head) + 1 + 17 + 1 + acl_data[207] + 168);
+                
+                ret = usb_transmit(context,apud_data,sizeof(result_head) + 1 + 17 + 1 + acl_data[207] + 168,output,sizeof(output),p_usb_ccid);
+
+            }           
+
+            printf("log return\n");
+            print_rec(output,ret);
+
+            
+          }
+
+          /***************POLL  END***************/
 #else
 sleep(2);
 #endif
