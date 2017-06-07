@@ -43,6 +43,8 @@ OSAL_DEBUG_ENTRY_DEFINE(eg_usbto322);
 extern   void get_wl(uint8_t *id_lv,uint8_t *data_wl,int *wlen);
 extern    void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int strlen);
 extern     void update_ce(void);
+
+extern    void send_log(unsigned char* log_buffer,int len);
 const static int TIMEOUT=1000; /* timeout in ms */  
 
 
@@ -558,19 +560,6 @@ end:
 
 }
 
-int state_alternate(E_USB_COMM_STATE state_d,usb_ccid_322_t * ccid)
-{
-    /* Take the semaphore. */
-    if(osal_sem_take(ccid->sem_state, OSAL_WAITING_FOREVER) != OSAL_EOK){
-        
-        printf("Semaphore return failed. \n");
-        return -1;
-    }
-
-    ccid->usb_state = state_d;
-
-    return 0;
-}
 
 unsigned char lu_test[] = {0x00,0x84,0x00,0x00,0x08};
 volatile  int cnt = 0;
@@ -792,7 +781,7 @@ while(1){
             if(ret > 0)
                 ubus_client_process(UBUS_CLIENT_SENDVERSION,NULL,output,ret);
         }
-        p_usb_ccid->usb_state = USB_COMM_STATE_INIT_END;//;
+        //p_usb_ccid->usb_state = USB_COMM_STATE_INIT_END;//;
         break;
         
     case USB_COMM_STATE_INIT:
@@ -852,22 +841,22 @@ while(1){
         sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_SEND_VERSION,0,0,NULL);
         
         //sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_UPDATE_BASECFG,0,0,NULL);
-        p_usb_ccid->usb_state = USB_COMM_STATE_P2P;//USB_COMM_STATE_CFG;//USB_COMM_STATE_P2P;//USB_COMM_STATE_CFG;//USB_COMM_STATE_P2P;
+        //p_usb_ccid->usb_state = USB_COMM_STATE_P2P;//USB_COMM_STATE_CFG;//USB_COMM_STATE_P2P;//USB_COMM_STATE_CFG;//USB_COMM_STATE_P2P;
         break;
 
 
     case USB_COMM_STATE_INIT_END:
 
         msleep(100);
-        p_usb_ccid->usb_state = USB_COMM_STATE_POLL;
-        osal_timer_start(p_usb_ccid->timer_322);//begin to poll,init finished
+       // p_usb_ccid->usb_state = USB_COMM_STATE_POLL;
+        //osal_timer_start(p_usb_ccid->timer_322);//begin to poll,init finished
         printf("poll process START!!!\n");
         break;
         
           
    case USB_COMM_STATE_ACL:
 
-         p_usb_ccid->usb_state = USB_COMM_STATE_IDLE;//USB_COMM_STATE_TRANSFER;//
+         //p_usb_ccid->usb_state = USB_COMM_STATE_IDLE;//USB_COMM_STATE_TRANSFER;//
          break;
 
    case USB_COMM_STATE_INVALID:
@@ -899,7 +888,7 @@ while(1){
         sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_UPDATE_MACKEY,0,cnt,NULL);
 */
         
-        p_usb_ccid->usb_state = USB_COMM_STATE_IDLE;
+       // p_usb_ccid->usb_state = USB_COMM_STATE_IDLE;
         break;
         
     case USB_COMM_STATE_IDLE:
@@ -911,7 +900,7 @@ while(1){
         break;
     case USB_COMM_STATE_TRANSFER:
         msleep(100);
-        p_usb_ccid->usb_state = USB_COMM_STATE_TRANSFER;
+        //p_usb_ccid->usb_state = USB_COMM_STATE_TRANSFER;
         //printf("in transfer mode\n");
         break;
     case USB_COMM_STATE_DEFAULT:
