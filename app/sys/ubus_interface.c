@@ -51,6 +51,7 @@ int readCFG(const char* _fileName, key_buffer_t* cfg)
     FILE* fp = NULL;
     long len;
     int i;
+    char cmd[200];
     
     if( NULL == _fileName) return (-1);
 
@@ -82,12 +83,74 @@ int readCFG(const char* _fileName, key_buffer_t* cfg)
     printf("\n============================\n");
     
     fclose(fp);
+
+    //sprintf(cmd, "rm %s", _fileName);
+    //system(cmd);
+    unlink(_fileName);
     
     printf("get cfg\n");
     
     return 0;        
 }
 
+
+
+/*
+ * 函数说明:  读二进制文件
+*  参数描述: _fileName, 文件名称
+*             _buf, 读出来的数据存放位置
+*             _bufLen, 数据的长度信息
+*    返回值:  0, 成功
+*             -1, 失败
+*
+*/
+int readfile(const char* _fileName, unsigned char* cfg)
+{
+
+    FILE* fp = NULL;
+    long len;
+    int i;
+    char cmd[200];
+    
+    if( NULL == _fileName) return (-1);
+
+    fp = fopen(_fileName, "rb"); // 必须确保是以 二进制读取的形式打开 
+
+    if( NULL == fp )
+    {
+        return (-1);
+    }
+
+    fseek (fp , 0 , SEEK_END);  
+
+    len =  ftell (fp); 
+    
+    rewind(fp);
+
+    cfg[0] = (unsigned char)((len&0xFF00)>>8);
+    cfg[1] = (unsigned char)(len&0x00FF);
+    
+
+    printf("\nlen is %d\n",len);
+
+    fread(&cfg[2], len, 1, fp); // 二进制读
+    
+    printf("\n==============remote buffer==============\n");
+    for(i = 0; i<len + 2;i++){
+        printf("%02x ",cfg[i]);
+    }
+    printf("\n===============remote buffer end=============\n");
+    
+    fclose(fp);
+
+    //sprintf(cmd, "rm %s", _fileName);
+    //system(cmd);
+    unlink(_fileName);
+    
+    printf("get cfg\n");
+    
+    return 0;        
+}
 
 enum {
     
@@ -132,6 +195,9 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
     
         len = blobmsg_data_len(tb[REQ_STR_HEX]);
 
+        if(len == 0)
+            return -1;
+
         printf("get ubus len is %d\n",len);
 
     }
@@ -175,17 +241,9 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
             }
             
             memcpy(&controll_eg.p2pkey.data,data,len);
+
             
-            for(i = 0;i < MAX_322_NUM;i++ ){
-
-                if(controll_eg.usb_ccid_322[i].ccid322_exist){
-                    
-                    //controll_eg.usb_ccid_322[i].usb_state = USB_COMM_STATE_P2P;
-                    controll_eg.usb_ccid_322[i].init_flag |= INIT_MASK_P2P;
-                }
-                
-
-            }
+            sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_UPDATE_P2PKEY,0,0,NULL);
             
             break;
         
@@ -203,18 +261,9 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
             }
             
             memcpy(&controll_eg.mackey.data,data,len);
+
+            sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_UPDATE_MACKEY,0,0,NULL);
             
-            for(i = 0;i < MAX_322_NUM;i++ ){
-
-                if(controll_eg.usb_ccid_322[i].ccid322_exist){
-                    
-                    //controll_eg.usb_ccid_322[i].usb_state = USB_COMM_STATE_MACKEY;
-                    controll_eg.usb_ccid_322[i].init_flag |= INIT_MASK_MAC;
-
-                }
-                
-
-            }
             break;
 
 
@@ -225,62 +274,73 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
 /*
             if(controll_eg.basecfg.data != NULL){
 
-                free(controll_eg.basecfg.data);
+                free(&controll_eg.basecfg.data);
 
             }
 */
-            printf("%s\n",pStr);
-            //readCFG("/tmp/322ce/322ce",&controll_eg.basecfg);
-            memset(path_name,0,sizeof(path_name));
-            memcpy(path_name,pStr,strlen(pStr) + 1);
-            readCFG(path_name,&controll_eg.basecfg);
             
-            printf("get cfg\n");
-            
-            for(i = 0;i < MAX_322_NUM;i++ ){
+            printf("base cfg path:%s\n",pStr);
 
-                //if(controll_eg.usb_ccid_322[i].ccid322_exist){
-                    
-                    //controll_eg.usb_ccid_322[i].usb_state = USB_COMM_STATE_P2P;
-                    controll_eg.usb_ccid_322[i].init_flag |= INIT_MASK_BASECFG;
-               // }
-                
-
-            }
+            readCFG(pStr,&controll_eg.basecfg);
             
+
+            sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_UPDATE_BASECFG,0,0,NULL);
             
             break;
             
-        case UBUS_SERVER_TIME_CFG:
-            break;
-
-        case UBUS_SERVER_ALARM_CFG:
-            break;
             
         case UBUS_SERVER_READER_CFG:
             
 /*
             if(controll_eg.ctlcfg.data != NULL){
 
-                free(controll_eg.ctlcfg.data);
+                free(&controll_eg.ctlcfg.data);
 
             }
-            
 */
-            printf("%s\n",pStr);
+            printf("controll_eg.ctlcfg.data is %02X\n",controll_eg.ctlcfg.data);
+            printf("ctrl cfg path:%s\n",pStr);
+            
             readCFG(pStr,&controll_eg.ctlcfg);
 
-            for(i = 0;i < MAX_322_NUM;i++ ){
+            sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_UPDATE_READERCFG,0,0,NULL);
+            break;
+            
+        case UBUS_SERVER_TIME_CFG:
+            break;
+        
+        case UBUS_SERVER_ALARM_CFG:
+            break;
 
-                if(controll_eg.usb_ccid_322[i].ccid322_exist){
-                    
-                    //controll_eg.usb_ccid_322[i].usb_state = USB_COMM_STATE_P2P;
-                    controll_eg.usb_ccid_322[i].init_flag |= INIT_MASK_CRLCFG;
-                }
-                
+        case UBUS_SERVER_ALARM:
+            controll_eg.alarm_buffer[0] = len;
+            memcpy(&controll_eg.alarm_buffer[1],data,len);
+            sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_ALARM_ACTIVE,0,0,NULL);
+            break;
+            
+        case UBUS_SERVER_REMOTE:
+            
+/*
+            if(p_controll_eg->ctlcfg.data != NULL){
+
+                free(p_controll_eg->ctlcfg.data);
 
             }
+*/
+            //printf("sizeof(p_controll_eg->remote_buffer) is %d\n",sizeof(p_controll_eg->remote_buffer));
+            memset(p_controll_eg->remote_buffer,0,sizeof(p_controll_eg->remote_buffer));
+            //printf("ctrl remote path:%s\n",pStr);
             
+            //readCFG(pStr,p_controll_eg->remote_buffer);
+
+            controll_eg.remote_buffer[0] = (unsigned char)((len&0xFF00)>>8);
+            controll_eg.remote_buffer[1] = (unsigned char)(len&0x00FF);
+
+            printf("len is %d,buffer[0]:%d\n",sizeof(p_controll_eg->remote_buffer));
+            
+            memcpy(&controll_eg.remote_buffer[2],data,len);
+
+            sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_REMOTE_OPEN,0,0,NULL);
             break;
         default:
             break;
@@ -417,7 +477,7 @@ void ubus_interface_init(void)
 
     tid = osal_task_create("tk_ubus_server",
                         ubus_server_thread_entry,
-                        NULL,RT_SYS_THREAD_STACK_SIZE, RT_SYS_THREAD_PRIORITY);
+                        NULL,LESS_THREAD_STACK_SIZE, RT_SYS_THREAD_PRIORITY);
 
     osal_assert(tid != NULL);
 

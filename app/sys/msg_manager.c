@@ -170,6 +170,11 @@ void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int st
             memcpy(str_buffer,strhex,strlen);
             break;
 
+        case UBUS_CLIENT_LOG:
+            str_buffer = (unsigned char*)malloc(strlen);
+            memcpy(str_buffer,strhex,strlen);
+            break;
+
         default:
             break;
         
@@ -177,8 +182,7 @@ void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int st
 
 
     }
-
-    
+   
 	//char *a = "\x11\x22\x33\x44\x55\x66\x77\x88\x11\x22\x33\x44\x55\x66\x77\x88\x99\xAA";
 	blobmsg_add_field(&b, BLOBMSG_TYPE_UNSPEC, "strhex", str_buffer, strlen);
 	
@@ -186,10 +190,61 @@ void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int st
 
     if(str_buffer != NULL)
         free(str_buffer);
-
-
 }
 
+void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strlen)
+{
+
+	static struct ubus_request req;
+	uint32_t id;
+	int ret;
+	int ap_index=2;
+
+    unsigned char* str_buffer = NULL;
+
+	if (ubus_lookup_id(ctx, "pc02nbi", &id)) {
+		fprintf(stderr, "Failed to look up test object\n");
+		return;
+	}
+
+	blob_buf_init(&b, 0);
+	
+	blobmsg_add_u32(&b, "tag", tag);
+
+    switch(tag)
+    {
+        case UBUS_CLIENT_GETWL:
+            break;
+
+        case UBUS_CLIENT_GETWLCFG:
+            break;
+
+        case UBUS_CLIENT_SEND_ALARM:
+            str_buffer = (unsigned char*)malloc(strlen);
+            memcpy(str_buffer,strhex,strlen);
+            break;
+
+        case UBUS_CLIENT_LOG:
+            str_buffer = (unsigned char*)malloc(strlen);
+            memcpy(str_buffer,strhex,strlen);
+            break;
+
+        default:
+            break;
+        
+
+
+
+    }
+   
+	//char *a = "\x11\x22\x33\x44\x55\x66\x77\x88\x11\x22\x33\x44\x55\x66\x77\x88\x99\xAA";
+	blobmsg_add_field(&b, BLOBMSG_TYPE_UNSPEC, "strhex", str_buffer, strlen);
+	
+	int i =	ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 3000);
+
+    if(str_buffer != NULL)
+        free(str_buffer);
+}
 
 static void get_wl_data_cb(struct ubus_request *req,
 				    int type, struct blob_attr *msg)
@@ -312,7 +367,6 @@ static void get_wl_4_cb(struct ubus_request *req,
 }
 
 #define ID_LEN 4
-
 void get_wl_4(uint8_t *p_id,uint8_t *data_wl,int *wlen)
 {
 	static struct ubus_request req;
@@ -353,6 +407,104 @@ void get_wl_4(uint8_t *p_id,uint8_t *data_wl,int *wlen)
 	//printf("%d\n", i);
 	//return ;
 }
+
+
+
+static void get_audit_cb(struct ubus_request *req,
+				    int type, struct blob_attr *msg)
+{
+	struct blob_attr *tb[__RETURN_MAX];
+	int rc;
+	int len;
+    key_buffer_t *wl_lv;
+	blobmsg_parse(return_policy, __RETURN_MAX, tb, blob_data(msg), blob_len(msg));
+    
+	if (!tb[RETURN_STATUS]) {
+		fprintf(stderr, "No return code received from server\n");
+		return;
+	}
+
+    wl_lv = (key_buffer_t *)req->priv;
+        
+	rc = blobmsg_get_u32(tb[RETURN_STATUS]);
+    
+    
+    if(tb[RETURN_STRHEX] != NULL){
+        
+        unsigned char *data = (unsigned char *)blobmsg_data(tb[RETURN_STRHEX]);
+        
+        if(data != NULL){
+
+        
+            len = blobmsg_data_len(tb[RETURN_STRHEX]);
+
+            wl_lv->len = len;
+            
+            memcpy(wl_lv->data,data,len);
+
+           // req->priv = &wl_lv;
+
+        }
+        else{
+
+            printf("WL return NULL\n");
+
+        }
+    }else{
+
+        printf("str hex is NULL\n");
+    }
+    
+    
+	//fprintf(stderr, "return is %d \n", rc);
+}
+int get_audit_data(unsigned int tag,unsigned char* strhex,int strlen,uint8_t *data_wl,int *wlen)
+{
+	static struct ubus_request req;
+	uint32_t id;
+	int ret;
+    uint8_t id_data[4] = {0};//len = 4
+    uint8_t id_len;
+
+    key_buffer_t wl_buffer;
+
+    memset(&wl_buffer,0,sizeof(wl_buffer));
+	if (ubus_lookup_id(ctx, "ubus321", &id)) {
+		fprintf(stderr, "Failed to look up ubus321 object\n");
+		return -1;
+	}
+	blob_buf_init(&b, 0);
+	
+	blobmsg_add_u32(&b, "tag", tag);
+    //printf("F[%s] L[%d],tag is %d\n", __FILE__, __LINE__,tag);
+
+    wl_buffer.data = data_wl;
+
+    //printf("F[%s] L[%d],p is %p\n", __FILE__, __LINE__,data_wl);
+
+    memcpy(id_data,strhex,strlen);
+
+    printf("\n%d-%d-%d-%d\n",id_data[0],id_data[1],id_data[2],id_data[3]);
+    
+	blobmsg_add_field(&b, BLOBMSG_TYPE_UNSPEC, "strhex", id_data, strlen);
+    
+	int i =	ubus_invoke(ctx, id, "pushdata", b.head, get_audit_cb, (void*)&wl_buffer, 3000);
+    printf("F[%s] L[%d],len is %d,%d\n", __FILE__, __LINE__,wl_buffer.len,*wlen);
+    //data_wl = wl_buffer.data;
+    if(wl_buffer.len < *wlen){
+        
+        memcpy(data_wl,wl_buffer.data,wl_buffer.len);
+        *wlen = wl_buffer.len;
+    }
+    else{
+
+        printf("F[%s] L[%d] wl len too long!!!\n", __FILE__, __LINE__);
+        return -1;
+    }
+	//printf("%d\n", i);
+	return 0 ;
+}
+
 
 
 void ubus_clien_init(void)
@@ -412,6 +564,7 @@ int state_alternate(E_USB_COMM_STATE state_d,usb_ccid_322_t * ccid)
     }
 
     ccid->usb_state = state_d;
+    ccid->toggle_state = 0xAA;
 
     return 0;
 }
@@ -426,22 +579,66 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
     //msg_manager_t *p_sys = &p_controll_eg->msg_manager;
     
     switch(p_msg->id){
+        
     case SYS_MSG_INITED:
-        OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_TRACE, "%s: initialize complete\n", __FUNCTION__);
+        
+        for(i = 0;i < MAX_322_NUM;i++ ){
+        
+            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+
+                
+                state_alternate(USB_COMM_STATE_INIT,&controll_eg.usb_ccid_322[i]);
+            }
+            
+        
+        }
+        OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "%s: initialize complete\n", __FUNCTION__);
 
         break;
-    case SYS_MSG_SEND_VERSION:
+        
+    case SYS_MSG_SEND_CE:
+        
         ce_send_fg++;
+        
         if(ce_send_fg >= p_controll_eg->cnt_322){
 
             update_ce();
             OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "send 322 ce\n");
         }
+        
+
+        break;
+
+    case SYS_MSG_SEND_COSVERSION:
+        
+        for(i = 0;i < MAX_322_NUM;i++ ){
+        
+            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+
+                
+                state_alternate(USB_COMM_STATE_VERSION,&controll_eg.usb_ccid_322[i]);
+                //break;
+            }
+            
+        
+        }
+
         break;
                 
     case SYS_MSG_UPDATE_MACKEY:
-        //printf("update mackey,cnt is %d\n",p_msg->argc);
-        //update_mackey();
+        
+        for(i = 0;i < MAX_322_NUM;i++ ){
+        
+            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+
+                
+                state_alternate(USB_COMM_STATE_MACKEY,&controll_eg.usb_ccid_322[i]);
+                controll_eg.usb_ccid_322[i].init_flag |= INIT_MASK_MAC;
+            }
+            
+        
+        }
+
         break;
             
     case SYS_MSG_UPDATE_P2PKEY:
@@ -451,7 +648,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
             if(controll_eg.usb_ccid_322[i].ccid322_exist){
 
                 
-                                
+                state_alternate(USB_COMM_STATE_P2P,&controll_eg.usb_ccid_322[i]);
                 controll_eg.usb_ccid_322[i].init_flag |= INIT_MASK_P2P;
             }
             
@@ -461,7 +658,20 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
         break;        
 
     case SYS_MSG_UPDATE_BASECFG:
-        update_cfg();
+        //update_cfg();
+        
+        for(i = 0;i < MAX_322_NUM;i++ ){
+        
+            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+                
+                //controll_eg.usb_ccid_322[i].usb_state = USB_COMM_STATE_P2P;
+                
+                state_alternate(USB_COMM_STATE_CFG,&controll_eg.usb_ccid_322[i]);
+                controll_eg.usb_ccid_322[i].init_flag |= INIT_MASK_BASECFG;
+            }
+            
+        
+        }
         break;
         
     case SYS_MSG_UPDATE_TIMECFG:
@@ -473,9 +683,70 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
         break;
         
     case SYS_MSG_UPDATE_READERCFG:
+        
+        for(i = 0;i < MAX_322_NUM;i++ ){
+        
+            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+                
+                //controll_eg.usb_ccid_322[i].usb_state = USB_COMM_STATE_P2P;
+                state_alternate(USB_COMM_STATE_RDCFG,&controll_eg.usb_ccid_322[i]);
+                controll_eg.usb_ccid_322[i].init_flag |= INIT_MASK_CRLCFG;
+            }
+            
+        
+        }
     
         break;
+    case SYS_MSG_ALARM_ACTIVE:
+        
+        for(i = 0;i < MAX_322_NUM;i++ ){
+        
+            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+                
+                //controll_eg.usb_ccid_322[i].usb_state = USB_COMM_STATE_P2P;
+                state_alternate(USB_COMM_ALARM_OPEN,&controll_eg.usb_ccid_322[i]);
+                //break;
+            }
+            
+        
+        }
+        break;
+        
+    case SYS_MSG_INFO_PUSH:
+        
+/*
+        for(i = 0;i < MAX_322_NUM;i++ ){
+        
+            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+                
+                //controll_eg.usb_ccid_322[i].usb_state = USB_COMM_STATE_P2P;
+                state_alternate(USB_COMM_STATE_PUSH,&controll_eg.usb_ccid_322[i]);
+                //break;
+            }
+            
+        
+        }
+*/
+        //printf("get push info %d\n",p_msg->argc);
+        state_alternate(USB_COMM_STATE_PUSH,&controll_eg.usb_ccid_322[p_msg->argc]);
+        break;
 
+
+   case SYS_MSG_REMOTE_OPEN:
+    
+       for(i = 0;i < MAX_322_NUM;i++ ){
+       
+           if(controll_eg.usb_ccid_322[i].ccid322_exist){
+               
+               state_alternate(USB_COMM_REMOTE_OPEN,&controll_eg.usb_ccid_322[i]);
+               //break;
+           }
+           
+       
+       }
+        
+        
+    break;
         
     default:
         break;
@@ -532,7 +803,7 @@ void msg_manager_init(void)
 
     p_msg->task_msg = osal_task_create("task-msg",
                            msg_thread_entry, p_msg,
-                           RT_SYS_THREAD_STACK_SIZE, RT_SYS_THREAD_PRIORITY);
+                           LESS_THREAD_STACK_SIZE, RT_SYS_THREAD_PRIORITY);
     osal_assert(p_msg->task_msg != NULL);      
 
 }

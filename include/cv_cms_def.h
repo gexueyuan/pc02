@@ -34,7 +34,10 @@
 #define RT_WNETRX_THREAD_PRIORITY   TK_PRIO_DEFAULT//(TK_PRIO_DEFAULT - 20)
 #define RT_NTRIP_THREAD_PRIORITY		TK_PRIO_DEFAULT//(TK_PRIO_DEFAULT - 21)
 
-#define DEF_THREAD_STACK_SIZE   (1024*8192)
+#define DEF_THREAD_STACK_SIZE   (1024*4096)
+
+#define LESS_THREAD_STACK_SIZE   (1024*1024)
+
 
 #define RT_SYS_THREAD_STACK_SIZE   DEF_THREAD_STACK_SIZE//(1024*8)
 #define RT_GPS_THREAD_STACK_SIZE   DEF_THREAD_STACK_SIZE//(1024*8)
@@ -47,7 +50,7 @@
 /**
     size of all the queue in system 
 */
-#define SYS_QUEUE_SIZE 16
+#define SYS_QUEUE_SIZE 64
 #define VAM_QUEUE_SIZE 20
 #define VSA_QUEUE_SIZE 16
 #define WNET_QUEUE_SIZE 20
@@ -63,10 +66,13 @@ enum SYSTEM_MSG_TYPE{
     SYS_MSG_BASE = 0x0000,
     SYS_MSG_INITED,
     SYS_MSG_ACL_CHECK,
-    SYS_MSG_COS_UPDATE,
     SYS_MSG_CHECK_VERSION,
+    SYS_MSG_INFO_PUSH,
 
-    SYS_MSG_SEND_VERSION,
+    SYS_MSG_SEND_CE,
+    SYS_MSG_SEND_COSVERSION,
+
+    SYS_MSG_REMOTE_OPEN,
     
     SYS_MSG_UPDATE_MACKEY,    
     SYS_MSG_UPDATE_P2PKEY,    
@@ -218,6 +224,9 @@ typedef enum _USB_COMM_STATE {
     USB_COMM_STATE_MACKEY,
     USB_COMM_STATE_P2P,
     USB_COMM_STATE_VERSION,
+
+    USB_COMM_ALARM_OPEN,
+    USB_COMM_REMOTE_OPEN,
     
 } E_USB_COMM_STATE;
 
@@ -250,7 +259,11 @@ typedef enum _UBUS_INTERFACE {
     UBUS_SERVER_TIME_CFG = 0x0301,
     UBUS_SERVER_ALARM_CFG = 0x0401,
     UBUS_SERVER_READER_CFG = 0x0601,
-   
+
+    
+    UBUS_SERVER_ALARM = 0x002B,
+    
+    UBUS_SERVER_REMOTE = 0x0B02,
 } E_UBUS_INTERFACE;
 
 
@@ -260,9 +273,16 @@ typedef enum _UBUS_CLIENT {
     UBUS_CLIENT_GETWL = 0x3001,
     UBUS_CLIENT_GETWLCFG = 0x3002,
     
-    UBUS_CLIENT_SENDVERSION = 0x3003,
+    UBUS_CLIENT_SENDVERSION = 0x4002,
 
     UBUS_CLIENT_LOG = 0x4001,
+
+    UBUS_CLIENT_AUDIT_LOG = 0x4005,
+    
+    UBUS_CLIENT_AUDIT_WL = 0x4006,
+
+
+    UBUS_CLIENT_SEND_ALARM = 0x9002,
 } E_UBUS_CLIENT;
 
 
@@ -392,6 +412,7 @@ typedef struct _usb_ccid_322 {
     
     /*state machine*/
     E_USB_COMM_STATE usb_state;
+    uint8_t toggle_state;
     uint8_t  toggle;
     uint8_t toggle_transmit;
     uint8_t toggle_ubus;
@@ -437,12 +458,15 @@ typedef struct _Controller {
 
     key_buffer_t basecfg;
     key_buffer_t ctlcfg;
+    
 
 //    unsigned char mackey[5];
 //    unsigned char p2pkey[32];
 /*key*/
-
-
+/*alarm*/
+    uint8_t alarm_buffer[64];
+    uint8_t remote_buffer[1200];
+/*alarm*/
 /*cfg*/
     config_door_t door_cfg[4];
     reader_cfg_t reader_cfg[8];
