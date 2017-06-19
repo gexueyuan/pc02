@@ -269,9 +269,15 @@ typedef enum _UBUS_INTERFACE {
 
 typedef enum _UBUS_CLIENT {
 
+    
+    UBUS_CLIENT_GETRTC = 0x2000,
+
     UBUS_CLIENT_SENDCE = 0x2002,
+        
     UBUS_CLIENT_GETWL = 0x3001,
     UBUS_CLIENT_GETWLCFG = 0x3002,
+
+    UBUS_CLIENT_GETP2P = 0x4003,
     
     UBUS_CLIENT_SENDVERSION = 0x4002,
 
@@ -442,6 +448,7 @@ typedef struct _msg_manager {
     /*os task end*/
 } msg_manager_t;
 
+#pragma pack(4)
 
 typedef struct _Controller {
 
@@ -455,6 +462,7 @@ typedef struct _Controller {
 /*key*/
     key_buffer_t mackey;
     key_buffer_t p2pkey;
+
 
     key_buffer_t basecfg;
     key_buffer_t ctlcfg;
@@ -568,6 +576,9 @@ osal_status_t sys_add_event_queue(msg_manager_t *p_sys,
                              uint16_t msg_len, 
                              uint32_t msg_argc,
                              void    *msg_argv);
+
+void log_message (char *name, int priority, const char *format, ...);
+
 
 #endif /* __CV_CMS_DEF_H__ */
 

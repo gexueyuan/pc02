@@ -131,10 +131,13 @@ osal_sem_t *sem_pr11ce;
 
 osal_sem_t *sem_322ce;
 
+const uint8_t open_door[] = {0x80,0xDD,0x33,0x00,0x03,0x01,0x00,0x02};
+
 const uint8_t test_p2p[] = {0xE0,0xFD,0x00,0x00,0x21,0x08,0xF8,0x19,0x94,0x85,0x3C,0x1D,0xBC,0x72,0xCA,0x6B,0x95,0xA7,0xAE,0xB5,0x6F,0xA8,0x84,0xC9,0x99,0x62,0x50,0x46,0x7F,0x06,0xBD,0x40,0xC4,0xC2,0x24,0x50,0x04,0xE7};
                                             /*0*/   /*1*/   /*2*/   /*3*/   /*4*/
 unsigned char* usb_port_def[MAX_322_NUM] = {"1-1.1","1-1.2","1-1.3","1-1.4","1-1.5"};
 
+unsigned char* test_o = (unsigned char*)"\x00\x22\x00\x00\xBE\x01\xF6\xBA\x57\xB5\x61\xDD\x09\xE4\x39\xCF\x52\x4D\xF1\x6F\x2B\xC8\x04\xC0\xEE\xCB\xC4\x3A\x41\x20\x97\x11\x05\x19\x0F\x0F\x0F\x12\x05\x19\x0F\x0F\x0F\x99\xF0\x8B\xA6\x68\x92\xA0\x4C\xC7\x72\x0A\x4D\xC2\x29\x49\x7D\x81\x6C\x1A\x20\x94\x7A\x2A\xA0\xF2\xDE\xCC\x8E\xC1\x2F\x3D\x1D\x2A\x6E\x2B\x9D\xAF\x19\xD6\x8C\x9D\x23\x06\x28\x0B\x30\xB0\xAB\xDB\xE4\x11\x4A\x28\x2E\x2B\x56\x85\xDE\x4B\x0B\x9A\x35\xFF\xCA\xF4\xB7\x31\x9A\x15\xED\xA0\x47\xDC\x66\x4A\x95\x79\xD7\xFB\x8B\x9C\xF3\x50\x10\xFE\x75\xA4\x6B\xDF\x76\x95\x84\x27\xE9\x1D\xFB\x34\xF4\xE8\x04\x32\xF5\xE3\xB3\xBA\x83\xF2\xEF\x5B\x24\x50\x7D\x4F\x95\x76\x95\x73\x72\x71\xD6\xE9\x0A\x7D\xBF\x5F\xFB\xB6\x8E\xA6\xE3\xE9\xE6\xFC\xF5\x1C\x4A\xE9\x30\xDC\x28\xBF\x57\x87\xE6\x80\x00\x00\x00\xC5\x39\x64\x35";
 
 /*
 * 函数说明: 写二进制文件
@@ -208,6 +211,8 @@ int usb_transmit(void *context, const unsigned char * apdu,
        printf("\n%s Semaphore return failed. \n",usb_322->usb_port);
        return;
     }
+    
+    //print_send(apdu,apdu_len);
     ret = luareader_transmit(context, apdu, apdu_len, resp, max_resp_size,3000);
 
     osal_sem_release(usb_322->sem_322);
@@ -299,7 +304,7 @@ void eg_usb_main_proc(char *data,int len)
  @return  : 
 *****************************************************************************/
 //const uint8_t time_head[] = {0xFC,0xA0,0x00,0x00,0x19,0x80,0x34,0x00,0x00,0x13};
-const uint8_t time_head[] = {0xFC,0xA0,0x00,0x00,0x19,0x80,0x34,0x00,0x00,0x0A};
+const uint8_t time_head[] = {0xFC,0xA0,0x00,0x00,0x0F,0x80,0x34,0x00,0x00,0x0A};
 #if 0
 uint8_t   get_sys_time(unsigned char *time_ptr)//len must be more than 19
 {
@@ -385,7 +390,19 @@ uint8_t   get_sys_time(unsigned char *time_ptr)//len must be more than 19
     time_ptr[sizeof(time_head) + 3] = ((unsigned char)timenow-> tm_year) > 100 ? (unsigned char)timenow-> tm_year - 100:17;
     time_ptr[sizeof(time_head) + 4] = (unsigned char)timenow-> tm_mon + 1;
     time_ptr[sizeof(time_head) + 5] = (unsigned char)timenow-> tm_mday;
-    time_ptr[sizeof(time_head) + 6] = (unsigned char)timenow-> tm_wday;
+    
+    if(timenow-> tm_wday == 0){
+        
+        time_ptr[sizeof(time_head) + 6] = 7;
+        //printf("sunday\n");
+    }
+    else{
+        
+        time_ptr[sizeof(time_head) + 6] = (unsigned char)timenow-> tm_wday;
+        
+        //printf("1-6\n");
+    }
+    
     time_ptr[sizeof(time_head) + 7] = (unsigned char)timenow-> tm_hour;
     time_ptr[sizeof(time_head) + 8] = (unsigned char)timenow-> tm_min;
     time_ptr[sizeof(time_head) + 9] = (unsigned char)timenow-> tm_sec;
@@ -437,6 +454,7 @@ int check_card(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_len)
     int len;
     uint8_t resp_code[] = {0x90,0x00};
     uint8_t resp_code_nocard[] = {0x90,0x01,0x90,0x00};
+    uint8_t resp_code_alarm[] = {0x90,0x01,0x90,0x0A};
     uint8_t alarm_code[] = {0x90,0x0A};
 
     //read_buffer = (unsigned char*)malloc(buffer_len);
@@ -453,6 +471,13 @@ int check_card(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_len)
             //free(read_buffer);
             return 0;
         }
+        if(memcmp(rd_data,resp_code_alarm,sizeof(resp_code_alarm)) == 0){
+            
+            //OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_INFO, "nocard\n");
+            //free(read_buffer);
+            return 2;
+        }
+        
     }
     
 
@@ -484,7 +509,7 @@ int parse_data(unsigned char* rd_data,int buffer_len,unsigned char* wl_data,int 
     int i;
     int ret;
     len = buffer_len;
-
+    struct timeval _start,_end;
     //card id 4Byte 20170531
     unsigned char card_id[4] = {0};
 
@@ -505,7 +530,11 @@ int parse_data(unsigned char* rd_data,int buffer_len,unsigned char* wl_data,int 
     switch(card_event)
     {
         case CARDPOLLEVENT_NO_EVENT:
+
+
+
             
+ #if 1           
             if(len < 64){
 
                 memcpy(card_id,&read_buffer[2],4);
@@ -513,12 +542,24 @@ int parse_data(unsigned char* rd_data,int buffer_len,unsigned char* wl_data,int 
                 printf("card id is \n");
                 print_rec(card_id,4);
                 
+/*
+                gettimeofday( &_start, NULL );
+                printf("start : %d.%d\n", _start.tv_sec, _start.tv_usec);
+*/
+                
                 get_wl_4(card_id,wl_data,wl_len);
+                
+/*
+                gettimeofday( &_end, NULL );
+                printf("end   : %d.%d\n",_end.tv_sec,_end.tv_usec);
+*/
+                
                 printf("wl len is %d\n",*wl_len);
                 print_rec(wl_data,*wl_len);
 
 
             }
+            #endif
             //ret = CARDPOLLEVENT_NO_EVENT;
             break;
 
@@ -710,7 +751,7 @@ int parse_data(unsigned char* rd_data,int buffer_len,unsigned char* wl_data,int 
             break;            
 
         default:
-            OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_WARN, "error data,%d\n",card_event);
+            //OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_WARN, "error data,%d\n",card_event);
             break;
 
     }
@@ -755,6 +796,7 @@ void *eg_usb_thread_entry(void *parameter)
 
     int remote_len;
     int audit_len;
+    int tail_check;
 
     usb_ccid_322_t *p_usb_ccid;
 
@@ -772,6 +814,8 @@ void *eg_usb_thread_entry(void *parameter)
     }
     OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "connect to  %s succeed\n",p_usb_ccid->usb_port);
 
+//    if(strcmp(p_usb_ccid->usb_port,"1-1.3") == 0)
+//        goto out;
     
 while(1){
 
@@ -801,8 +845,12 @@ while(1){
                      
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "send p2pkey\n");
 
-                print_send(&controll_eg.p2pkey.data,controll_eg.p2pkey.len);
-                ret = usb_transmit(context,&controll_eg.p2pkey.data,controll_eg.p2pkey.len,output,sizeof(output),p_usb_ccid);
+                //printf("controll_eg.p2pkey.len is %d\n",controll_eg.p2pkey.len);
+
+                controll_eg.p2pkey.len = controll_eg.p2pkey.len > 64 ? 38:controll_eg.p2pkey.len;
+
+                print_send(controll_eg.p2pkey.data,controll_eg.p2pkey.len);
+                ret = usb_transmit(context,controll_eg.p2pkey.data,controll_eg.p2pkey.len,output,sizeof(output),p_usb_ccid);
                 print_rec(output,ret);
 
                 
@@ -817,9 +865,10 @@ while(1){
                 
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "send MACKEY\n");
                 
-
-                print_send(&controll_eg.mackey.data,controll_eg.mackey.len);
-                ret = usb_transmit(context,&controll_eg.mackey.data,controll_eg.mackey.len,output,sizeof(output),p_usb_ccid);
+                
+                controll_eg.p2pkey.len = controll_eg.mackey.len > 64 ? 37:controll_eg.mackey.len;
+                print_send(controll_eg.mackey.data,controll_eg.mackey.len);
+                ret = usb_transmit(context,controll_eg.mackey.data,controll_eg.mackey.len,output,sizeof(output),p_usb_ccid);
                 print_rec(output,ret);
 
                 
@@ -920,6 +969,9 @@ while(1){
                 print_rec(output,ret + 1);
                 if(ret > 0)
                     ubus_client_process(UBUS_CLIENT_SENDVERSION,NULL,output,ret - 1);
+
+                printf("================find 321 id===============\n");
+                ubus_321_find();
             }
             
             osal_sem_release(p_usb_ccid->sem_state);
@@ -931,10 +983,12 @@ while(1){
             OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "%s init begin\n");
 
 /*
-            OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "%s chane mode\n",p_usb_ccid->usb_port);
+            OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "%s change mode\n",p_usb_ccid->usb_port);
             usb_transmit(context,check,sizeof(check),output,sizeof(output),p_usb_ccid);        
             print_rec(output,ret);
 */
+
+            /*****************************************read 322ce*************************************************/
 
             //read 322 ce
             ret = usb_transmit(context,ce_322,sizeof(ce_322),&output[3],sizeof(output) - 3,p_usb_ccid);
@@ -945,33 +999,79 @@ while(1){
                 memset(output, 0, sizeof(output));
                 ret = luareader_pop_value(context, (char *)output, sizeof(output));
                 printf("luareader_pop_value(%p)=%d(%s)\n", context, ret, output);
-                break;
+                
+                log_message(p_usb_ccid->usb_port,3,"322 ce read error\n");
+                //osal_sem_release(p_usb_ccid->sem_state);
+                //break;
                 
             
+            }else{
+            
+                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "322 ce,len is %d\n",ret - 2);//minus 90 00
+                //print_rec(&output[3],ret);
+                output[0] = p_usb_ccid->ccid322_index + 1;
+                output[1] = (unsigned char)(((ret - 2)&0xFF00)>>8);
+                output[2] = (unsigned char)(((ret - 2)&0x00FF));
+                
+                /* Take the semaphore. */
+                if(osal_sem_take(sem_322ce, OSAL_WAITING_FOREVER) != OSAL_EOK){
+                    
+                    printf("Semaphore return failed. \n");
+                    
+                    //osal_sem_release(p_usb_ccid->sem_state);
+                    //break;
+                }else{
+                    writeFile(CEPATH_322,output,ret - 2 + 3);
+                    osal_sem_release(sem_322ce);
+                    print_rec(output,ret + 3);
+                }
             }
-            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "322 ce,len is %d\n",ret - 2);//minus 90 00
+        /**********************************************pr11 ce**********************************************************/
+        //read pr11 ce
+        #if 0
+        ret = usb_transmit(context,ce_pr11,sizeof(ce_pr11),&output[3],sizeof(output) - 3,p_usb_ccid);
+        
+        if(ret <= 0){
+        
+            
+            memset(output, 0, sizeof(output));
+            ret = luareader_pop_value(context, (char *)output, sizeof(output));
+            printf("luareader_pop_value(%p)=%d(%s)\n", context, ret, output);           
+            log_message(p_usb_ccid->usb_port,3,"pr11 ce read error\n");
+            //osal_sem_release(p_usb_ccid->sem_state);
+            //break;
+            
+        
+        }
+        else{
+            
+            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "pr11 ce,len is %d\n",ret - 4);//minus 90 00
             //print_rec(&output[3],ret);
             output[0] = p_usb_ccid->ccid322_index + 1;
-            output[1] = (unsigned char)(((ret - 2)&0xFF00)>>8);
-            output[2] = (unsigned char)(((ret - 2)&0x00FF));
+            output[1] = (unsigned char)(((ret - 4)&0xFF00)>>8);
+            output[2] = (unsigned char)(((ret - 4)&0x00FF));
             
             /* Take the semaphore. */
-            if(osal_sem_take(sem_322ce, OSAL_WAITING_FOREVER) != OSAL_EOK){
+            if(osal_sem_take(sem_pr11ce, OSAL_WAITING_FOREVER) != OSAL_EOK){
                 
-                printf("Semaphore return failed. \n");
-                return;
+                printf("Semaphore return failed. \n");            
+                //osal_sem_release(p_usb_ccid->sem_state);
+                //break;
             }
-            writeFile(CEPATH_322,output,ret - 2 + 3);
-            osal_sem_release(sem_322ce);
-            print_rec(output,ret + 3);
-
-
+            else{
+                writeFile(CEPATH_PR11,output,ret - 4 + 3);
+                osal_sem_release(sem_pr11ce);
+                print_rec(output,ret + 3);
+            }
+        }
+        #endif
+        /************************************************finish************************************************************/
             p_usb_ccid->init_flag |= INIT_MASK_CE;
             //update_ce();       
             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_SEND_CE,0,0,NULL);
             
             osal_sem_release(p_usb_ccid->sem_state);
-            osal_timer_start(p_usb_ccid->timer_322);//begin to poll,init finished
+            osal_timer_start(p_usb_ccid->timer_322);//begin to poll,init finished  
             //sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_UPDATE_BASECFG,0,0,NULL);
             //p_usb_ccid->usb_state = USB_COMM_STATE_P2P;//USB_COMM_STATE_CFG;//USB_COMM_STATE_P2P;//USB_COMM_STATE_CFG;//USB_COMM_STATE_P2P;
             break;
@@ -992,9 +1092,10 @@ while(1){
             get_sys_time(send_data);
             //x_TransmitApdu_hid_hs(&USB_HID_1,send_data,sizeof(time_head)+20,recv_data,&rec_len,timeout);
            // ret = luareader_transmit(context, send_data, sizeof(time_head)+20, output, sizeof(output));
+           
+            //print_send(send_data,sizeof(time_head)+10);
             ret = usb_transmit(context,send_data,sizeof(time_head)+10,output,sizeof(output),p_usb_ccid);
             OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_TRACE, "push time\n");
-            //print_send(send_data,sizeof(time_head)+10);
             //print_rec(output,ret);
            
             
@@ -1048,9 +1149,11 @@ while(1){
     /***************POLL***************/
             
           //OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "poll start\n");
+            //log_message(p_usb_ccid->usb_port,3,"poll start\n");
           ret = usb_transmit(context,car_detect,sizeof(car_detect),output,sizeof(output),p_usb_ccid);
           //OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "poll end\n");
           //print_rec(output,ret);
+         //log_message(p_usb_ccid->usb_port,3,"poll end\n");
           if(ret < 0){
           
               
@@ -1060,10 +1163,26 @@ while(1){
               
           
           }
-if(check_card(p_usb_ccid,output,ret) == 1){
+/*
+          OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "open\n");
+           ret = usb_transmit(context,test_o,sizeof(test_o),output,sizeof(output),p_usb_ccid);
+           print_rec(output,ret);
+           if(ret < 0){
+           
+               
+               memset(output, 0, sizeof(output));
+               ret = luareader_pop_value(context, (char *)output, sizeof(output));
+               printf("luareader_pop_value(%p)=%d(%s)\n", context, ret, output);
+               
+           
+           }
+*/
+          
+          tail_check = check_card(p_usb_ccid,output,ret);
+          
+if(tail_check == 1){
 
     parse_tag = parse_data(output,ret,acl_data,&acl_len);
-
 
     switch(parse_tag){
 
@@ -1079,6 +1198,8 @@ if(check_card(p_usb_ccid,output,ret) == 1){
                 apud_data[sizeof(result_head)] = 17;
 
                 memcpy(&apud_data[sizeof(result_head) + 1],acl_data,acl_len);
+
+                //print_send(apud_data,sizeof(result_head) + 1 + 17);
                 
                 ret = usb_transmit(context,apud_data,sizeof(result_head) + 1 + 17,output,sizeof(output),p_usb_ccid);
             }
@@ -1101,6 +1222,10 @@ if(check_card(p_usb_ccid,output,ret) == 1){
 
                 print_send(apud_data,sizeof(result_head) + 1 + 17 + 1 + acl_data[207] + 168);
                 
+                //ret = usb_transmit(context,open_door,sizeof(open_door),output,sizeof(output),p_usb_ccid);
+                
+                //print_send(test_o,195);
+                //ret = usb_transmit(context,test_o,195,output,sizeof(output),p_usb_ccid);
                 ret = usb_transmit(context,apud_data,sizeof(result_head) + 1 + 17 + 1 + acl_data[207] + 168,output,sizeof(output),p_usb_ccid);
 
             }           
@@ -1250,8 +1375,15 @@ if(check_card(p_usb_ccid,output,ret) == 1){
     }
 
 }
+else if(tail_check == 2){
+
+    
+
+
+}
 
           /***************POLL  END***************/
+          msleep(30);
 #else
 sleep(2);
 #endif

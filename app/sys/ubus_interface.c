@@ -21,8 +21,8 @@
 
 static struct ubus_context *ctx;
 static struct blob_buf b;
-
-
+unsigned char p2p_buffer[128] = {0};
+unsigned char mac_buffer[128] = {0};
 static long get_file_len(FILE *file)
 {
     long len; 
@@ -180,7 +180,6 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
     unsigned char *data ;
     uint8_t path_name[256];
     blobmsg_parse(fun2_message_parse_policy, __REQ_MAX, tb, blob_data(msg), blob_len(msg));
-    printf("get here\n");
 
     if (!tb[REQ_TAG])
         return UBUS_STATUS_INVALID_ARGUMENT;
@@ -200,6 +199,10 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
 
         printf("get ubus len is %d\n",len);
 
+    for(i = 0; i < len;i++){
+        printf("%02X ",data[i]);
+    }
+    printf("\n");
     }
     }
     if(tb[REQ_STR] != NULL) {
@@ -226,13 +229,18 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
             }   
         }
 #endif
+    memset(p2p_buffer,0,sizeof(p2p_buffer));
+    memset(mac_buffer,0,sizeof(mac_buffer));
     switch(if_tag){
 
         case UBUS_SERVER_P2P:
 
-            controll_eg.p2pkey.data = (unsigned char *)malloc(len);
+            
+            controll_eg.p2pkey.data = p2p_buffer;//(unsigned char *)malloc(len);//p2p_buffer;//(unsigned char *)malloc(len);
             
             controll_eg.p2pkey.len = len;
+
+            //printf("controll_eg.p2pkey.len is %d\n",controll_eg.p2pkey.len);
             
             if(controll_eg.p2pkey.data == NULL){
 
@@ -240,30 +248,39 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
                 break;
             }
             
-            memcpy(&controll_eg.p2pkey.data,data,len);
-
-            
+            memcpy(controll_eg.p2pkey.data,data,len);
+            //printf("controll_eg.p2pkey.len is %d\n",controll_eg.p2pkey.len);
             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_UPDATE_P2PKEY,0,0,NULL);
-            
+            sleep(1);
             break;
         
 
         case UBUS_SERVER_MACKEY:
-            
-            controll_eg.mackey.data = (unsigned char *)malloc(len);
 
-            controll_eg.mackey.len = len;
+            
+            
+            p_controll_eg->mackey.data = mac_buffer;//(unsigned char *)malloc(len);//mac_buffer;//(unsigned char *)malloc(len);
+
+            p_controll_eg->mackey.len = len;
+
+            //printf("controll_eg.mackey.len is %d\n",controll_eg.mackey.len);
 
             if(controll_eg.mackey.data == NULL){
 
                 printf("F[%s] L[%d] malloc failed!!!", __FILE__, __LINE__);
                 break;
             }
-            
-            memcpy(&controll_eg.mackey.data,data,len);
-
+            //printf("%p,%p,%p\n",controll_eg.mackey.data,&controll_eg.mackey.data,mac_buffer);
+            memcpy(controll_eg.mackey.data,data,len);
+/*
+                for(i = 0; i < len;i++){
+        printf("%02X ",mac_buffer[i]);
+    }
+    printf("\n");
+*/
             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_UPDATE_MACKEY,0,0,NULL);
             
+            sleep(1);
             break;
 
 

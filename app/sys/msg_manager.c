@@ -30,6 +30,20 @@ static struct blob_buf b;
 
 static unsigned char ce_send_fg = 0;
 
+uint32_t id_322 = 0;
+
+void ubus_321_find(void)
+{
+
+    if (ubus_lookup_id(ctx, "ubus321", &id_322)) {
+        
+        fprintf(stderr, "Failed to look up test object\n");
+        return;
+    }
+
+
+}
+
 
 enum {
 	RETURN_STATUS,
@@ -163,6 +177,9 @@ void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int st
             break;
 
         case UBUS_CLIENT_GETWLCFG:
+            break;
+
+        case UBUS_CLIENT_GETP2P:
             break;
 
         case UBUS_CLIENT_SENDVERSION:
@@ -369,18 +386,42 @@ static void get_wl_4_cb(struct ubus_request *req,
 #define ID_LEN 4
 void get_wl_4(uint8_t *p_id,uint8_t *data_wl,int *wlen)
 {
+
+
+
 	static struct ubus_request req;
 	uint32_t id;
 	int ret;
     uint8_t id_data[4] = {0};//len = 4
     uint8_t id_len;
-
+    struct timeval _start,_end;
     key_buffer_t wl_buffer;
+    
+/*
+            gettimeofday( &_start, NULL );
+    printf("ubus look start : %d.%d\n", _start.tv_sec, _start.tv_usec);
+*/
+    
+     id = id_322;
 
-	if (ubus_lookup_id(ctx, "ubus321", &id)) {
-		fprintf(stderr, "Failed to look up test object\n");
-		return;
-	}
+    if(id == 0){
+        
+    	if (ubus_lookup_id(ctx, "ubus321", &id)) {
+    		fprintf(stderr, "Failed to look up test object\n");
+    		return;
+    	}
+
+        id_322 = id;
+        
+    }
+
+/*
+        gettimeofday( &_end, NULL );
+    printf("ubus look end    : %d.%d\n",_end.tv_sec,_end.tv_usec);
+        gettimeofday( &_start, NULL );
+    printf("invoke start : %d.%d\n", _start.tv_sec, _start.tv_usec);
+*/
+    
 	blob_buf_init(&b, 0);
 	
 	blobmsg_add_u32(&b, "tag", 0x3001);
@@ -391,14 +432,20 @@ void get_wl_4(uint8_t *p_id,uint8_t *data_wl,int *wlen)
     wl_buffer.data = data_wl;
     
 	blobmsg_add_field(&b, BLOBMSG_TYPE_UNSPEC, "strhex", id_data, ID_LEN);
-    
+
 	int i =	ubus_invoke(ctx, id, "pushdata", b.head, get_wl_4_cb, (void*)&wl_buffer, 3000);
+    
+/*
+    gettimeofday( &_end, NULL );
+    printf("invoke end   : %d.%d\n",_end.tv_sec,_end.tv_usec);
+*/
 
     //data_wl = wl_buffer.data;
     if(wl_buffer.len < *wlen){
         
         memcpy(data_wl,wl_buffer.data,wl_buffer.len);
         *wlen = wl_buffer.len;
+
     }
     else{
 
@@ -406,6 +453,7 @@ void get_wl_4(uint8_t *p_id,uint8_t *data_wl,int *wlen)
     }
 	//printf("%d\n", i);
 	//return ;
+
 }
 
 
@@ -506,6 +554,55 @@ int get_audit_data(unsigned int tag,unsigned char* strhex,int strlen,uint8_t *da
 }
 
 
+static void get_rtc_cb(struct ubus_request *req,
+				    int type, struct blob_attr *msg)
+{
+	struct blob_attr *tb[__RETURN_MAX];
+	int rc;
+	int len;
+    key_buffer_t *wl_lv;
+	blobmsg_parse(return_policy, __RETURN_MAX, tb, blob_data(msg), blob_len(msg));
+    
+	if (!tb[RETURN_STATUS]) {
+		fprintf(stderr, "No return code received from server\n");
+		return;
+	}
+
+    wl_lv = (key_buffer_t *)req->priv;
+        
+	rc = blobmsg_get_u32(tb[RETURN_STATUS]);
+    
+    
+    if(tb[RETURN_STRHEX] != NULL){
+        
+        unsigned char *data = (unsigned char *)blobmsg_data(tb[RETURN_STRHEX]);
+        
+        if(data != NULL){
+
+        
+            len = blobmsg_data_len(tb[RETURN_STRHEX]);
+
+            wl_lv->len = len;
+            
+            memcpy(wl_lv->data,data,len);
+
+           // req->priv = &wl_lv;
+
+        }
+        else{
+
+            printf("rtc return NULL\n");
+
+        }
+    }else{
+
+        printf("rtc str hex is NULL\n");
+    }
+    
+    
+	//fprintf(stderr, "return is %d \n", rc);
+}
+
 
 void ubus_clien_init(void)
 {
@@ -520,6 +617,9 @@ void ubus_clien_init(void)
         fprintf(stderr, "Failed to connect to ubus\n");
         return -1;
     }
+
+
+    //id_322 = 
 
 
     //client_main();
@@ -604,8 +704,12 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
 
             update_ce();
             OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "send 322 ce\n");
+
+            sleep(1);
+            printf("===========request p2p key===============\n");
+            ubus_client_process(UBUS_CLIENT_GETP2P,NULL,NULL,0);
         }
-        
+
 
         break;
 
@@ -620,7 +724,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
                 //break;
             }
             
-        
+
         }
 
         break;
@@ -803,7 +907,7 @@ void msg_manager_init(void)
 
     p_msg->task_msg = osal_task_create("task-msg",
                            msg_thread_entry, p_msg,
-                           LESS_THREAD_STACK_SIZE, RT_SYS_THREAD_PRIORITY);
+                           DEF_THREAD_STACK_SIZE, RT_SYS_THREAD_PRIORITY);
     osal_assert(p_msg->task_msg != NULL);      
 
 }
