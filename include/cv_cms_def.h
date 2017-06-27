@@ -72,6 +72,8 @@ enum SYSTEM_MSG_TYPE{
     SYS_MSG_SEND_CE,
     SYS_MSG_SEND_COSVERSION,
 
+    SYS_MSG_GET_MACKEY,
+
     SYS_MSG_REMOTE_OPEN,
     
     SYS_MSG_UPDATE_MACKEY,    
@@ -261,6 +263,8 @@ typedef enum _UBUS_INTERFACE {
     UBUS_SERVER_READER_CFG = 0x0601,
 
     
+    UBUS_SERVER_UPGRADE_COSVERSION = 0x0026,
+    
     UBUS_SERVER_ALARM = 0x002B,
     
     UBUS_SERVER_REMOTE = 0x0B02,
@@ -278,6 +282,7 @@ typedef enum _UBUS_CLIENT {
     UBUS_CLIENT_GETWLCFG = 0x3002,
 
     UBUS_CLIENT_GETP2P = 0x4003,
+    UBUS_CLIENT_GETMAC = 0x4004,
     
     UBUS_CLIENT_SENDVERSION = 0x4002,
 
@@ -472,6 +477,7 @@ typedef struct _Controller {
 //    unsigned char p2pkey[32];
 /*key*/
 /*alarm*/
+    uint8_t rtc_encrypt[16];
     uint8_t alarm_buffer[64];
     uint8_t remote_buffer[1200];
 /*alarm*/

@@ -329,6 +329,13 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
         case UBUS_SERVER_ALARM_CFG:
             break;
 
+
+
+        case UBUS_SERVER_UPGRADE_COSVERSION:
+            printf("check cos version\n");
+            
+            break;
+
         case UBUS_SERVER_ALARM:
             controll_eg.alarm_buffer[0] = len;
             memcpy(&controll_eg.alarm_buffer[1],data,len);

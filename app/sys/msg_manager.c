@@ -37,7 +37,7 @@ void ubus_321_find(void)
 
     if (ubus_lookup_id(ctx, "ubus321", &id_322)) {
         
-        fprintf(stderr, "Failed to look up test object\n");
+        fprintf(stderr, "Failed to look up ubus321 object\n");
         return;
     }
 
@@ -86,7 +86,7 @@ static void update_mackey(void)
 	int ap_index=2;
 
 	if (ubus_lookup_id(ctx, "ubus322", &id)) {
-		fprintf(stderr, "Failed to look up test object\n");
+		fprintf(stderr, "Failed to look up ubus322 object\n");
 		return;
 	}
 	blob_buf_init(&b, 0);
@@ -109,7 +109,7 @@ static void update_cfg(void)
 	int ap_index=2;
 
 	if (ubus_lookup_id(ctx, "ubus322", &id)) {
-		fprintf(stderr, "Failed to look up test object\n");
+		fprintf(stderr, "Failed to look up ubus322 object\n");
 		return;
 	}
 	blob_buf_init(&b, 0);
@@ -132,7 +132,7 @@ void update_ce(void)
 	int ap_index=2;
 
 	if (ubus_lookup_id(ctx, "pc02nbi", &id)) {
-		fprintf(stderr, "Failed to look up test object\n");
+		fprintf(stderr, "Failed to look up pc02nbi object\n");
 		return;
 	}
 	blob_buf_init(&b, 0);
@@ -163,10 +163,23 @@ void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int st
 
     unsigned char* str_buffer = NULL;
 
-	if (ubus_lookup_id(ctx, "ubus321", &id)) {
-		fprintf(stderr, "Failed to look up ubus321 object\n");
-		return;
-	}
+     id = id_322;
+
+    if(id == 0){
+
+        
+    	if (ubus_lookup_id(ctx, "ubus321", &id)) {
+    		fprintf(stderr, "Failed to look up pc02nbi object\n");
+    		return;
+    	}
+
+        id_322 = id;
+
+        printf("\n===========321id is %d,ubus client=============\n",id);
+        
+    }
+
+    
 	blob_buf_init(&b, 0);
 	
 	blobmsg_add_u32(&b, "tag", tag);
@@ -181,6 +194,10 @@ void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int st
 
         case UBUS_CLIENT_GETP2P:
             break;
+            
+        case UBUS_CLIENT_GETMAC:
+            break;
+            
 
         case UBUS_CLIENT_SENDVERSION:
             str_buffer = (unsigned char*)malloc(strlen);
@@ -220,7 +237,7 @@ void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strle
     unsigned char* str_buffer = NULL;
 
 	if (ubus_lookup_id(ctx, "pc02nbi", &id)) {
-		fprintf(stderr, "Failed to look up test object\n");
+		fprintf(stderr, "Failed to look up pc02nbi object\n");
 		return;
 	}
 
@@ -321,7 +338,7 @@ void get_wl(uint8_t *id_lv,uint8_t *data_wl,int *wlen)
     *wlen = wl_buffer.len;
 
 	if (ubus_lookup_id(ctx, "ubus321", &id)) {
-		fprintf(stderr, "Failed to look up test object\n");
+		fprintf(stderr, "Failed to look up ubus321 object\n");
 		return;
 	}
 	blob_buf_init(&b, 0);
@@ -405,13 +422,16 @@ void get_wl_4(uint8_t *p_id,uint8_t *data_wl,int *wlen)
      id = id_322;
 
     if(id == 0){
+
         
     	if (ubus_lookup_id(ctx, "ubus321", &id)) {
-    		fprintf(stderr, "Failed to look up test object\n");
+    		fprintf(stderr, "Failed to look up ubus321 object\n");
     		return;
     	}
 
         id_322 = id;
+
+        printf("\n===========321id is %d,get wl=============\n",id);
         
     }
 
@@ -560,7 +580,7 @@ static void get_rtc_cb(struct ubus_request *req,
 	struct blob_attr *tb[__RETURN_MAX];
 	int rc;
 	int len;
-    key_buffer_t *wl_lv;
+    uint8_t *rtc_data;
 	blobmsg_parse(return_policy, __RETURN_MAX, tb, blob_data(msg), blob_len(msg));
     
 	if (!tb[RETURN_STATUS]) {
@@ -568,7 +588,7 @@ static void get_rtc_cb(struct ubus_request *req,
 		return;
 	}
 
-    wl_lv = (key_buffer_t *)req->priv;
+    rtc_data = (uint8_t *)req->priv;
         
 	rc = blobmsg_get_u32(tb[RETURN_STATUS]);
     
@@ -582,9 +602,16 @@ static void get_rtc_cb(struct ubus_request *req,
         
             len = blobmsg_data_len(tb[RETURN_STRHEX]);
 
-            wl_lv->len = len;
-            
-            memcpy(wl_lv->data,data,len);
+            if(len > 16){
+                
+                printf("error:F[%s] L[%d],len is %d\n", __FILE__, __LINE__,len);
+
+                len = 16;
+
+            }
+
+                            
+            memcpy(rtc_data,data,len);
 
            // req->priv = &wl_lv;
 
@@ -594,7 +621,8 @@ static void get_rtc_cb(struct ubus_request *req,
             printf("rtc return NULL\n");
 
         }
-    }else{
+    }
+    else{
 
         printf("rtc str hex is NULL\n");
     }
@@ -603,7 +631,41 @@ static void get_rtc_cb(struct ubus_request *req,
 	//fprintf(stderr, "return is %d \n", rc);
 }
 
+int get_rtc_data(uint8_t *data_rtc)
+{
+	static struct ubus_request req;
+	uint32_t id;
+	int ret;
 
+    
+    id = id_322;
+
+    if(id == 0){
+
+        
+    	if (ubus_lookup_id(ctx, "ubus321", &id)) {
+    		fprintf(stderr, "Failed to look up ubus321 object\n");
+    		return;
+    	}
+
+        id_322 = id;
+
+        printf("\n===========321id is %d,get wl=============\n",id);
+        
+    }
+    
+
+	blob_buf_init(&b, 0);
+	
+	blobmsg_add_u32(&b, "tag", UBUS_CLIENT_GETRTC);
+    
+    
+	//blobmsg_add_field(&b, BLOBMSG_TYPE_UNSPEC, "strhex", NULL, 0);
+    
+	int i =	ubus_invoke(ctx, id, "pushdata", b.head, get_rtc_cb, (void*)data_rtc, 3000);
+    
+	return 0 ;
+}
 void ubus_clien_init(void)
 {
 
@@ -706,6 +768,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
             OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "send 322 ce\n");
 
             sleep(1);
+            
             printf("===========request p2p key===============\n");
             ubus_client_process(UBUS_CLIENT_GETP2P,NULL,NULL,0);
         }
@@ -746,6 +809,9 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
         break;
             
     case SYS_MSG_UPDATE_P2PKEY:
+
+        printf("================find 321 id===============\n");
+        ubus_321_find();
         
         for(i = 0;i < MAX_322_NUM;i++ ){
         

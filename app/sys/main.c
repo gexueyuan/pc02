@@ -26,7 +26,10 @@
 
 #include "queue_msg.h"
 
-#define FIRMWARE_VERSION "V2.0.000" 
+#define RELEASE
+
+#define FIRMWARE_VERSION "V1.0.1" 
+
 #ifdef RELEASE
 #define FIRMWARE_IDEN "rel" 
 #else
@@ -52,7 +55,16 @@ eg_global_var_t eg_envar,*p_eg_envar;
 
 Controller_t controll_eg,*p_controll_eg;
 
+unsigned char _version[200];
 
+void get_version(void)
+{
+  osal_printf("\nPC02322 ver: %s[%s,%s %s]\n\n", FIRMWARE_VERSION, FIRMWARE_IDEN, __TIME__, __DATE__);
+
+  sprintf(_version,"PC02322 ver: %s[%s,%s %s]",FIRMWARE_VERSION, FIRMWARE_IDEN, __TIME__, __DATE__);
+}
+
+    
 void global_init(void)
 {
     p_eg_envar = &eg_envar;
@@ -67,14 +79,25 @@ void global_init(void)
     system("rm -rf /tmp/322ce");
 
     system("mkdir /tmp/322ce");
+
     
-    
+    get_version();
 }
+
 
 int main(int argc, char *argv[])
 {
 //    system("./hostapd -d /etc/hostapd.conf -B");
     global_init();
+
+    if (argc > 1 && !strcmp(argv[1], "-v")){
+        
+        //printf("\n%s\n",_version);
+        return 0;
+        
+    }
+
+
     ubus_interface_init();
     msg_manager_init();
     eg_usbto322_init();
@@ -96,10 +119,5 @@ int main(int argc, char *argv[])
         //eg_tcp_client();  
         //test();
     }
-}
-
-void get_version(void)
-{
-  osal_printf("\nFirm: %s[%s,%s %s]\n\n", FIRMWARE_VERSION, FIRMWARE_IDEN, __TIME__, __DATE__);
 }
 

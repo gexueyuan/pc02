@@ -33,7 +33,7 @@ OSAL_DEBUG_ENTRY_DEFINE(eg_usbto322);
 
 #define USB_FAILED    0x6E00
 #define USB_OK        0x9000 
-#define EUSB_SEND_PERIOD  500 
+#define EUSB_SEND_PERIOD  6000 
 
 
 
@@ -50,6 +50,9 @@ extern   void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,
 extern     void update_ce(void);
 
 extern    void send_log(unsigned char* log_buffer,int len);
+
+extern int get_rtc_data(uint8_t *data_rtc);
+
 const static int TIMEOUT=1000; /* timeout in ms */  
 
 
@@ -107,6 +110,8 @@ const uint8_t basecfg_head[] = {0x00,0x25,0x00,0x00};//+len+data
 const uint8_t ctlcfg_head[] = {0x00,0x29,0x00,0x00};//+len+data
 
 const uint8_t result_head[] = {0x00,0x22,0x00,0x00};//+len+data
+
+const uint8_t alarm322_head[] = {0x00,0x23,0x00,0x00,0x10};//+len+data
 
 const uint8_t alarm_op_head[] = {0x00,0x2B,0x00,0x00};//len + data
 
@@ -456,6 +461,7 @@ int check_card(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_len)
     uint8_t resp_code_nocard[] = {0x90,0x01,0x90,0x00};
     uint8_t resp_code_alarm[] = {0x90,0x01,0x90,0x0A};
     uint8_t alarm_code[] = {0x90,0x0A};
+    uint8_t wg_error[] = {0x93,0x01};
 
     //read_buffer = (unsigned char*)malloc(buffer_len);
 
@@ -479,8 +485,16 @@ int check_card(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_len)
         }
         
     }
-    
 
+    if(buffer_len == 2){
+        if(memcmp(rd_data,wg_error,sizeof(wg_error)) == 0){
+            
+            OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_INFO, "wg error 9301\n");
+            //free(read_buffer);
+            return -3;
+        }
+    }
+    
     if(buffer_len < 5){
 
         //OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_INFO, "reader return short\n");
@@ -767,7 +781,7 @@ end:
 
 unsigned char lu_test[] = {0x00,0x84,0x00,0x00,0x08};
 volatile  int cnt = 0;
-volatile static uint8_t sw_version = 0;
+volatile  uint8_t sw_version = 0;
 
 /*****************************************************************************
  @funcname: eg_usb_thread_entry
@@ -797,8 +811,14 @@ void *eg_usb_thread_entry(void *parameter)
     int remote_len;
     int audit_len;
     int tail_check;
+    unsigned char rtc[16] = {0};
 
     usb_ccid_322_t *p_usb_ccid;
+
+    /**test**/
+    
+    struct timeval _start,_end;
+    /**test**/
 
     p_usb_ccid = (usb_ccid_322_t*)parameter;
     
@@ -816,6 +836,8 @@ void *eg_usb_thread_entry(void *parameter)
 
 //    if(strcmp(p_usb_ccid->usb_port,"1-1.3") == 0)
 //        goto out;
+    
+    //sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_INFO_PUSH,0,p_usb_ccid->ccid322_index,NULL);
     
 while(1){
 
@@ -970,8 +992,10 @@ while(1){
                 if(ret > 0)
                     ubus_client_process(UBUS_CLIENT_SENDVERSION,NULL,output,ret - 1);
 
-                printf("================find 321 id===============\n");
-                ubus_321_find();
+                //printf("================find 321 id===============\n");
+                //ubus_321_find();
+                printf("================push time===============\n");
+                sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_INFO_PUSH,0,p_usb_ccid->ccid322_index,NULL);
             }
             
             osal_sem_release(p_usb_ccid->sem_state);
@@ -1209,8 +1233,8 @@ if(tail_check == 1){
                 
                 apud_data[sizeof(result_head)] = 17 + 1 + acl_data[207] + 168;//len
 
-                printf("data len is %d\n",apud_data[sizeof(result_head)]);
-                
+                //printf("data len is %d\n",apud_data[sizeof(result_head)]);
+                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "data len is %d\n",apud_data[sizeof(result_head)]);
 
                 memcpy(&apud_data[sizeof(result_head) + 1],acl_data,17);//result:1 + RTC:16
 
@@ -1236,7 +1260,19 @@ if(tail_check == 1){
                 
                 log_len = ret - 2;
                 memcpy(log_data,output,log_len);
+                
+/*
+                gettimeofday( &_start, NULL );
+                printf("start : %d.%d\n", _start.tv_sec, _start.tv_usec);
+*/
+                
                 ubus_client_process(UBUS_CLIENT_LOG,NULL,log_data,log_len);
+                
+/*
+                gettimeofday( &_end, NULL );
+                printf("start : %d.%d\n", _end.tv_sec, _end.tv_usec);
+*/
+                
             }
 
             break;
@@ -1378,7 +1414,25 @@ if(tail_check == 1){
 else if(tail_check == 2){
 
     
+    get_rtc_data(rtc);
+    
+    OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "\nget 322 alarm,send rtc encrypt:\n");
 
+
+    
+    memcpy(apud_data,alarm322_head,sizeof(alarm322_head));
+    memcpy(apud_data[sizeof(alarm322_head)],rtc,sizeof(rtc));
+    print_send(apud_data,sizeof(alarm322_head) + sizeof(rtc));
+    ret = usb_transmit(context,apud_data,sizeof(alarm322_head) + sizeof(rtc),output,sizeof(output),p_usb_ccid);
+
+    
+    OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "\nget 322 alarm log:\n");
+    
+    print_rec(output,ret);
+
+    
+    ubus_net_process(UBUS_CLIENT_SEND_ALARM,NULL,output,ret - 2);
+    
 
 }
 
@@ -1408,7 +1462,7 @@ uint8_t usb_wb;
 
 void timer_usb_callback(void* parameter)
 {
-
+    unsigned char rtc[16];
     usb_ccid_322_t *p_usb_timer = (usb_ccid_322_t *)parameter;
     
     //printf("timer in port %s,index is %d\n",p_usb_timer->usb_port,p_usb_timer->ccid322_index);
@@ -1416,12 +1470,18 @@ void timer_usb_callback(void* parameter)
    // if(p_usb_timer->toggle_ubus == 0xAA){
 
         
-        if(p_usb_timer->toggle >= 100){
+        if(p_usb_timer->toggle >= 10){
 
             p_usb_timer->toggle = 0;
             //p_usb_timer->usb_state = USB_COMM_STATE_PUSH;
             //printf("push index %d\n",p_usb_timer->ccid322_index);
             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_INFO_PUSH,0,p_usb_timer->ccid322_index,NULL);
+
+/*
+                get_rtc_data(rtc);
+
+                print_rec(rtc,16);
+*/
 
         }
         else{
