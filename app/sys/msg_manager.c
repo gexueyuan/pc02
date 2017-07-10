@@ -29,7 +29,7 @@ static struct ubus_context *ctx;
 static struct blob_buf b;
 
 static unsigned char ce_send_fg = 0;
-
+static unsigned char info_send_fg = 0;
 uint32_t id_322 = 0;
 
 void ubus_321_find(void)
@@ -169,7 +169,7 @@ void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int st
 
         
     	if (ubus_lookup_id(ctx, "ubus321", &id)) {
-    		fprintf(stderr, "Failed to look up pc02nbi object\n");
+    		fprintf(stderr, "Failed to look up 321 object\n");
     		return;
     	}
 
@@ -259,6 +259,11 @@ void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strle
             break;
 
         case UBUS_CLIENT_LOG:
+            str_buffer = (unsigned char*)malloc(strlen);
+            memcpy(str_buffer,strhex,strlen);
+            break;
+
+        case UBUS_CLIENT_SEND_DOOR_INFO:
             str_buffer = (unsigned char*)malloc(strlen);
             memcpy(str_buffer,strhex,strlen);
             break;
@@ -724,10 +729,10 @@ int state_alternate(E_USB_COMM_STATE state_d,usb_ccid_322_t * ccid)
         printf("Semaphore return failed. \n");
         return -1;
     }
-
+    //printf("state before\n");
     ccid->usb_state = state_d;
     ccid->toggle_state = 0xAA;
-
+    //printf("state after\n");
     return 0;
 }
 
@@ -738,22 +743,27 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
 
     uint32_t type = 0; 
     int i;
+    unsigned char door_state[2];
     //msg_manager_t *p_sys = &p_controll_eg->msg_manager;
     
     switch(p_msg->id){
         
     case SYS_MSG_INITED:
-        
-        for(i = 0;i < MAX_322_NUM;i++ ){
-        
-            if(controll_eg.usb_ccid_322[i].ccid322_exist){
 
-                
-                state_alternate(USB_COMM_STATE_INIT,&controll_eg.usb_ccid_322[i]);
-            }
-            
-        
-        }
+       // sleep(5);
+//        
+//        for(i = 0;i < MAX_322_NUM;i++ ){
+//        
+//            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+
+//                //printf("init %d,ccid is %x\n",i,&controll_eg.usb_ccid_322[i]);
+//                state_alternate(USB_COMM_STATE_INIT,&controll_eg.usb_ccid_322[i]);
+//            }
+//            
+//        
+//        }
+       // sleep(1);
+        state_alternate(USB_COMM_STATE_INIT,&controll_eg.usb_ccid_322[p_msg->argc]);
         OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "%s: initialize complete\n", __FUNCTION__);
 
         break;
@@ -775,6 +785,33 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
 
 
         break;
+
+
+    case SYS_MSG_SEND_DRSTATE:
+
+        memcpy(door_state,p_msg->argv,2);
+        OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "send door state:%d,%d\n",door_state[0],door_state[1]);
+        ubus_net_process(UBUS_CLIENT_SEND_DOOR_INFO,NULL,door_state,2);
+
+        break;
+
+/*
+    case SYS_MSG_SEND_CTRLINFO:
+        
+        info_send_fg++;
+        
+        if(info_send_fg >= p_controll_eg->cnt_322){
+
+            update_ce();
+            OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "send ctrl info\n");
+
+            sleep(1);
+            
+        }
+
+
+        break;
+*/
 
     case SYS_MSG_SEND_COSVERSION:
         

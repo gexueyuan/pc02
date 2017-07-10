@@ -9,7 +9,7 @@
            2017-4-28    gexueyuan    Created file
            ...
 ******************************************************************************/
-
+#if 0
 
 #include <sys/time.h>
 #include <unistd.h>
@@ -67,7 +67,7 @@ int cfg_door_base(char *filename,int no)
 
     file_len = get_file_len(fd);
     
-    p_cfg = &controll_eg.door_cfg[no];
+    //p_cfg = &controll_eg.door_cfg[no];
 
 //    for(i = READER1_CFG;i < READER8_CFG; i++ ){
 //               
@@ -97,7 +97,7 @@ int cfg_time(unsigned char *filename)
     char cmd[200];
     long file_len;
     short type,length;
-    config_door_t *p_door_cfg;// = &p_controll_eg->door_cfg;
+   // config_door_t *p_door_cfg;// = &p_controll_eg->door_cfg;
 
     uint8_t door_no = 0;
     uint16_t time_buffer_len = 0xffff;
@@ -145,7 +145,7 @@ int cfg_time(unsigned char *filename)
 
     tlv_box_get_char(box,TIME_CFG_DOOR_NO,&door_no);
 
-    p_door_cfg = &p_controll_eg->door_cfg[door_no];
+   // p_door_cfg = &p_controll_eg->door_cfg[door_no];
 
 
 
@@ -222,4 +222,4 @@ int cfg_reader_RD(char *filename)
 
     return 1;
 }
-
+#endif

@@ -283,7 +283,22 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
             sleep(1);
             break;
 
+        case UBUS_SERVER_TMSYNC:
+            printf("================sync  time===============\n");
 
+            for(i = 0;i < MAX_322_NUM;i++ ){
+            
+                if(controll_eg.usb_ccid_322[i].ccid322_exist){
+
+                   sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_INFO_PUSH,0,controll_eg.usb_ccid_322[i].ccid322_index,NULL);
+                    
+                   // state_alternate(USB_COMM_REMOTE_OPEN,&controll_eg.usb_ccid_322[i]);
+                    //break;
+                }
+                
+            
+            }
+            break;
             
         case UBUS_SERVER_BASE_CFG:
 
@@ -360,7 +375,7 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
             controll_eg.remote_buffer[0] = (unsigned char)((len&0xFF00)>>8);
             controll_eg.remote_buffer[1] = (unsigned char)(len&0x00FF);
 
-            printf("len is %d,buffer[0]:%d\n",sizeof(p_controll_eg->remote_buffer));
+            //printf("len is %d,buffer[0]:%d,buffer[1]:%d\n",len,p_controll_eg->remote_buffer[0],p_controll_eg->remote_buffer[1]);
             
             memcpy(&controll_eg.remote_buffer[2],data,len);
 

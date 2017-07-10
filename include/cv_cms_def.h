@@ -70,6 +70,8 @@ enum SYSTEM_MSG_TYPE{
     SYS_MSG_INFO_PUSH,
 
     SYS_MSG_SEND_CE,
+    SYS_MSG_SEND_DRSTATE,
+    SYS_MSG_SEND_CTRLINFO,
     SYS_MSG_SEND_COSVERSION,
 
     SYS_MSG_GET_MACKEY,
@@ -83,13 +85,7 @@ enum SYSTEM_MSG_TYPE{
     SYS_MSG_UPDATE_ALERTCFG,    
     SYS_MSG_UPDATE_READERCFG,    
     
-    SYS_MSG_STOP_ALERT,
     SYS_MSG_ALARM_ACTIVE,
-    SYS_MSG_ALARM_CANCEL,
-    SYS_MSG_GPS_UPDATE,
-    SYS_MSG_BSM_UPDATE,
-    SYS_MSG_HI_IN_UPDATE,
-    SYS_MSG_HI_OUT_UPDATE,
     SYS_MSG_XXX,
 };
 
@@ -226,6 +222,7 @@ typedef enum _USB_COMM_STATE {
     USB_COMM_STATE_MACKEY,
     USB_COMM_STATE_P2P,
     USB_COMM_STATE_VERSION,
+    USB_COMM_CTRL_INFO,
 
     USB_COMM_ALARM_OPEN,
     USB_COMM_REMOTE_OPEN,
@@ -257,6 +254,7 @@ typedef enum _UBUS_INTERFACE {
     
     UBUS_SERVER_MACKEY = 0x0101,
     UBUS_SERVER_P2P = 0x0102,
+    UBUS_SERVER_TMSYNC = 0x0103,
     UBUS_SERVER_BASE_CFG = 0x0201,
     UBUS_SERVER_TIME_CFG = 0x0301,
     UBUS_SERVER_ALARM_CFG = 0x0401,
@@ -294,6 +292,8 @@ typedef enum _UBUS_CLIENT {
 
 
     UBUS_CLIENT_SEND_ALARM = 0x9002,
+
+    UBUS_CLIENT_SEND_DOOR_INFO = 0x9003,
 } E_UBUS_CLIENT;
 
 
@@ -325,6 +325,7 @@ typedef enum _INIT_MASK {
 
 #define CEPATH_PR11 "/tmp/322ce/pr11ce"
 #define CEPATH_322 "/tmp/322ce/322ce"
+#define CEPATH_CTRLINFO "/tmp/322ce/controller_info"
 #define msleep(n) usleep(n*1000)
 typedef struct _key_buffer {
     int len;
@@ -415,18 +416,23 @@ typedef struct _pr11 {
 typedef struct _usb_ccid_322 {
 
     uint8_t ccid322_exist;
-    uint8_t pr11_exist;/*0= no exist, 1= exist*/
-    unsigned char usb_port[16];
-    uint8_t ccid322_index;
-    uint8_t door_cfg_index;
+    uint8_t door_index;/*0= no exist, 1= exist*/
+    uint8_t ccid322_index;    
     uint8_t init_flag;//init mask
+    unsigned char usb_port[16];
+    unsigned char pid_322[4];
+    unsigned char sn_pr11[16];
+    unsigned char pid_pr11[4];
+    uint8_t  now_door_state[2];
+    uint8_t  pre_door_state[2];  
+    
     
     /*state machine*/
     E_USB_COMM_STATE usb_state;
     uint8_t toggle_state;
     uint8_t  toggle;
     uint8_t toggle_transmit;
-    uint8_t toggle_ubus;
+    uint8_t toggle_alarm;
     /**/
     
     /*os task start*/
@@ -458,7 +464,7 @@ typedef struct _msg_manager {
 typedef struct _Controller {
 
 /*322 obj */
-    usb_ccid_322_t usb_ccid_322[MAX_322_NUM];
+    usb_ccid_322_t usb_ccid_322[MAX_322_NUM + 1];
     uint8_t cnt_322;
     msg_manager_t msg_manager;
 
@@ -467,14 +473,7 @@ typedef struct _Controller {
 /*key*/
     key_buffer_t mackey;
     key_buffer_t p2pkey;
-
-
-    key_buffer_t basecfg;
-    key_buffer_t ctlcfg;
-    
-
-//    unsigned char mackey[5];
-//    unsigned char p2pkey[32];
+   
 /*key*/
 /*alarm*/
     uint8_t rtc_encrypt[16];
@@ -482,7 +481,8 @@ typedef struct _Controller {
     uint8_t remote_buffer[1200];
 /*alarm*/
 /*cfg*/
-    config_door_t door_cfg[4];
+    key_buffer_t basecfg;
+    key_buffer_t ctlcfg;
     reader_cfg_t reader_cfg[8];
     uint8_t sys_ctrl;
     uint8_t legacy_WG;
