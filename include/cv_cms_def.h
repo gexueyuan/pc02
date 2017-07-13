@@ -262,6 +262,9 @@ typedef enum _UBUS_INTERFACE {
 
     
     UBUS_SERVER_UPGRADE_COSVERSION = 0x0026,
+
+    
+    UBUS_SERVER_CLEAR_ALARM = 0x0023,
     
     UBUS_SERVER_ALARM = 0x002B,
     

@@ -525,12 +525,15 @@ int check_card(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_len)
         return -2;
     }
 
+/*
     if((memcmp(&rd_data[buffer_len - 2],resp_code,2)) ||
         (memcmp(&rd_data[buffer_len - 4],resp_code,2))){
         //OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "reader return error\n");
+        //sleep(1);
         //free(read_buffer);
         return -1;
     }
+*/
     //free(read_buffer);
     return 1;
 
@@ -1332,7 +1335,7 @@ while(1){
             //log_message(p_usb_ccid->usb_port,3,"poll start\n");
           ret = usb_transmit(context,car_detect,sizeof(car_detect),output,sizeof(output),p_usb_ccid);
           //OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "poll end\n");
-          //print_rec(output,ret);
+          print_rec(output,ret);
          //log_message(p_usb_ccid->usb_port,3,"poll end\n");
           if(ret < 0){
           
@@ -1570,6 +1573,7 @@ if(tail_check == 1){
 else if(tail_check == 2){
 
     
+/*
     get_rtc_data(rtc);
     
     OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "\nget 322 alarm,send rtc encrypt:\n");
@@ -1588,6 +1592,7 @@ else if(tail_check == 2){
 
     
     ubus_net_process(UBUS_CLIENT_SEND_ALARM,NULL,output,ret - 2);
+*/
     
 
 }
