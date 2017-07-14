@@ -525,7 +525,7 @@ int check_card(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_len)
         return -2;
     }
 
-/*
+/*添加900A以后,这个字段9000或者900A都是正确的，以后不予判断
     if((memcmp(&rd_data[buffer_len - 2],resp_code,2)) ||
         (memcmp(&rd_data[buffer_len - 4],resp_code,2))){
         //OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "reader return error\n");
@@ -1335,7 +1335,7 @@ while(1){
             //log_message(p_usb_ccid->usb_port,3,"poll start\n");
           ret = usb_transmit(context,car_detect,sizeof(car_detect),output,sizeof(output),p_usb_ccid);
           //OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "poll end\n");
-          print_rec(output,ret);
+          //print_rec(output,ret);
          //log_message(p_usb_ccid->usb_port,3,"poll end\n");
           if(ret < 0){
           
