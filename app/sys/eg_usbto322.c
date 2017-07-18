@@ -1335,7 +1335,7 @@ while(1){
             //log_message(p_usb_ccid->usb_port,3,"poll start\n");
           ret = usb_transmit(context,car_detect,sizeof(car_detect),output,sizeof(output),p_usb_ccid);
           //OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "poll end\n");
-          print_rec(output,ret);
+          //print_rec(output,ret);
          //log_message(p_usb_ccid->usb_port,3,"poll end\n");
           if(ret < 0){
           

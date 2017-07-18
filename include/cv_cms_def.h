@@ -226,6 +226,8 @@ typedef enum _USB_COMM_STATE {
 
     USB_COMM_ALARM_OPEN,
     USB_COMM_REMOTE_OPEN,
+
+    USB_COMM_ID_READ,
     
 } E_USB_COMM_STATE;
 
@@ -437,6 +439,11 @@ typedef struct _usb_ccid_322 {
     uint8_t toggle_transmit;
     uint8_t toggle_alarm;
     /**/
+
+    /*zmq start*/
+    void *context;
+    void *requester;
+    /*zmq start*/
     
     /*os task start*/
     osal_task_t   *task_322;
