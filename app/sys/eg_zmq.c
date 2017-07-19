@@ -21,6 +21,8 @@
 #define ZMQ_3 18903
 #define ZMQ_4 18904
 
+#define R_BUFFER 2048
+
 #define ZMQ_THREAD_STACK_SIZE   (256*1024)
 
 unsigned char* zmq_tk[] = {"zmq-1","zmq-2","zmq-3","zmq-4"};
@@ -47,43 +49,66 @@ int zmq_pc02 (void)
 
 void *eg_zmq_thread_entry(void *parameter)
 {
-
+    int ret = 0;
     usb_ccid_322_t *p_zmq_322;
 
     unsigned char buffer[2048];
     /* Create an empty ?MQ message */
     zmq_msg_t msg;
-    int rc = zmq_msg_init (&msg);
+    //int rc = zmq_msg_init (&msg);
     //assert (rc == 0);
 
+
+    
     p_zmq_322 = (usb_ccid_322_t*)parameter;
 
-    p_zmq_322->context = zmq_ctx_new ();
-    p_zmq_322->requester = zmq_socket (p_zmq_322->context, ZMQ_REQ);
-    zmq_connect (p_zmq_322->requester, "tcp://localhost:18901");
+    printf("zmq is %p\n",p_zmq_322);
 
+    
+    int rc =  zmq_msg_init_size(&msg,R_BUFFER);
+    p_zmq_322 = (usb_ccid_322_t*)parameter;
 
+    p_zmq_322->context = zmq_ctx_new ();   
+    printf("zmq ctx is %p\n",p_zmq_322->context);
+
+    
+    p_zmq_322->requester = zmq_socket (p_zmq_322->context, ZMQ_REQ);   
+    printf("zmq req is %p\n",p_zmq_322->requester);
+    
+    rc = zmq_connect (p_zmq_322->requester, "tcp://localhost:18901");
+
+    printf("zmq connect is %d\n",rc);
+    if(rc != 0){
+
+        printf("zmq connect eror!\n");
+        goto clear;
+
+    }
         //zmq_send (p_zmq_322->requester, "Hello", 5, 0);
         //zmq_recv (p_zmq_322->requester, buffer, 10, 0);
 
     while(1){
 
         
-/*
-        zmq_recv (p_zmq_322->requester, buffer, 10, 0);
-        printf("no-block\n");
-*/
-        
+        ret = zmq_recv (p_zmq_322->requester, buffer, 10, 0);
+        printf("no-block,ret is %d\n",ret);
+
+        if(ret == -1){
+            
+            printf("error: %s\n", strerror(errno));
+            sleep(5);
+            
+        }
         /* Block until a message is available to be received from socket */
-        rc = zmq_msg_recv (&msg, p_zmq_322->requester, 0);
+        //rc = zmq_msg_recv (&msg, p_zmq_322->requester, 0);
         //assert (rc != -1);
         
-        printf("no-block\n");
+        //printf("no-block\n");
 
 
     }
 
-
+clear:
     /* Release message */
     zmq_msg_close (&msg);
     zmq_close (p_zmq_322->requester);
