@@ -14,12 +14,8 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "cv_cms_def.h"
-
-
-#define ZMQ_1 18901
-#define ZMQ_2 18902
-#define ZMQ_3 18903
-#define ZMQ_4 18904
+#include "libzmqtools.h"
+#include "libtlv.h"
 
 #define R_BUFFER 2048
 
@@ -46,72 +42,94 @@ int zmq_pc02 (void)
     zmq_ctx_destroy (context);
     return 0;
 }
+		
+static unsigned short msg_parse_packet(char *recv_buf, int recv_len, char *send_buf, int *send_len)
+{		
+	int  rc;
+	int  tmp_len;
+	int  timeout;
+	int  socket_fd;
+	unsigned short tran_code = 0;
+	
+	//获取交易码
+	iFindTlvList(recv_buf, recv_len, TLV_RD_BEGIN, TLV_TYPE_16, (unsigned char *)&tran_code, &tmp_len);
 
+	
+	return tran_code;
+}
 void *eg_zmq_thread_entry(void *parameter)
 {
-    int ret = 0;
+    //int ret = 0;
+    unsigned short ret;
     usb_ccid_322_t *p_zmq_322;
+	int  rc = 0;
+	int  timeout = 0;
+
+	char recv_buf[MAX_BUF_LEN];
+	int  recv_len = 0;
+	char send_buf[MAX_BUF_LEN];
+	int  send_len = 0;
+    
 
     unsigned char buffer[2048];
     /* Create an empty ?MQ message */
-    zmq_msg_t msg;
-    //int rc = zmq_msg_init (&msg);
-    //assert (rc == 0);
-
-
     
     p_zmq_322 = (usb_ccid_322_t*)parameter;
 
-    printf("zmq is %p\n",p_zmq_322);
-
+	p_zmq_322->context = zmq_ctx_new();
     
-    int rc =  zmq_msg_init_size(&msg,R_BUFFER);
-    p_zmq_322 = (usb_ccid_322_t*)parameter;
+	p_zmq_322->zmq_server = zmq_socket_new_dealer_svr(p_zmq_322->context, ZMQ_SERVER_1);
+	
+	p_zmq_322->zmq_client = zmq_socket_new_dealer(p_zmq_322->context, ZMQ_CLI_1);
 
-    p_zmq_322->context = zmq_ctx_new ();   
-    printf("zmq ctx is %p\n",p_zmq_322->context);
-
+	zmq_pollitem_t pollitems[1];
+	
+	memset(pollitems, 0, sizeof(pollitems));
+	pollitems[0].socket = p_zmq_322->zmq_server;  
+	pollitems[0].events = ZMQ_POLLIN;
+      
+    //接收消息
+    timeout = -1;//block
     
-    p_zmq_322->requester = zmq_socket (p_zmq_322->context, ZMQ_REQ);   
-    printf("zmq req is %p\n",p_zmq_322->requester);
-    
-    rc = zmq_connect (p_zmq_322->requester, "tcp://localhost:18901");
-
-    printf("zmq connect is %d\n",rc);
-    if(rc != 0){
-
-        printf("zmq connect eror!\n");
-        goto clear;
-
-    }
-        //zmq_send (p_zmq_322->requester, "Hello", 5, 0);
-        //zmq_recv (p_zmq_322->requester, buffer, 10, 0);
-
     while(1){
-
+       
+        rc = zmq_poll(pollitems, 1, timeout);
         
-        ret = zmq_recv (p_zmq_322->requester, buffer, 10, 0);
-        printf("no-block,ret is %d\n",ret);
-
-        if(ret == -1){
-            
-            printf("error: %s\n", strerror(errno));
-            sleep(5);
-            
+        if(rc <= 0) {
+            timeout = -1;
+            continue;
         }
-        /* Block until a message is available to be received from socket */
-        //rc = zmq_msg_recv (&msg, p_zmq_322->requester, 0);
-        //assert (rc != -1);
-        
-        //printf("no-block\n");
+
+        //zmq
+        if(pollitems[0].revents & ZMQ_POLLIN){
+            
+        	recv_len = zmq_recv(p_zmq_322->zmq_server, recv_buf,sizeof(recv_buf), 0); 
+            
+        	if (recv_len <= 0){
+                
+        		printf("zmq_recv error=[%d]", zmq_errno());
+        		continue;
+                
+        	}
+            
+        	//解析报文处理
+        	//ret = msg_parse_packet(recv_buf, recv_len, send_buf, &send_len);
+
+            memcpy(p_zmq_322->zmq_buffer,recv_buf,recv_len);
+
+            p_zmq_322->zmq_len = recv_len;
+            
+            sys_add_event_queue(&controll_eg.msg_manager,ZMQ_MSG_ID,0,p_zmq_322->ccid322_index,NULL);
+        }
+
+
 
 
     }
 
 clear:
     /* Release message */
-    zmq_msg_close (&msg);
-    zmq_close (p_zmq_322->requester);
+    zmq_close (p_zmq_322->zmq_client);
     zmq_ctx_destroy (p_zmq_322->context);
     
     return 0;

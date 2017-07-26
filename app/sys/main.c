@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
     ubus_interface_init();
     msg_manager_init();
     eg_usbto322_init();
-    eg_zmq_init();
+    //eg_zmq_init();
     //eg_net_init();
     //acl_local_init();
     //eg_comm_init();

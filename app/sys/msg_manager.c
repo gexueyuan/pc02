@@ -951,7 +951,10 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
            
        
        }
-        
+
+    case ZMQ_MSG_ID:
+        state_alternate(USB_COMM_ID_READ,&controll_eg.usb_ccid_322[p_msg->argc]);
+        break;
         
     break;
         

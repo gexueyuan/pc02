@@ -76,6 +76,7 @@ typedef enum _CARDPOLLEVENT {
     CARDPOLLEVENT_POWER,
     CARDPOLLEVENT_WLNUM,
     CARDPOLLEVENT_WL,
+    CARDPOLLEVENT_ID,
 } E_CARDPOLLEVENT;
 
 const unsigned char test1[] = {0xFC,0xA0,0x00,0x00,0x05,0x80,0xCA,0xCE,0x52,0x00};//{0xe0,0xfd,0x00,0x00,0x00,0x00,0x20,0xB1,0xC8,0xFE,0xF7,0x63,0x81,0xF6,0xB6,0x75,0x80,0xEF,0xD2,0xC3,0xAA,0xC4,0x7E,0x5A,0x58,0xC0,0xDD,0x5F,0x66,0x96,0x61,0x5C,0xC1,0x26,0x8B,0xA1,0xB1,0xF4,0x86};
@@ -149,7 +150,7 @@ const uint8_t open_door[] = {0x80,0xDD,0x33,0x00,0x03,0x01,0x00,0x02};
 
 const uint8_t test_p2p[] = {0xE0,0xFD,0x00,0x00,0x21,0x08,0xF8,0x19,0x94,0x85,0x3C,0x1D,0xBC,0x72,0xCA,0x6B,0x95,0xA7,0xAE,0xB5,0x6F,0xA8,0x84,0xC9,0x99,0x62,0x50,0x46,0x7F,0x06,0xBD,0x40,0xC4,0xC2,0x24,0x50,0x04,0xE7};
                                             /*0*/   /*1*/   /*2*/   /*3*/   /*4*/
-unsigned char* usb_port_def[MAX_322_NUM] = {"1-1.1","1-1.2","1-1.3","1-1.4","1-1.5"};
+unsigned char* usb_port_def[MAX_322_NUM + 1] = {"1-1.1","1-1.2","1-1.3","1-1.4","1-1.5"};
 
 unsigned char* test_o = (unsigned char*)"\x00\x22\x00\x00\xBE\x01\xF6\xBA\x57\xB5\x61\xDD\x09\xE4\x39\xCF\x52\x4D\xF1\x6F\x2B\xC8\x04\xC0\xEE\xCB\xC4\x3A\x41\x20\x97\x11\x05\x19\x0F\x0F\x0F\x12\x05\x19\x0F\x0F\x0F\x99\xF0\x8B\xA6\x68\x92\xA0\x4C\xC7\x72\x0A\x4D\xC2\x29\x49\x7D\x81\x6C\x1A\x20\x94\x7A\x2A\xA0\xF2\xDE\xCC\x8E\xC1\x2F\x3D\x1D\x2A\x6E\x2B\x9D\xAF\x19\xD6\x8C\x9D\x23\x06\x28\x0B\x30\xB0\xAB\xDB\xE4\x11\x4A\x28\x2E\x2B\x56\x85\xDE\x4B\x0B\x9A\x35\xFF\xCA\xF4\xB7\x31\x9A\x15\xED\xA0\x47\xDC\x66\x4A\x95\x79\xD7\xFB\x8B\x9C\xF3\x50\x10\xFE\x75\xA4\x6B\xDF\x76\x95\x84\x27\xE9\x1D\xFB\x34\xF4\xE8\x04\x32\xF5\xE3\xB3\xBA\x83\xF2\xEF\x5B\x24\x50\x7D\x4F\x95\x76\x95\x73\x72\x71\xD6\xE9\x0A\x7D\xBF\x5F\xFB\xB6\x8E\xA6\xE3\xE9\xE6\xFC\xF5\x1C\x4A\xE9\x30\xDC\x28\xBF\x57\x87\xE6\x80\x00\x00\x00\xC5\x39\x64\x35";
 
@@ -236,7 +237,7 @@ int usb_transmit(void *context, const unsigned char * apdu,
         
         memset(output, 0, sizeof(output));
         error = luareader_pop_value(context, (char *)output, sizeof(output));
-        printf("luareader_pop_value(%p)=%d(%s)\n", context, error, output);
+        printf("%s-luareader_pop_value(%p)=%d(%s)\n",usb_322->usb_port,context, error, output);
         
  
     }
@@ -283,7 +284,7 @@ int alloc_322_index(unsigned char * port_name)
 
     int i = 0;
 
-    for(i = 0;i < MAX_322_NUM;i++){
+    for(i = 0;i < MAX_322_NUM + 1;i++){
 
         if(strcmp(usb_port_def[i],port_name) == 0){
             
@@ -571,7 +572,13 @@ int parse_data(unsigned char* rd_data,int buffer_len,unsigned char* wl_data,int 
     {
         case CARDPOLLEVENT_NO_EVENT:
 
+            //card type
+            if(read_buffer[1] == 0x02){
 
+                return CARDPOLLEVENT_ID;
+
+
+            }
 
             
  #if 1           
@@ -866,7 +873,6 @@ void *eg_usb_thread_entry(void *parameter)
     
     //sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_INFO_PUSH,0,p_usb_ccid->ccid322_index,NULL);
     sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_INITED,0,p_usb_ccid->ccid322_index,NULL);
-    
 while(1){
 
 #if 1
@@ -876,7 +882,6 @@ while(1){
     acl_len = 1024;
     log_len = 2048;
     remote_len = 0;
-    
     if(p_usb_ccid->toggle_state == 0xAA){
     
         p_usb_ccid->toggle_state = 0;
@@ -1323,6 +1328,16 @@ while(1){
             osal_sem_release(p_usb_ccid->sem_state);
 
             break;
+            
+        case  USB_COMM_ID_READ:
+            
+            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "Id transmit\n");
+            ret = usb_transmit(context,p_usb_ccid->zmq_buffer,p_usb_ccid->zmq_len,output,sizeof(output),p_usb_ccid);
+            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "322 Id return:\n");
+            print_rec(output,ret);
+            zmq_socket_send(p_usb_ccid->zmq_server,output,ret);
+            osal_sem_release(p_usb_ccid->sem_state);
+            break;
 
         default:
             break;
@@ -1335,7 +1350,7 @@ while(1){
             //log_message(p_usb_ccid->usb_port,3,"poll start\n");
           ret = usb_transmit(context,car_detect,sizeof(car_detect),output,sizeof(output),p_usb_ccid);
           //OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "poll end\n");
-          //print_rec(output,ret);
+          print_rec(output,ret);
          //log_message(p_usb_ccid->usb_port,3,"poll end\n");
           if(ret < 0){
           
@@ -1563,6 +1578,10 @@ if(tail_check == 1){
             ret = usb_transmit(context,apud_data,sizeof(transfer_head) + 3 + audit_len,output,sizeof(output),p_usb_ccid);
             print_rec(output,ret);
             break;
+
+       case CARDPOLLEVENT_ID:
+            
+            break;
             
         default:
             break;    
@@ -1600,7 +1619,7 @@ else if(tail_check == 2){
           /***************POLL  END***************/
           
           //printf("F[%s] L[%d] ptr is NULL!!!\n", __FILE__, __LINE__);
-          msleep(30);
+          msleep(500);
 #else
 sleep(2);
 #endif
@@ -1721,10 +1740,9 @@ void eg_usbto322_init()
 
         
         ret = alloc_322_index(device_str[i]);
-
+        //printf("ret is %d\n",ret);
         if(ret == 0)
             continue;
-
         controll_eg.cnt_322++;
         p_usb_ccid = &(controll_eg.usb_ccid_322[ret]);
         p_usb_ccid->ccid322_index = ret;

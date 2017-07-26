@@ -13,7 +13,7 @@
 #define __CV_CMS_DEF_H__
 
 #include "cv_osal.h"
-
+#include "zmq.h"
 
 /*****************************************************************************
  * declaration of variables and functions                                    *
@@ -83,7 +83,9 @@ enum SYSTEM_MSG_TYPE{
     SYS_MSG_UPDATE_BASECFG,
     SYS_MSG_UPDATE_TIMECFG,    
     SYS_MSG_UPDATE_ALERTCFG,    
-    SYS_MSG_UPDATE_READERCFG,    
+    SYS_MSG_UPDATE_READERCFG,
+
+    ZMQ_MSG_ID,
     
     SYS_MSG_ALARM_ACTIVE,
     SYS_MSG_XXX,
@@ -442,8 +444,12 @@ typedef struct _usb_ccid_322 {
 
     /*zmq start*/
     void *context;
-    void *requester;
-    /*zmq start*/
+    void *zmq_client;
+    void *zmq_server;
+    int zmq_len;
+    uint8_t zmq_buffer[10240];
+	zmq_pollitem_t pollitems;
+    /*zmq end*/
     
     /*os task start*/
     osal_task_t   *task_322;
