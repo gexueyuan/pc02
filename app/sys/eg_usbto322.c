@@ -233,10 +233,10 @@ int usb_transmit(void *context, const unsigned char * apdu,
 
     if(ret < 0){
     
-        
+        printf("transmit return is %d\n",ret);
         memset(output, 0, sizeof(output));
         error = luareader_pop_value(context, (char *)output, sizeof(output));
-        printf("luareader_pop_value(%p)=%d(%s)\n", context, error, output);
+        printf("%s-luareader_pop_value(%p)=%d(%s)\n",usb_322->usb_port,context, error, output);
         
  
     }
@@ -978,7 +978,7 @@ while(1){
 
         case USB_COMM_STATE_VERSION:
 
-            if(sw_version == 0)
+            //if(sw_version == 0)
                 {
                 
                 sw_version = 0xAA;
