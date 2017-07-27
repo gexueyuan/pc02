@@ -1139,7 +1139,7 @@ while(1){
         }else{
         
             if(memcmp(&output[ret - 2],confirm,sizeof(confirm)) == 0){
-                    OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "ctrl_cfg,len is %d\n",ret - 2);//minus 90 00
+                    OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "ctrl_cfg,len is %d,door index is %d\n",ret - 2,output[ret - 4]);//minus 90 00
                     //memcpy(p_usb_ccid->pid_322,output,4);//322 id len si 4
                     print_rec(output,ret);
 
@@ -1619,7 +1619,7 @@ else if(tail_check == 2){
           /***************POLL  END***************/
           
           //printf("F[%s] L[%d] ptr is NULL!!!\n", __FILE__, __LINE__);
-          msleep(500);
+          msleep(30);
 #else
 sleep(2);
 #endif
