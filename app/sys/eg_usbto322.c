@@ -1581,7 +1581,7 @@ else if(tail_check == 2){
 
     
     memcpy(apud_data,alarm322_head,sizeof(alarm322_head));
-    memcpy(apud_data[sizeof(alarm322_head)],rtc,sizeof(rtc));
+    memcpy(&apud_data[sizeof(alarm322_head)],rtc,sizeof(rtc));
     print_send(apud_data,sizeof(alarm322_head) + sizeof(rtc));
     ret = usb_transmit(context,apud_data,sizeof(alarm322_head) + sizeof(rtc),output,sizeof(output),p_usb_ccid);
 
