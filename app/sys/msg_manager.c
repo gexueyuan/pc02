@@ -655,7 +655,7 @@ int get_rtc_data(uint8_t *data_rtc)
 
         id_322 = id;
 
-        printf("\n===========321id is %d,get wl=============\n",id);
+        printf("\n===========321id is 0X%X=============\n",id);
         
     }
     

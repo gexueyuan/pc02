@@ -1350,8 +1350,9 @@ while(1){
             //log_message(p_usb_ccid->usb_port,3,"poll start\n");
           ret = usb_transmit(context,car_detect,sizeof(car_detect),output,sizeof(output),p_usb_ccid);
           //OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "poll end\n");
-          print_rec(output,ret);
+          //print_rec(output,ret);
          //log_message(p_usb_ccid->usb_port,3,"poll end\n");
+/*
           if(ret < 0){
           
               
@@ -1361,6 +1362,7 @@ while(1){
               
           
           }
+*/
 /*
           OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "open\n");
            ret = usb_transmit(context,test_o,sizeof(test_o),output,sizeof(output),p_usb_ccid);
@@ -1594,13 +1596,14 @@ else if(tail_check == 2){
     
 /*
     get_rtc_data(rtc);
-    
+    printf("rtc data is \n");
+    print_rec(rtc,16);
     OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "\nget 322 alarm,send rtc encrypt:\n");
 
 
     
     memcpy(apud_data,alarm322_head,sizeof(alarm322_head));
-    memcpy(apud_data[sizeof(alarm322_head)],rtc,sizeof(rtc));
+    memcpy(&apud_data[sizeof(alarm322_head)],rtc,sizeof(rtc));
     print_send(apud_data,sizeof(alarm322_head) + sizeof(rtc));
     ret = usb_transmit(context,apud_data,sizeof(alarm322_head) + sizeof(rtc),output,sizeof(output),p_usb_ccid);
 
