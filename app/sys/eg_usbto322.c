@@ -28,6 +28,7 @@ OSAL_DEBUG_ENTRY_DEFINE(eg_usbto322);
 #include "stdafx.h"
 #include "luareader.h"
 
+#include "libzmqtools.h"
 
 
 
@@ -52,6 +53,8 @@ extern     void update_ce(void);
 extern    void send_log(unsigned char* log_buffer,int len);
 
 extern int get_rtc_data(uint8_t *data_rtc);
+
+extern void eg_zmq_init(usb_ccid_322_t* argv);
 
 const static int TIMEOUT=1000; /* timeout in ms */  
 
@@ -153,6 +156,11 @@ const uint8_t test_p2p[] = {0xE0,0xFD,0x00,0x00,0x21,0x08,0xF8,0x19,0x94,0x85,0x
 unsigned char* usb_port_def[MAX_322_NUM + 1] = {"1-1.1","1-1.2","1-1.3","1-1.4","1-1.5"};
 
 unsigned char* test_o = (unsigned char*)"\x00\x22\x00\x00\xBE\x01\xF6\xBA\x57\xB5\x61\xDD\x09\xE4\x39\xCF\x52\x4D\xF1\x6F\x2B\xC8\x04\xC0\xEE\xCB\xC4\x3A\x41\x20\x97\x11\x05\x19\x0F\x0F\x0F\x12\x05\x19\x0F\x0F\x0F\x99\xF0\x8B\xA6\x68\x92\xA0\x4C\xC7\x72\x0A\x4D\xC2\x29\x49\x7D\x81\x6C\x1A\x20\x94\x7A\x2A\xA0\xF2\xDE\xCC\x8E\xC1\x2F\x3D\x1D\x2A\x6E\x2B\x9D\xAF\x19\xD6\x8C\x9D\x23\x06\x28\x0B\x30\xB0\xAB\xDB\xE4\x11\x4A\x28\x2E\x2B\x56\x85\xDE\x4B\x0B\x9A\x35\xFF\xCA\xF4\xB7\x31\x9A\x15\xED\xA0\x47\xDC\x66\x4A\x95\x79\xD7\xFB\x8B\x9C\xF3\x50\x10\xFE\x75\xA4\x6B\xDF\x76\x95\x84\x27\xE9\x1D\xFB\x34\xF4\xE8\x04\x32\xF5\xE3\xB3\xBA\x83\xF2\xEF\x5B\x24\x50\x7D\x4F\x95\x76\x95\x73\x72\x71\xD6\xE9\x0A\x7D\xBF\x5F\xFB\xB6\x8E\xA6\xE3\xE9\xE6\xFC\xF5\x1C\x4A\xE9\x30\xDC\x28\xBF\x57\x87\xE6\x80\x00\x00\x00\xC5\x39\x64\x35";
+
+
+const uint8_t id_reader[] = {0x00,0x01,0x00,0x02,0x01,0x01};
+
+const uint8_t id_info_get[] = {0x00,0x2c,0x00,0x00};
 
 /*
 * 函数说明: 写二进制文件
@@ -575,6 +583,8 @@ int parse_data(unsigned char* rd_data,int buffer_len,unsigned char* wl_data,int 
             //card type
             if(read_buffer[1] == 0x02){
 
+                printf("find Id card\n");
+
                 return CARDPOLLEVENT_ID;
 
 
@@ -848,6 +858,11 @@ void *eg_usb_thread_entry(void *parameter)
     unsigned char ctrl_info[25] = {0};
 
     usb_ccid_322_t *p_usb_ccid;
+
+    int rec_zmq = 0;
+
+    uint8_t zmq_ans[256] = {0};
+    
 
     /**test**/
     
@@ -1338,6 +1353,15 @@ while(1){
             zmq_socket_send(p_usb_ccid->zmq_server,output,ret);
             osal_sem_release(p_usb_ccid->sem_state);
             break;
+            
+        case  USB_COMM_ID_DOOR_SERVER:
+            
+            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "Id info to server\n");
+            ret = usb_transmit(context,id_info_get,sizeof(id_info_get),output,sizeof(output),p_usb_ccid);
+            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "322 Id info return:\n");
+            print_rec(output,ret);
+            osal_sem_release(p_usb_ccid->sem_state);
+            break;
 
         default:
             break;
@@ -1362,20 +1386,6 @@ while(1){
               
           
           }
-*/
-/*
-          OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "open\n");
-           ret = usb_transmit(context,test_o,sizeof(test_o),output,sizeof(output),p_usb_ccid);
-           print_rec(output,ret);
-           if(ret < 0){
-           
-               
-               memset(output, 0, sizeof(output));
-               ret = luareader_pop_value(context, (char *)output, sizeof(output));
-               printf("luareader_pop_value(%p)=%d(%s)\n", context, ret, output);
-               
-           
-           }
 */
           
           tail_check = check_card(p_usb_ccid,output,ret);
@@ -1582,7 +1592,7 @@ if(tail_check == 1){
             break;
 
        case CARDPOLLEVENT_ID:
-            
+            zmq_socket_send(p_usb_ccid->zmq_client,id_reader,sizeof(id_reader));
             break;
             
         default:
@@ -1622,7 +1632,24 @@ else if(tail_check == 2){
           /***************POLL  END***************/
           
           //printf("F[%s] L[%d] ptr is NULL!!!\n", __FILE__, __LINE__);
-          msleep(30);
+
+        rec_zmq = zmq_recv(p_usb_ccid->zmq_answer,zmq_ans,sizeof(zmq_ans),ZMQ_DONTWAIT);
+
+        if(rec_zmq <= 0){
+
+            
+            //printf("no answer\n");
+
+
+        }
+        else{
+
+            printf("get zmq\n");
+
+
+        }
+
+        msleep(30);
 #else
 sleep(2);
 #endif
@@ -1779,7 +1806,8 @@ void eg_usbto322_init()
         osal_assert(p_usb_ccid->timer_322 != NULL);
         OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_WARN, "create timer %s\n",device_str[i]);
         //osal_timer_start(p_usb_ccid->timer_322);
-    
+
+        eg_zmq_init(p_usb_ccid);
 
     }  
     printf("322 num:%d\n",controll_eg.cnt_322);

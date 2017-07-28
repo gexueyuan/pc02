@@ -80,7 +80,9 @@ void *eg_zmq_thread_entry(void *parameter)
     
 	p_zmq_322->zmq_server = zmq_socket_new_dealer_svr(p_zmq_322->context, ZMQ_SERVER_1);
 	
-	p_zmq_322->zmq_client = zmq_socket_new_dealer(p_zmq_322->context, ZMQ_CLI_1);
+	p_zmq_322->zmq_answer = zmq_socket_new_dealer_svr(p_zmq_322->context, ZMQ_ANS_1);
+
+    printf("\nzmq ctx is %p,%p,%p\n",p_zmq_322->context,p_zmq_322->zmq_server,p_zmq_322->zmq_answer);
 
 	zmq_pollitem_t pollitems[1];
 	
@@ -137,20 +139,26 @@ clear:
 
 
 }
-void eg_zmq_init(void)
+void eg_zmq_init(usb_ccid_322_t* argv)
 {
 
 
     osal_task_t *tid;
 
-
-    tid = osal_task_create(zmq_tk[0],
+    printf("zmq name is %s\n",zmq_tk[argv->ccid322_index]);
+    tid = osal_task_create(zmq_tk[argv->ccid322_index],
                         eg_zmq_thread_entry,
-                        &controll_eg.usb_ccid_322[1],ZMQ_THREAD_STACK_SIZE, RT_SYS_THREAD_PRIORITY);
+                        argv,ZMQ_THREAD_STACK_SIZE, RT_SYS_THREAD_PRIORITY);
 
     osal_assert(tid != NULL);
 
+/*
+    tid = osal_task_create("zmq_server_2",
+                        eg_zmq_rep_entry,
+                        &controll_eg.usb_ccid_322[1],ZMQ_THREAD_STACK_SIZE, RT_SYS_THREAD_PRIORITY);
 
+    osal_assert(tid != NULL);
+*/
 
 
 

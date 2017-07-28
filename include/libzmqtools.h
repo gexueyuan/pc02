@@ -38,6 +38,10 @@ extern int zmq_socket_send(void *socket, char *pBuff, int iSendLen);
 #define ZMQ_SERVER_3 "tcp://localhost:28903"
 #define ZMQ_SERVER_4 "tcp://localhost:28904"
 
+#define ZMQ_ANS_1 "tcp://localhost:38901"
+#define ZMQ_ANS_2 "tcp://localhost:38902"
+#define ZMQ_ANS_3 "tcp://localhost:38903"
+#define ZMQ_ANS_4 "tcp://localhost:38904"
 
 #define MAX_BUF_LEN    10240
 

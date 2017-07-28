@@ -231,6 +231,7 @@ typedef enum _USB_COMM_STATE {
 
     USB_COMM_ID_READ,
     
+    USB_COMM_ID_DOOR_SERVER,
 } E_USB_COMM_STATE;
 
 typedef enum _DOOR_STATE {
@@ -446,6 +447,7 @@ typedef struct _usb_ccid_322 {
     void *context;
     void *zmq_client;
     void *zmq_server;
+    void *zmq_answer;
     int zmq_len;
     uint8_t zmq_buffer[10240];
 	zmq_pollitem_t pollitems;
