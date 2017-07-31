@@ -226,6 +226,8 @@ typedef enum _USB_COMM_STATE {
 
     USB_COMM_ALARM_OPEN,
     USB_COMM_REMOTE_OPEN,
+
+    USB_COMM_CLEAR_ALARM,
     
 } E_USB_COMM_STATE;
 
@@ -482,6 +484,7 @@ typedef struct _Controller {
     uint8_t rtc_encrypt[16];
     uint8_t alarm_buffer[64];
     uint8_t remote_buffer[1200];
+    uint8_t alarm_clear[16];
 /*alarm*/
 /*cfg*/
     key_buffer_t basecfg;

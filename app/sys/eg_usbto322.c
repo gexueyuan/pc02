@@ -111,7 +111,7 @@ const uint8_t ctlcfg_head[] = {0x00,0x29,0x00,0x00};//+len+data
 
 const uint8_t result_head[] = {0x00,0x22,0x00,0x00};//+len+data
 
-const uint8_t alarm322_head[] = {0x00,0x23,0x00,0x00,0x10};//+len+data
+const uint8_t alarm322_head[] = {0x00,0x23,0x00,0x00,0x10};//+len+data clear and check is all 16 bytes
 
 const uint8_t alarm_op_head[] = {0x00,0x2B,0x00,0x00};//len + data
 
@@ -1322,6 +1322,30 @@ while(1){
 
             osal_sem_release(p_usb_ccid->sem_state);
 
+            break;
+
+      case USB_COMM_CLEAR_ALARM:
+            
+            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "alarm clear\n");
+            
+            memcpy(apud_data,remote_op_head,sizeof(remote_op_head));
+            apud_data[sizeof(remote_op_head)] =  0x00;//extend data
+            
+            remote_len = ((controll_eg.remote_buffer[0]<<8)|(controll_eg.remote_buffer[1]&0x00FF));
+            memcpy(&apud_data[sizeof(remote_op_head) + 1],&controll_eg.remote_buffer,remote_len + 2); 
+            
+            print_send(apud_data,sizeof(remote_op_head) + 1 + 2 + remote_len);
+            ret = usb_transmit(context,apud_data,sizeof(remote_op_head) + 1 + 2 + remote_len,output,sizeof(output),p_usb_ccid);
+            print_rec(output,ret);
+            if(ret > 2){
+                
+                log_len = ret - 2;
+                memcpy(log_data,output,log_len);
+                ubus_client_process(UBUS_CLIENT_LOG,NULL,log_data,log_len);
+            }
+
+            osal_sem_release(p_usb_ccid->sem_state);
+            
             break;
 
         default:

@@ -381,6 +381,13 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
 
             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_REMOTE_OPEN,0,0,NULL);
             break;
+            
+         case UBUS_SERVER_CLEAR_ALARM:
+             memset(p_controll_eg->alarm_clear,0,sizeof(p_controll_eg->alarm_clear));
+             memcpy(p_controll_eg->alarm_clear,data,len);
+             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_ALARM_CLEAR,0,0,NULL);
+            break;
+            
         default:
             break;
 
