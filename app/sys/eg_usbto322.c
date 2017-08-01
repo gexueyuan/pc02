@@ -113,6 +113,8 @@ const uint8_t result_head[] = {0x00,0x22,0x00,0x00};//+len+data
 
 const uint8_t alarm322_head[] = {0x00,0x23,0x00,0x00,0x10};//+len+data clear and check is all 16 bytes
 
+const uint8_t alarm322_clear_head[] = {0x00,0x23,0x80,0x00,0x10};//+len+data clear and check is all 16 bytes
+
 const uint8_t alarm_op_head[] = {0x00,0x2B,0x00,0x00};//len + data
 
 const uint8_t remote_op_head[] = {0x00,0x27,0x00,0x00};//len + data
@@ -1280,7 +1282,7 @@ while(1){
             ret = usb_transmit(context,send_data,sizeof(time_head)+10,output,sizeof(output),p_usb_ccid);
             OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_TRACE, "push time\n");
             //print_rec(output,ret);
-           
+           p_usb_ccid->rtc_sync = 0xAA;
             
             osal_sem_release(p_usb_ccid->sem_state);
            // p_usb_ccid->usb_state = USB_COMM_STATE_IDLE;
@@ -1328,21 +1330,21 @@ while(1){
             
             OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "alarm clear\n");
             
-            memcpy(apud_data,remote_op_head,sizeof(remote_op_head));
-            apud_data[sizeof(remote_op_head)] =  0x00;//extend data
+            memcpy(apud_data,alarm322_clear_head,sizeof(alarm322_clear_head));
             
-            remote_len = ((controll_eg.remote_buffer[0]<<8)|(controll_eg.remote_buffer[1]&0x00FF));
-            memcpy(&apud_data[sizeof(remote_op_head) + 1],&controll_eg.remote_buffer,remote_len + 2); 
+            memcpy(&apud_data[sizeof(alarm322_clear_head) ],&controll_eg.alarm_clear,16); 
             
-            print_send(apud_data,sizeof(remote_op_head) + 1 + 2 + remote_len);
-            ret = usb_transmit(context,apud_data,sizeof(remote_op_head) + 1 + 2 + remote_len,output,sizeof(output),p_usb_ccid);
+            print_send(apud_data,sizeof(alarm322_clear_head) + 16);
+            ret = usb_transmit(context,apud_data,sizeof(alarm322_clear_head) + 16,output,sizeof(output),p_usb_ccid);
             print_rec(output,ret);
+/*
             if(ret > 2){
                 
                 log_len = ret - 2;
                 memcpy(log_data,output,log_len);
                 ubus_client_process(UBUS_CLIENT_LOG,NULL,log_data,log_len);
             }
+*/
 
             osal_sem_release(p_usb_ccid->sem_state);
             
@@ -1596,29 +1598,28 @@ if(tail_check == 1){
 }
 else if(tail_check == 2){
 
-    
-/*
-    get_rtc_data(rtc);
-    
-    OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "\nget 322 alarm,send rtc encrypt:\n");
+    if(p_usb_ccid->rtc_sync == 0xAA){
+        
+        get_rtc_data(rtc);
+
+        OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "\nget 322 alarm,send rtc encrypt:\n");
 
 
-    
-    memcpy(apud_data,alarm322_head,sizeof(alarm322_head));
-    memcpy(&apud_data[sizeof(alarm322_head)],rtc,sizeof(rtc));
-    print_send(apud_data,sizeof(alarm322_head) + sizeof(rtc));
-    ret = usb_transmit(context,apud_data,sizeof(alarm322_head) + sizeof(rtc),output,sizeof(output),p_usb_ccid);
 
-    
-    OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "\nget 322 alarm log:\n");
-    
-    print_rec(output,ret);
+        memcpy(apud_data,alarm322_head,sizeof(alarm322_head));
+        memcpy(&apud_data[sizeof(alarm322_head)],rtc,sizeof(rtc));
+        print_send(apud_data,sizeof(alarm322_head) + sizeof(rtc));
+        ret = usb_transmit(context,apud_data,sizeof(alarm322_head) + sizeof(rtc),output,sizeof(output),p_usb_ccid);
 
-    
-    ubus_net_process(UBUS_CLIENT_SEND_ALARM,NULL,output,ret - 2);
-*/
-    
 
+        OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "\nget 322 alarm log:\n");
+
+        print_rec(output,ret);
+
+
+        ubus_net_process(UBUS_CLIENT_SEND_ALARM,NULL,output,ret - 2);
+    
+        }
 }
 
           /***************POLL  END***************/
@@ -1756,6 +1757,7 @@ void eg_usbto322_init()
         p_usb_ccid->toggle_state = 0;
         p_usb_ccid->ccid322_exist = 1;
         p_usb_ccid->init_flag = 0;
+        p_usb_ccid->rtc_sync = 0;//RTC sync
         p_usb_ccid->now_door_state[0] = 0x01;
         p_usb_ccid->now_door_state[1] = 0x02;
         p_usb_ccid->pre_door_state[0] = 0x01;

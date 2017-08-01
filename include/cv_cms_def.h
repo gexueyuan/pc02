@@ -86,6 +86,7 @@ enum SYSTEM_MSG_TYPE{
     SYS_MSG_UPDATE_READERCFG,    
     
     SYS_MSG_ALARM_ACTIVE,
+    SYS_MSG_ALARM_CLEAR,
     SYS_MSG_XXX,
 };
 
@@ -438,6 +439,7 @@ typedef struct _usb_ccid_322 {
     uint8_t  toggle;
     uint8_t toggle_transmit;
     uint8_t toggle_alarm;
+    uint8_t rtc_sync;
     /**/
     
     /*os task start*/

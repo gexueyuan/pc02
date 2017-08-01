@@ -954,6 +954,22 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
         
         
     break;
+
+    case SYS_MSG_ALARM_CLEAR:
+     
+        for(i = 0;i < MAX_322_NUM;i++ ){
+        
+            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+                
+                state_alternate(USB_COMM_CLEAR_ALARM,&controll_eg.usb_ccid_322[i]);
+                //break;
+            }
+            
+        
+        }
+         
+         
+     break;
         
     default:
         break;
