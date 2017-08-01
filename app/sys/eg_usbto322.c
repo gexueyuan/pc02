@@ -140,6 +140,9 @@ const uint8_t v_322_d21[] = {0x00,0x26,0x01,0x81,0x00};
 const uint8_t v_pr11[] = {0x00,0x26,0x02,0x00,0x00};
 const uint8_t v_pr11_d21[] = {0x00,0x26,0x02,0x81,0x00};
 
+const uint8_t rd_p2pkey[] = {0x00,0xAA,0x00,0x00, 0x00};
+const uint8_t rd_pr11_p2pkey[] = {0xFC, 0xA0, 0x00, 0x00, 0x05,0x00,0xAA,0x00,0x00, 0x00};
+
 const uint8_t confirm[] = {0x90,0x00};
 
 const uint8_t _end_confirm[] = {0x90,0x00,0x90,0x0A};
@@ -890,7 +893,19 @@ while(1){
                 print_send(controll_eg.p2pkey.data,controll_eg.p2pkey.len);
                 ret = usb_transmit(context,controll_eg.p2pkey.data,controll_eg.p2pkey.len,output,sizeof(output),p_usb_ccid);
                 print_rec(output,ret);
+                
+                /************************TEST**************************/
+                sleep(1);
+                memset(output,0,sizeof(output));
+                print_send(rd_p2pkey,sizeof(rd_p2pkey));
+                ret = usb_transmit(context,rd_p2pkey,sizeof(rd_p2pkey),output,sizeof(output),p_usb_ccid);
+                print_rec(output,ret);
 
+                memset(output,0,sizeof(output));
+                print_send(rd_pr11_p2pkey,sizeof(rd_pr11_p2pkey));
+                ret = usb_transmit(context,rd_pr11_p2pkey,sizeof(rd_pr11_p2pkey),output,sizeof(output),p_usb_ccid);
+                print_rec(output,ret);
+                /************************TEST**************************/
                 
                 sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_SEND_COSVERSION,0,0,NULL);
                 osal_sem_release(p_usb_ccid->sem_state);
