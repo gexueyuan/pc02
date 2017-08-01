@@ -47,11 +47,10 @@ extern void eg_comm_init();
 extern void msg_manager_init(void);
 extern void ubus_server_thread_entry(void * parameter);
 
-void eg_zmq_init(void);
-
 //extern    void eg_net_init(void);
 
 //extern    void acl_local_init(void);
+extern void eg_zmq_test(void);
 
 
 eg_global_var_t eg_envar,*p_eg_envar;
@@ -103,8 +102,9 @@ int main(int argc, char *argv[])
 
     ubus_interface_init();
     msg_manager_init();
+    sleep(1);
     eg_usbto322_init();
-    //eg_zmq_init();
+    //eg_zmq_test();
     //eg_net_init();
     //acl_local_init();
     //eg_comm_init();

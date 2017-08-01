@@ -763,9 +763,10 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
 //        
 //        }
        // sleep(1);
-        state_alternate(USB_COMM_STATE_INIT,&controll_eg.usb_ccid_322[p_msg->argc]);
-        OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "%s: initialize complete\n", __FUNCTION__);
-
+       OSAL_MODULE_DBGPRT(p_controll_eg->usb_ccid_322[p_msg->argc].usb_port, OSAL_DEBUG_INFO, "port %d: state init\n",p_msg->argc);
+       
+        state_alternate(USB_COMM_STATE_INIT,&p_controll_eg->usb_ccid_322[p_msg->argc]);
+       
         break;
         
     case SYS_MSG_SEND_CE:
@@ -953,6 +954,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
        }
 
     case ZMQ_MSG_ID:
+        printf("read Id\n");
         state_alternate(USB_COMM_ID_READ,&controll_eg.usb_ccid_322[p_msg->argc]);
         break;
         

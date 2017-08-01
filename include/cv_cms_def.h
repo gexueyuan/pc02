@@ -448,6 +448,10 @@ typedef struct _usb_ccid_322 {
     void *zmq_client;
     void *zmq_server;
     void *zmq_answer;
+    void *zmq_sn;
+    unsigned char *zmq_cli_addr;
+    unsigned char *zmq_server_addr;   
+    unsigned char *zmq_answer_addr;
     int zmq_len;
     uint8_t zmq_buffer[10240];
 	zmq_pollitem_t pollitems;

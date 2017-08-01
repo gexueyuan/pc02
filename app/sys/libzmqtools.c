@@ -47,19 +47,29 @@ void *zmq_socket_new_dealer(void *context,char *dest){
 
 void *zmq_socket_new_dealer_identity(void *context,char *dest, char *identity){
 	int linger = 1;
+    int rc;
 	void *zsocket = zmq_socket (context, ZMQ_DEALER);
 	zmq_setsockopt(zsocket, ZMQ_LINGER, &linger, sizeof(linger));
 	if (identity)
 		zmq_setsockopt(zsocket, ZMQ_IDENTITY, identity, strlen(identity));
-	zmq_connect(zsocket,dest);
+	rc = zmq_connect(zsocket,dest);
+    if(rc != 0){
+        printf("zmq connect error\n");
+    }
 	return zsocket;
 }
 
 void *zmq_socket_new_dealer_svr(void *context,char *dest) {
     int linger = 1;
+    int rc = 0;
     void *zsocket = zmq_socket (context, ZMQ_DEALER);
     zmq_setsockopt(zsocket, ZMQ_LINGER, &linger, sizeof(linger));
-    zmq_bind(zsocket,dest);
+    rc = zmq_bind(zsocket,dest);
+    if (rc == -1) {
+        printf ("bind failed: %s\n", strerror (errno));
+        //return -1;
+    }
+
     return zsocket;
 }
 

@@ -28,22 +28,22 @@ extern int zmq_socket_send(void *socket, char *pBuff, int iSendLen);
 }
 #endif
 
-#define ZMQ_CLI_1 "tcp://localhost:18901"
-#define ZMQ_CLI_2 "tcp://localhost:18902"
-#define ZMQ_CLI_3 "tcp://localhost:18903"
-#define ZMQ_CLI_4 "tcp://localhost:18904"
+#define ZMQ_CLI_1 "tcp://127.0.0.1:18901"
+#define ZMQ_CLI_2 "tcp://127.0.0.1:18902"
+#define ZMQ_CLI_3 "tcp://127.0.0.1:18903"
+#define ZMQ_CLI_4 "tcp://127.0.0.1:18904"
 
-#define ZMQ_SERVER_1 "tcp://localhost:28901"
-#define ZMQ_SERVER_2 "tcp://localhost:28902"
-#define ZMQ_SERVER_3 "tcp://localhost:28903"
-#define ZMQ_SERVER_4 "tcp://localhost:28904"
+#define ZMQ_SERVER_1 "tcp://127.0.0.1:28901"
+#define ZMQ_SERVER_2 "tcp://127.0.0.1:28902"
+#define ZMQ_SERVER_3 "tcp://127.0.0.1:28903"
+#define ZMQ_SERVER_4 "tcp://127.0.0.1:28904"
 
-#define ZMQ_ANS_1 "tcp://localhost:38901"
-#define ZMQ_ANS_2 "tcp://localhost:38902"
-#define ZMQ_ANS_3 "tcp://localhost:38903"
-#define ZMQ_ANS_4 "tcp://localhost:38904"
+#define ZMQ_ANS_1 "tcp://127.0.0.1:38901"
+#define ZMQ_ANS_2 "tcp://127.0.0.1:38902"
+#define ZMQ_ANS_3 "tcp://127.0.0.1:38903"
+#define ZMQ_ANS_4 "tcp://127.0.0.1:38904"
 
-#define MAX_BUF_LEN    10240
+#define MAX_BUF_LEN    1024
 
 //GOPAN_BOX tag
 #define TLV_RD_BEGIN       0x0001     //½»Ò×´úÂë
