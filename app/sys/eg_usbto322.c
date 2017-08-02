@@ -217,6 +217,8 @@ int usb_transmit(void *context, const unsigned char * apdu,
 
     int ret = 0;
 
+    int connect_ret = 0;
+
     int error;
 
 	unsigned char output[64] = {0};
@@ -239,8 +241,35 @@ int usb_transmit(void *context, const unsigned char * apdu,
         memset(output, 0, sizeof(output));
         error = luareader_pop_value(context, (char *)output, sizeof(output));
         printf("%s-luareader_pop_value(%p)=%d(%s)\n",usb_322->usb_port,context, error, output);
+
+        printf("reconnect\n");
+
+        connect_ret = luareader_disconnect(usb_322->usb_context);
         
+        if(connect_ret < 0){
+            
+            OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "disconnect failed\n");
+        }
+        msleep(500);
+        connect_ret = luareader_connect(usb_322->usb_context,usb_322->usb_port);
+
+        if(connect_ret < 0){
+
+            usb_322->usb_reconnect_cnt++;
+            
+            OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "connect failed\n");
+
+            if(usb_322->usb_reconnect_cnt >= 10){
+                OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "connect failed 10 times,reboot!!!\n");
+                system("reboot");
+            }
+        }
  
+    }
+    else{
+
+       usb_322->usb_reconnect_cnt = 0; 
+
     }
 
     return ret;
@@ -850,8 +879,10 @@ void *eg_usb_thread_entry(void *parameter)
     /**test**/
 
     p_usb_ccid = (usb_ccid_322_t*)parameter;
+
+    p_usb_ccid->usb_context = luareader_new(0, NULL, NULL);
     
-	void * context = luareader_new(0, NULL, NULL);
+	void * context = p_usb_ccid->usb_context;
 
     OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "context is %p\n",context);
 
@@ -1282,11 +1313,12 @@ while(1){
             ret = usb_transmit(context,send_data,sizeof(time_head)+10,output,sizeof(output),p_usb_ccid);
             OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_TRACE, "push time\n");
             //print_rec(output,ret);
-           p_usb_ccid->rtc_sync = 0xAA;
+            p_usb_ccid->rtc_sync = 0xAA;
             
             osal_sem_release(p_usb_ccid->sem_state);
            // p_usb_ccid->usb_state = USB_COMM_STATE_IDLE;
             break;
+           
        case USB_COMM_ALARM_OPEN:
         
            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "alarm open\n");

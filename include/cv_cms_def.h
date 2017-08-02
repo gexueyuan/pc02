@@ -430,7 +430,9 @@ typedef struct _usb_ccid_322 {
     unsigned char sn_pr11[16];
     unsigned char pid_pr11[4];
     uint8_t  now_door_state[2];
-    uint8_t  pre_door_state[2];  
+    uint8_t  pre_door_state[2];
+    void *usb_context;
+    int usb_reconnect_cnt;
     
     
     /*state machine*/
