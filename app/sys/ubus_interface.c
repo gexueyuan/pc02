@@ -359,13 +359,7 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
             
         case UBUS_SERVER_REMOTE:
             
-/*
-            if(p_controll_eg->ctlcfg.data != NULL){
 
-                free(p_controll_eg->ctlcfg.data);
-
-            }
-*/
             //printf("sizeof(p_controll_eg->remote_buffer) is %d\n",sizeof(p_controll_eg->remote_buffer));
             memset(p_controll_eg->remote_buffer,0,sizeof(p_controll_eg->remote_buffer));
             //printf("ctrl remote path:%s\n",pStr);
@@ -380,6 +374,25 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
             memcpy(&controll_eg.remote_buffer[2],data,len);
 
             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_REMOTE_OPEN,0,0,NULL);
+            break;
+
+        case UBUS_SERVER_REMOTE_ID:
+            
+
+            //printf("sizeof(p_controll_eg->remote_buffer) is %d\n",sizeof(p_controll_eg->remote_buffer));
+            memset(p_controll_eg->remote_buffer,0,sizeof(p_controll_eg->remote_buffer));
+            //printf("ctrl remote path:%s\n",pStr);
+            
+            //readCFG(pStr,p_controll_eg->remote_buffer);
+
+            controll_eg.remote_buffer[0] = (unsigned char)((len&0xFF00)>>8);
+            controll_eg.remote_buffer[1] = (unsigned char)(len&0x00FF);
+
+            //printf("len is %d,buffer[0]:%d,buffer[1]:%d\n",len,p_controll_eg->remote_buffer[0],p_controll_eg->remote_buffer[1]);
+            
+            memcpy(&controll_eg.remote_buffer[2],data,len);
+
+            sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_ID_REMOTE_OPEN,0,0,NULL);
             break;
         default:
             break;

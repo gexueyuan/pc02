@@ -120,6 +120,7 @@ const uint8_t alarm322_head[] = {0x00,0x23,0x00,0x00,0x10};//+len+data
 const uint8_t alarm_op_head[] = {0x00,0x2B,0x00,0x00};//len + data
 
 const uint8_t remote_op_head[] = {0x00,0x27,0x00,0x00};//len + data
+const uint8_t remote_idop_head[] = {0x00,0x27,0x01,0x00};//len + data
 
 const uint8_t audit_result_head[] = {0x80,0x32,0x80,0x00,0x00};//len + data
 
@@ -1330,6 +1331,7 @@ while(1){
            ubus_net_process(UBUS_CLIENT_SEND_ALARM,NULL,output,ret - 2);
            osal_sem_release(p_usb_ccid->sem_state);
             break;
+            
         case USB_COMM_REMOTE_OPEN:
             
             OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "remote open\n");
@@ -1370,10 +1372,38 @@ while(1){
             ret = usb_transmit(context,id_info_get,sizeof(id_info_get),output,sizeof(output),p_usb_ccid);
             OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "322 Id info return:\n");
             print_rec(output,ret);
+            
             OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "make id data:\n");
             apud_data[0] = p_usb_ccid->door_index;
+            memcpy(&apud_data[1],zmq_ans,rec_zmq);
+            memcpy(&apud_data[1+rec_zmq],output,ret -2);
+            ubus_client_process(UBUS_CLIENT_SEND_ID_INFO,NULL,apud_data,1+rec_zmq+ret -2);
             
             osal_sem_release(p_usb_ccid->sem_state);
+            break;
+
+        case USB_ID_REMOTE_OPEN:
+            
+            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "ID remote open\n");
+            
+            memcpy(apud_data,remote_idop_head,sizeof(remote_idop_head));
+            apud_data[sizeof(remote_idop_head)] =  0x00;//extend data
+            
+            remote_len = ((controll_eg.remote_buffer[0]<<8)|(controll_eg.remote_buffer[1]&0x00FF));
+            memcpy(&apud_data[sizeof(remote_idop_head) + 1],&controll_eg.remote_buffer,remote_len + 2); 
+            
+            print_send(apud_data,sizeof(remote_idop_head) + 1 + 2 + remote_len);
+            ret = usb_transmit(context,apud_data,sizeof(remote_idop_head) + 1 + 2 + remote_len,output,sizeof(output),p_usb_ccid);
+            print_rec(output,ret);
+            if(ret > 2){
+                
+                log_len = ret - 2;
+                memcpy(log_data,output,log_len);
+                ubus_client_process(UBUS_CLIENT_LOG,NULL,log_data,log_len);
+            }
+
+            osal_sem_release(p_usb_ccid->sem_state);
+
             break;
 
         default:

@@ -122,6 +122,8 @@ int main(int argc, char *argv[])
         
         //eg_tcp_client();  
         //test();
+        if(controll_eg.cnt_322 == 0)
+            exit 0;
     }
 }
 
