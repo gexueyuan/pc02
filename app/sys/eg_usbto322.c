@@ -1225,13 +1225,24 @@ while(1){
             log_message(p_usb_ccid->usb_port,3,"sn pr11 read error\n");
             //osal_sem_release(p_usb_ccid->sem_state);
             //break;
+
+             goto out;
             
         
         }else{
         
-            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "pr11 sn,len is %d\n",ret - 2);//minus 90 00
-            memcpy(p_usb_ccid->sn_pr11,output,16);//pr11 sn len is 12
-            print_rec(output,ret);
+            if((memcmp(&output[ret - 4],_end_confirm,sizeof(_end_confirm)) == 0)||(memcmp(&output[ret - 4],_end_alarm,sizeof(_end_alarm)) == 0)){
+            
+                    OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "pr11 sn,len is %d\n",ret - 2);//minus 90 00
+                    memcpy(p_usb_ccid->sn_pr11,output,16);//pr11 sn len is 12
+                    print_rec(output,ret);
+                }
+            else{
+            
+                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "read pr11 sn error,thread exit\n");//minus 90 00
+                goto out;
+            }
+
         }
 
         
@@ -1248,13 +1259,23 @@ while(1){
             log_message(p_usb_ccid->usb_port,3,"pr11 pid read error\n");
             //osal_sem_release(p_usb_ccid->sem_state);
             //break;
-            
+             goto out;
         
         }else{
         
-            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "pr11 pid,len is %d\n",ret - 2);//minus 90 00
-            memcpy(p_usb_ccid->pid_pr11,output,4);//pr11 id len si 4
-            print_rec(output,ret);
+            if((memcmp(&output[ret - 4],_end_confirm,sizeof(_end_confirm)) == 0)||(memcmp(&output[ret - 4],_end_alarm,sizeof(_end_alarm)) == 0)){
+            
+                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "pr11 pid,len is %d\n",ret - 2);//minus 90 00
+                memcpy(p_usb_ccid->pid_pr11,output,4);//pr11 id len si 4
+                print_rec(output,ret);
+                
+            }
+            else{
+                
+                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "read pr11 pid error,thread exit\n");//minus 90 00
+                goto out;
+            }
+
         }
         //write to file
         
@@ -1667,11 +1688,17 @@ sleep(2);
 
 
 out: 
-        ret = luareader_disconnect(context);
-       
+    
+        luareader_disconnect(context);
+
         luareader_term(context);
-        
-        return ret;
+
+        p_usb_ccid->ccid322_exist = 0;
+
+        controll_eg.cnt_322--;
+
+        OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "thread exit!\n");
+
 
 
 }
