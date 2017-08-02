@@ -140,7 +140,7 @@ const uint8_t v_pr11_d21[] = {0x00,0x26,0x02,0x81,0x00};
 
 const uint8_t confirm[] = {0x90,0x00};
 
-const uint8_t _end_confirm[] = {0x90,0x00,0x90,0x0A};
+const uint8_t _end_confirm[] = {0x90,0x00,0x90,0x00};
 const uint8_t _end_alarm[] = {0x90,0x00,0x90,0x0A};
 
 
@@ -1702,6 +1702,8 @@ out:
         controll_eg.cnt_322--;
 
         OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "thread exit!\n");
+
+        printf("322 thread num is %d\n",controll_eg.cnt_322);
 
 
 
