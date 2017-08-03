@@ -43,7 +43,7 @@ extern int zmq_socket_send(void *socket, char *pBuff, int iSendLen);
 #define ZMQ_ANS_3 "tcp://127.0.0.1:38903"
 #define ZMQ_ANS_4 "tcp://127.0.0.1:38904"
 
-#define MAX_BUF_LEN    1024
+#define MAX_BUF_LEN    2048
 
 //GOPAN_BOX tag
 #define TLV_RD_BEGIN       0x0001     //½»Ò×´úÂë

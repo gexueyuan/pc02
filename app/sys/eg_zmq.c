@@ -65,9 +65,9 @@ void *eg_zmq_thread_entry(void *parameter)
 	int  rc = 0;
 	int  timeout = 0;
 
-	char recv_buf[MAX_BUF_LEN];
+	unsigned char recv_buf[MAX_BUF_LEN];
 	int  recv_len = 0;
-	char send_buf[MAX_BUF_LEN];
+	unsigned char send_buf[MAX_BUF_LEN];
 	int  send_len = 0;
     
     unsigned char *zmq_cli_addr;

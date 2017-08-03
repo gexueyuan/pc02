@@ -167,7 +167,7 @@ unsigned char* test_o = (unsigned char*)"\x00\x22\x00\x00\xBE\x01\xF6\xBA\x57\xB
 
 const uint8_t id_reader[] = {0x00,0x01,0x00,0x02,0x01,0x01};
 
-const uint8_t id_info_get[] = {0x00,0x2c,0x00,0x00};
+const uint8_t id_info_get[] = {0x00,0xc2,0x00,0x00,0x00};
 
 /*
 * 函数说明: 写二进制文件
@@ -1371,14 +1371,16 @@ while(1){
             OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "Id info to server\n");
             ret = usb_transmit(context,id_info_get,sizeof(id_info_get),output,sizeof(output),p_usb_ccid);
             OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "322 Id info return:\n");
+            
             print_rec(output,ret);
-            
-            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "make id data:\n");
-            apud_data[0] = p_usb_ccid->door_index;
-            memcpy(&apud_data[1],zmq_ans,rec_zmq);
-            memcpy(&apud_data[1+rec_zmq],output,ret -2);
-            ubus_client_process(UBUS_CLIENT_SEND_ID_INFO,NULL,apud_data,1+rec_zmq+ret -2);
-            
+            if((ret >2)&&(memcmp(output[ret -2],confirm,sizeof(confirm)) == 0)){
+                
+                    OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "make id data:\n");
+                    apud_data[0] = p_usb_ccid->door_index;
+                    memcpy(&apud_data[1],&zmq_ans[4],rec_zmq - 4);
+                    memcpy(&apud_data[1+rec_zmq],output,ret -2);
+                    ubus_client_process(UBUS_CLIENT_SEND_ID_INFO,NULL,apud_data,1+rec_zmq - 4+ret -2);
+            }
             osal_sem_release(p_usb_ccid->sem_state);
             break;
 
@@ -1687,9 +1689,14 @@ else if(tail_check == 2){
         }
         else{
 
-            printf("get zmq\n");
+            printf("get zmq answer\n");
 
             print_rec(zmq_ans,rec_zmq);
+
+            
+            sys_add_event_queue(&controll_eg.msg_manager,ZMQ_RESULT,0,p_usb_ccid->ccid322_index,NULL);
+            
+            
         }
 
         msleep(30);

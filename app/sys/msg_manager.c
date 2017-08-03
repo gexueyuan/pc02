@@ -968,7 +968,17 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
 
     case ZMQ_MSG_ID:
         printf("read Id:\n");
-        state_alternate(USB_COMM_ID_READ,&controll_eg.usb_ccid_322[p_msg->argc]);
+        //state_alternate(USB_COMM_ID_READ,&controll_eg.usb_ccid_322[p_msg->argc]);
+        for(i = 0;i < MAX_322_NUM;i++ ){
+        
+            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+                
+                state_alternate(USB_COMM_ID_READ,&controll_eg.usb_ccid_322[i]);
+                //break;
+            }
+            
+        
+        }
         break;
 
     case ZMQ_RESULT:
