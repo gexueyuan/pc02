@@ -272,10 +272,12 @@ int usb_transmit(void *context, const unsigned char * apdu,
 
             msleep(500);
             //ret = usb_transmit(context,controll_eg.p2pkey.data,controll_eg.p2pkey.len,output,sizeof(output),p_usb_ccid);
+/*
             ret = luareader_transmit(context, controll_eg.p2pkey.data, controll_eg.p2pkey.len, output, sizeof(output),3000);
             OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "update p2pkey,ret = %d\n",ret);
             ret = luareader_transmit(context, controll_eg.mackey.data, controll_eg.mackey.len, output, sizeof(output),3000);
             OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "update mackey,ret = %d\n",ret);
+*/
         }
  
     }
@@ -1655,7 +1657,15 @@ if(tail_check == 1){
             ret = usb_transmit(context,apud_data,sizeof(transfer_head) + 3 + audit_len,output,sizeof(output),p_usb_ccid);
             print_rec(output,ret);
             break;
-            
+
+        case CARDPOLLEVENT_POWER:
+/*
+            ret = usb_transmit(context, controll_eg.p2pkey.data, controll_eg.p2pkey.len, output, sizeof(output),3000);
+            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_WARN, "update p2pkey,ret = %d\n",ret);
+            ret = usb_transmit(context, controll_eg.mackey.data, controll_eg.mackey.len, output, sizeof(output),3000);
+            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_WARN, "update mackey,ret = %d\n",ret);
+*/
+            break;
         default:
             break;    
 
