@@ -332,6 +332,7 @@ typedef enum _INIT_MASK {
 #define CEPATH_PR11 "/tmp/322ce/pr11ce"
 #define CEPATH_322 "/tmp/322ce/322ce"
 #define CEPATH_CTRLINFO "/tmp/322ce/controller_info"
+#define CEPATH_key "/tmp/322ce/key"
 #define msleep(n) usleep(n*1000)
 typedef struct _key_buffer {
     int len;
