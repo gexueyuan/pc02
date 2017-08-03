@@ -1373,13 +1373,17 @@ while(1){
             OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "322 Id info return:\n");
             
             print_rec(output,ret);
-            if((ret >2)&&(memcmp(output[ret -2],confirm,sizeof(confirm)) == 0)){
+            if((ret >2)&&(memcmp(&output[ret -2],confirm,sizeof(confirm)) == 0)){
                 
                     OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "make id data:\n");
                     apud_data[0] = p_usb_ccid->door_index;
-                    memcpy(&apud_data[1],&zmq_ans[4],rec_zmq - 4);
-                    memcpy(&apud_data[1+rec_zmq],output,ret -2);
-                    ubus_client_process(UBUS_CLIENT_SEND_ID_INFO,NULL,apud_data,1+rec_zmq - 4+ret -2);
+                    
+                    memcpy(&apud_data[1],output,ret -2);
+                    memcpy(&apud_data[1 + ret -2],&zmq_ans[4],rec_zmq - 4);
+                    //memcpy(&apud_data[1+rec_zmq - 4],output,ret -2);
+                    
+                    print_send(apud_data,1+ rec_zmq - 4 + ret -2);
+                    ubus_net_process(UBUS_CLIENT_SEND_ID_INFO,NULL,apud_data,1+rec_zmq - 4+ret -2);
             }
             osal_sem_release(p_usb_ccid->sem_state);
             break;
@@ -1713,6 +1717,12 @@ out:
        
         luareader_term(context);
 
+        osal_sem_delete(p_usb_ccid->sem_322);
+
+        osal_sem_delete(p_usb_ccid->sem_state);
+        
+        osal_timer_delete(p_usb_ccid->timer_322);
+        
         
         p_usb_ccid->ccid322_exist = 0;
 

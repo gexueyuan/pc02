@@ -268,6 +268,11 @@ void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strle
             memcpy(str_buffer,strhex,strlen);
             break;
 
+        case UBUS_CLIENT_SEND_ID_INFO:
+            str_buffer = (unsigned char*)malloc(strlen);
+            memcpy(str_buffer,strhex,strlen);
+            break;
+
         default:
             break;
         
