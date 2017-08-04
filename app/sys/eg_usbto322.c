@@ -1697,7 +1697,7 @@ else if(tail_check == 2){
 
             print_rec(zmq_ans,rec_zmq);
 
-            
+            if(rec_zmq > 14)
             sys_add_event_queue(&controll_eg.msg_manager,ZMQ_RESULT,0,p_usb_ccid->ccid322_index,NULL);
             
             
