@@ -964,7 +964,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
        
            if(controll_eg.usb_ccid_322[i].ccid322_exist){
                
-               state_alternate(USB_COMM_REMOTE_OPEN,&controll_eg.usb_ccid_322[i]);
+               state_alternate(USB_ID_REMOTE_OPEN,&controll_eg.usb_ccid_322[i]);
                //break;
            }
            
