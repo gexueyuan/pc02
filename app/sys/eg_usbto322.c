@@ -143,6 +143,7 @@ const uint8_t confirm[] = {0x90,0x00};
 const uint8_t _end_confirm[] = {0x90,0x00,0x90,0x00};
 const uint8_t _end_alarm[] = {0x90,0x00,0x90,0x0A};
 
+const uint8_t reset_322usb[] = {0xF0,0xF0,0x02,0xFF,0x00};
 
 osal_sem_t *sem_pr11ce;
 
@@ -254,7 +255,9 @@ int usb_transmit(void *context, const unsigned char * apdu,
             
             OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "disconnect failed\n");
         }
-        msleep(500);
+        
+        msleep(300);
+        
         connect_ret = luareader_connect(usb_322->usb_context,usb_322->usb_port);
 
         if(connect_ret < 0){
@@ -263,14 +266,18 @@ int usb_transmit(void *context, const unsigned char * apdu,
             
             OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "connect failed\n");
 
-            if(usb_322->usb_reconnect_cnt >= 5){
+            if(usb_322->usb_reconnect_cnt >= 10){
                 OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "connect failed 10 times,reboot!!!\n");
                 system("reboot");
             }
         }
         else{
 
-            msleep(500);
+            //msleep(200);
+            OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "reconnect succeed!\n");
+            
+            usb_322->usb_reconnect_cnt = 0; 
+            
             //ret = usb_transmit(context,controll_eg.p2pkey.data,controll_eg.p2pkey.len,output,sizeof(output),p_usb_ccid);
 /*
             ret = luareader_transmit(context, controll_eg.p2pkey.data, controll_eg.p2pkey.len, output, sizeof(output),3000);
@@ -1238,12 +1245,14 @@ while(1){
             printf("luareader_pop_value(%p)=%d(%s)\n", context, ret, output);
             
             log_message(p_usb_ccid->usb_port,3,"sn pr11 read error\n");
-            //osal_sem_release(p_usb_ccid->sem_state);
+            
+            if(strcmp(p_usb_ccid->usb_port,"1-1.2") == 0){
+            osal_sem_release(p_usb_ccid->sem_state);
             //break;
 
              goto out;
             
-        
+                }
         }else{
         
             if((memcmp(&output[ret - 4],_end_confirm,sizeof(_end_confirm)) == 0)||(memcmp(&output[ret - 4],_end_alarm,sizeof(_end_alarm)) == 0)){
@@ -1255,7 +1264,11 @@ while(1){
             else{
             
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "read pr11 sn error,thread exit\n");//minus 90 00
+                
+                if(strcmp(p_usb_ccid->usb_port,"1-1.2") == 0){
+                osal_sem_release(p_usb_ccid->sem_state);
                 goto out;
+                    }
             }
 
         }
@@ -1273,8 +1286,10 @@ while(1){
             
             log_message(p_usb_ccid->usb_port,3,"pr11 pid read error\n");
             //osal_sem_release(p_usb_ccid->sem_state);
-            //break;
-             goto out;
+            
+            if(strcmp(p_usb_ccid->usb_port,"1-1.2") == 0){
+            goto out;
+                }
         
         }else{
         
@@ -1288,7 +1303,13 @@ while(1){
             else{
                 
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "read pr11 pid error,thread exit\n");//minus 90 00
+
+                
+                if(strcmp(p_usb_ccid->usb_port,"1-1.2") == 0){
+                osal_sem_release(p_usb_ccid->sem_state);
+                
                 goto out;
+                    }
             }
 
         }
@@ -1347,8 +1368,8 @@ while(1){
            
             //print_send(send_data,sizeof(time_head)+10);
             ret = usb_transmit(context,send_data,sizeof(time_head)+10,output,sizeof(output),p_usb_ccid);
-            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_TRACE, "push time\n");
-            //print_rec(output,ret);
+            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "push time\n");
+            print_rec(output,ret);
             p_usb_ccid->rtc_sync = 0xAA;
             
             osal_sem_release(p_usb_ccid->sem_state);
@@ -1417,6 +1438,13 @@ while(1){
             osal_sem_release(p_usb_ccid->sem_state);
             
             break;
+
+    case  USB_322_TEST:
+        OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "322 usb reset\n");
+        usb_transmit(context,reset_322usb,sizeof(reset_322usb),output,sizeof(output),p_usb_ccid);
+        
+        osal_sem_release(p_usb_ccid->sem_state);
+        break;
 
         default:
             break;
@@ -1711,7 +1739,8 @@ sleep(2);
 
 
 out: 
-    
+    //if(strcmp(p_usb_ccid->usb_port,"1-1.2") == 0){
+        {
         luareader_disconnect(context);
 
         luareader_term(context);
@@ -1732,7 +1761,7 @@ out:
 
         printf("322 thread num is %d\n",controll_eg.cnt_322);
 
-
+        }
 
 }
 
@@ -1745,7 +1774,7 @@ void timer_usb_callback(void* parameter)
     unsigned char rtc[16];
     usb_ccid_322_t *p_usb_timer = (usb_ccid_322_t *)parameter;
     
-    //printf("timer in port %s,index is %d\n",p_usb_timer->usb_port,p_usb_timer->ccid322_index);
+    printf("timer in port %s,index is %d\n",p_usb_timer->usb_port,p_usb_timer->ccid322_index);
     
    // if(p_usb_timer->toggle_ubus == 0xAA){
 
@@ -1772,7 +1801,7 @@ void timer_usb_callback(void* parameter)
         }
    // }
 
-    
+   sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_322_USBTEST,0,p_usb_timer->ccid322_index,NULL);
 }
 
 

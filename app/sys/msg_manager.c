@@ -709,12 +709,12 @@ osal_status_t sys_add_event_queue(msg_manager_t *p_sys,
         p_msg->len = msg_len;
         p_msg->argc = msg_argc;
         p_msg->argv = msg_argv;
-        err = osal_queue_send(p_sys->queue_msg, p_msg, len, 0, 0);
+        err = osal_queue_send(p_sys->queue_msg, p_msg, len, 0, 3000);
     }
 
     if (err != OSAL_STATUS_SUCCESS) {
-        OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_WARN, "%s: failed=[%d], msg=%04x\n",\
-                           __FUNCTION__, err, msg_id);
+        OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_WARN, "%s: failed=[%d], msg=%04x,tg=%d\n",\
+                           __FUNCTION__, err, msg_id,msg_argc);
         osal_free(p_msg);                   
     }
 
@@ -970,6 +970,12 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
          
          
      break;
+
+    case SYS_MSG_322_USBTEST:
+            
+            //printf("322 usb test %d\n",p_msg->argc);
+            state_alternate(USB_322_TEST,&controll_eg.usb_ccid_322[p_msg->argc]);
+            break;
         
     default:
         break;
