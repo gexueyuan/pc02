@@ -1246,13 +1246,10 @@ while(1){
             
             log_message(p_usb_ccid->usb_port,3,"sn pr11 read error\n");
             
-            if(strcmp(p_usb_ccid->usb_port,"1-1.2") == 0){
             osal_sem_release(p_usb_ccid->sem_state);
-            //break;
 
-             goto out;
+            goto out;
             
-                }
         }else{
         
             if((memcmp(&output[ret - 4],_end_confirm,sizeof(_end_confirm)) == 0)||(memcmp(&output[ret - 4],_end_alarm,sizeof(_end_alarm)) == 0)){
@@ -1265,10 +1262,8 @@ while(1){
             
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "read pr11 sn error,thread exit\n");//minus 90 00
                 
-                if(strcmp(p_usb_ccid->usb_port,"1-1.2") == 0){
                 osal_sem_release(p_usb_ccid->sem_state);
                 goto out;
-                    }
             }
 
         }
@@ -1285,11 +1280,9 @@ while(1){
             printf("luareader_pop_value(%p)=%d(%s)\n", context, ret, output);
             
             log_message(p_usb_ccid->usb_port,3,"pr11 pid read error\n");
-            //osal_sem_release(p_usb_ccid->sem_state);
+            osal_sem_release(p_usb_ccid->sem_state);
             
-            if(strcmp(p_usb_ccid->usb_port,"1-1.2") == 0){
             goto out;
-                }
         
         }else{
         
@@ -1305,11 +1298,9 @@ while(1){
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "read pr11 pid error,thread exit\n");//minus 90 00
 
                 
-                if(strcmp(p_usb_ccid->usb_port,"1-1.2") == 0){
                 osal_sem_release(p_usb_ccid->sem_state);
                 
                 goto out;
-                    }
             }
 
         }
@@ -1739,8 +1730,6 @@ sleep(2);
 
 
 out: 
-    //if(strcmp(p_usb_ccid->usb_port,"1-1.2") == 0){
-        {
         luareader_disconnect(context);
 
         luareader_term(context);
@@ -1761,7 +1750,6 @@ out:
 
         printf("322 thread num is %d\n",controll_eg.cnt_322);
 
-        }
 
 }
 
@@ -1774,7 +1762,7 @@ void timer_usb_callback(void* parameter)
     unsigned char rtc[16];
     usb_ccid_322_t *p_usb_timer = (usb_ccid_322_t *)parameter;
     
-    printf("timer in port %s,index is %d\n",p_usb_timer->usb_port,p_usb_timer->ccid322_index);
+    //printf("timer in port %s,index is %d\n",p_usb_timer->usb_port,p_usb_timer->ccid322_index);
     
    // if(p_usb_timer->toggle_ubus == 0xAA){
 
@@ -1800,8 +1788,8 @@ void timer_usb_callback(void* parameter)
 
         }
    // }
-
-   sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_322_USBTEST,0,p_usb_timer->ccid322_index,NULL);
+//test usb interrupt
+   //sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_322_USBTEST,0,p_usb_timer->ccid322_index,NULL);
 }
 
 
