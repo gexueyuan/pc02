@@ -169,6 +169,9 @@ const uint8_t id_reader[] = {0x00,0x01,0x00,0x02,0x01,0x01};
 
 const uint8_t id_info_get[] = {0x00,0xc2,0x00,0x00,0x00};
 
+const uint8_t id_cmd_1[] = {0x80,0xCA,0xCE,0x4E,0x4,0x0,0x0,0x0,0xD0};
+
+
 /*
 * 函数说明: 写二进制文件
 * 参数描述: _fileName, 文件名称
@@ -1312,7 +1315,6 @@ while(1){
             OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_TRACE, "push time\n");
             //print_rec(output,ret);
            
-            
             osal_sem_release(p_usb_ccid->sem_state);
            // p_usb_ccid->usb_state = USB_COMM_STATE_IDLE;
             break;
@@ -1359,6 +1361,7 @@ while(1){
         case  USB_COMM_ID_READ:
             
             OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "Id transmit\n");
+            print_send(p_usb_ccid->zmq_buffer,p_usb_ccid->zmq_len);
             ret = usb_transmit(context,p_usb_ccid->zmq_buffer,p_usb_ccid->zmq_len,output,sizeof(output),p_usb_ccid);
             OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "322 Id return:\n");
             print_rec(output,ret);
