@@ -151,6 +151,7 @@ osal_sem_t *sem_322ce;
 
 osal_sem_t *sem_ctrlinfo;
 
+osal_sem_t *sem_alarm;
 
 const uint8_t open_door[] = {0x80,0xDD,0x33,0x00,0x03,0x01,0x00,0x02};
 
@@ -952,7 +953,11 @@ while(1){
                 ret = usb_transmit(context,controll_eg.p2pkey.data,controll_eg.p2pkey.len,output,sizeof(output),p_usb_ccid);
                 print_rec(output,ret);
 
-                
+                if(memcmp(output,confirm,sizeof(confirm)) == 0){
+                    
+                    p_usb_ccid->rtc_sync = 0xAA;
+
+                }
                 sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_SEND_COSVERSION,0,0,NULL);
                 osal_sem_release(p_usb_ccid->sem_state);
                 //p_usb_ccid->usb_state = USB_COMM_STATE_MACKEY;//USB_COMM_STATE_RDCFG;//USB_COMM_STATE_MACKEY;//USB_COMM_STATE_CFG;//USB_COMM_STATE_MACKEY;
@@ -1359,9 +1364,9 @@ while(1){
            
             //print_send(send_data,sizeof(time_head)+10);
             ret = usb_transmit(context,send_data,sizeof(time_head)+10,output,sizeof(output),p_usb_ccid);
-            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "push time\n");
-            print_rec(output,ret);
-            p_usb_ccid->rtc_sync = 0xAA;
+            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_TRACE, "push time\n");
+            //print_rec(output,ret);
+            //p_usb_ccid->rtc_sync = 0xAA;
             
             osal_sem_release(p_usb_ccid->sem_state);
            // p_usb_ccid->usb_state = USB_COMM_STATE_IDLE;
@@ -1539,7 +1544,17 @@ if(tail_check == 1){
 */
                 
                 ubus_client_process(UBUS_CLIENT_LOG,NULL,log_data,log_len);
+                /* Take the semaphore. */
+                if(osal_sem_take(sem_alarm, OSAL_WAITING_FOREVER) != OSAL_EOK)
+                {
+                   printf("\n%s Semaphore return failed. \n",p_usb_ccid->usb_port);
+                   continue;
+                }
                 
+                    controll_eg.alarm_opendoor++;
+                    printf("\nalarm cnt is %d\n",controll_eg.alarm_opendoor);
+
+                osal_sem_release(sem_alarm);
 /*
                 gettimeofday( &_end, NULL );
                 printf("start : %d.%d\n", _end.tv_sec, _end.tv_usec);
@@ -1693,6 +1708,7 @@ if(tail_check == 1){
 }
 else if(tail_check == 2){
 
+
     if(p_usb_ccid->rtc_sync == 0xAA){
         
         get_rtc_data(rtc);
@@ -1711,9 +1727,30 @@ else if(tail_check == 2){
 
         print_rec(output,ret);
 
+        // Take the semaphore. 
+        if(osal_sem_take(sem_alarm, OSAL_WAITING_FOREVER) != OSAL_EOK)
+        {
+           printf("\n%s Semaphore return failed. \n",p_usb_ccid->usb_port);
+           continue;
+        }
+      
+        
+            if(controll_eg.alarm_opendoor > 0){
+                controll_eg.alarm_opendoor--;
+                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "open door,drop alarm!\n");
+            }
+            else{
+                
+                if(controll_eg.alarm_opendoor == 0){
+                    
+                    OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "send alarm to server!\n");
+                    ubus_net_process(UBUS_CLIENT_SEND_ALARM,NULL,output,ret - 2);
+                    
+                }
+            }
+        osal_sem_release(sem_alarm);
 
-        ubus_net_process(UBUS_CLIENT_SEND_ALARM,NULL,output,ret - 2);
-    
+        
         }
 }
 
@@ -1850,6 +1887,9 @@ void eg_usbto322_init()
 
     sem_ctrlinfo= osal_sem_create("sem_ctrlinfo", 1);
     osal_assert(sem_ctrlinfo != NULL);
+
+    sem_alarm = osal_sem_create("sem_alarm", 1);
+    osal_assert(sem_alarm != NULL);
     
     for(i = 0;i < dev_index;i++){
 

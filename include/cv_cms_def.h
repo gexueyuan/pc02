@@ -492,6 +492,7 @@ typedef struct _Controller {
     uint8_t alarm_buffer[64];
     uint8_t remote_buffer[1200];
     uint8_t alarm_clear[16];
+    uint8_t alarm_opendoor;
 /*alarm*/
 /*cfg*/
     key_buffer_t basecfg;

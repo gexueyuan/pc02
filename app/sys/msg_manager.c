@@ -441,11 +441,13 @@ void get_wl_4(uint8_t *p_id,uint8_t *data_wl,int *wlen)
     }
 
 /*
-        gettimeofday( &_end, NULL );
-    printf("ubus look end    : %d.%d\n",_end.tv_sec,_end.tv_usec);
-        gettimeofday( &_start, NULL );
-    printf("invoke start : %d.%d\n", _start.tv_sec, _start.tv_usec);
-*/
+        //gettimeofday( &_end, NULL );
+    //printf("ubus look end    : %d.%d\n",_end.tv_sec,_end.tv_usec);
+
+        */
+
+    
+
     
 	blob_buf_init(&b, 0);
 	
@@ -457,6 +459,11 @@ void get_wl_4(uint8_t *p_id,uint8_t *data_wl,int *wlen)
     wl_buffer.data = data_wl;
     
 	blobmsg_add_field(&b, BLOBMSG_TYPE_UNSPEC, "strhex", id_data, ID_LEN);
+
+/*
+    gettimeofday( &_start, NULL );
+    printf("invoke start : %d.%d\n", _start.tv_sec, _start.tv_usec);
+*/
 
 	int i =	ubus_invoke(ctx, id, "pushdata", b.head, get_wl_4_cb, (void*)&wl_buffer, 3000);
     
