@@ -139,14 +139,15 @@ void *eg_zmq_thread_entry(void *parameter)
             
         	//解析报文处理
         	//ret = msg_parse_packet(recv_buf, recv_len, send_buf, &send_len);
-            printf("server recive:\n");
+            printf("\n------------------------------\n");
+            printf("usb zmq recive:\n");
             for(i = 0;i < recv_len;i++){
 
-                printf("0x%X ",recv_buf[i]);
+                printf("%02X ",recv_buf[i]);
                 
 
             }
-            printf("\n");
+            printf("\n------------------------------\n");
             memcpy(p_zmq_322->zmq_buffer,recv_buf,recv_len);
 
             p_zmq_322->zmq_len = recv_len;

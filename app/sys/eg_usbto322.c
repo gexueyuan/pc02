@@ -41,6 +41,8 @@ OSAL_DEBUG_ENTRY_DEFINE(eg_usbto322);
 #define VENDOR_ID 0x1780  
 #define PRODUCT_ID 0x0312
 
+#define USE_TIMESTAMP
+
 extern   void get_wl(uint8_t *id_lv,uint8_t *data_wl,int *wlen);
 extern   void get_wl_4(uint8_t *id_lv,uint8_t *data_wl,int *wlen);
 extern   int get_audit_data(unsigned int tag,unsigned char* strhex,int strlen,uint8_t *data_wl,int *wlen);
@@ -418,7 +420,25 @@ uint8_t   get_sys_time(unsigned char *time_ptr)//len must be more than 19
 
 void print_rec(unsigned char* rec,int len)
 {
-#if 1
+#ifdef USE_TIMESTAMP
+        int i;
+        struct timeval tvl;
+        struct tm * local_t;
+        
+        gettimeofday(&tvl, NULL);
+        local_t = localtime(&tvl.tv_sec);
+
+        if(osal_module_debug_level <= OSAL_DEBUG_INFO){
+            printf("\n[%02d:%02d:%02d.%03d]recv data len is :%d\n\r",local_t->tm_hour,local_t->tm_min,local_t->tm_sec,(int)(tvl.tv_usec/1000),len);
+            for(i = 0;i < len;i++){
+            
+                printf("%02X ",rec[i]);
+                
+            }
+            printf("\n\r\n");
+        }
+
+#else
     int i;
 
     if(osal_module_debug_level <= OSAL_DEBUG_INFO){
@@ -437,7 +457,26 @@ void print_rec(unsigned char* rec,int len)
 
 void print_send(unsigned char* send,int len)
 {
-#if 1
+
+#ifdef USE_TIMESTAMP
+    int i;
+    struct timeval tvl;
+    struct tm * local_t;
+    
+    gettimeofday(&tvl, NULL);
+    local_t = localtime(&tvl.tv_sec);
+    
+    if(osal_module_debug_level <= OSAL_DEBUG_INFO){
+        printf("\n[%02d:%02d:%02d.%03d]send data len is :%d\n\r",local_t->tm_hour,local_t->tm_min,local_t->tm_sec,(int)(tvl.tv_usec/1000),len);
+        for(i = 0;i < len;i++){
+        
+            printf("%02X ",send[i]);
+            
+        }
+        printf("\n\r\n");
+    }
+
+#else
     int i;
 
     if(osal_module_debug_level <= OSAL_DEBUG_INFO){
@@ -898,7 +937,7 @@ while(1){
                 ret = usb_transmit(context,controll_eg.p2pkey.data,controll_eg.p2pkey.len,output,sizeof(output),p_usb_ccid);
                 print_rec(output,ret);
                 
-                /************************TEST**************************/
+                /************************TEST**************************
                 sleep(1);
                 memset(output,0,sizeof(output));
                 print_send(rd_p2pkey,sizeof(rd_p2pkey));
@@ -909,7 +948,7 @@ while(1){
                 print_send(rd_pr11_p2pkey,sizeof(rd_pr11_p2pkey));
                 ret = usb_transmit(context,rd_pr11_p2pkey,sizeof(rd_pr11_p2pkey),output,sizeof(output),p_usb_ccid);
                 print_rec(output,ret);
-                /************************TEST**************************/
+                ************************TEST**************************/
                 
                 sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_SEND_COSVERSION,0,0,NULL);
                 osal_sem_release(p_usb_ccid->sem_state);
@@ -1360,12 +1399,16 @@ while(1){
             
         case  USB_COMM_ID_READ:
             
-            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "Id transmit\n");
+            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "322 usb transmit:");
             print_send(p_usb_ccid->zmq_buffer,p_usb_ccid->zmq_len);
             ret = usb_transmit(context,p_usb_ccid->zmq_buffer,p_usb_ccid->zmq_len,output,sizeof(output),p_usb_ccid);
-            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "322 Id return:\n");
-            print_rec(output,ret);
-            zmq_socket_send(p_usb_ccid->zmq_server,output,ret);
+            //OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "322 Id return:\n");
+            if(ret > 0){
+                print_rec(output,ret);
+                zmq_socket_send(p_usb_ccid->zmq_server,output,ret);
+            }else            
+                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "322 usb transmit error\n");
+            p_usb_ccid->usb_state = USB_COMM_STATE_DEFAULT;
             osal_sem_release(p_usb_ccid->sem_state);
             break;
             
@@ -1413,6 +1456,9 @@ while(1){
 
             osal_sem_release(p_usb_ccid->sem_state);
 
+            break;
+
+     case USB_COMM_STATE_DEFAULT:
             break;
 
         default:
@@ -1701,9 +1747,10 @@ else if(tail_check == 2){
             print_rec(zmq_ans,rec_zmq);
 
             if(rec_zmq > 14)
-            sys_add_event_queue(&controll_eg.msg_manager,ZMQ_RESULT,0,p_usb_ccid->ccid322_index,NULL);
+                sys_add_event_queue(&controll_eg.msg_manager,ZMQ_RESULT,0,p_usb_ccid->ccid322_index,NULL);
             
             
+            printf("switch value is %d\n",p_usb_ccid->toggle_state);
         }
 
         msleep(30);
