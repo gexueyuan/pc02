@@ -23,6 +23,8 @@ static struct ubus_context *ctx;
 static struct blob_buf b;
 unsigned char p2p_buffer[128] = {0};
 unsigned char mac_buffer[128] = {0};
+unsigned char base_cfg_buffer[128] = {0};
+unsigned char ctrl_cfg_buffer[128] = {0};
 static long get_file_len(FILE *file)
 {
     long len; 
@@ -45,11 +47,11 @@ static long get_file_len(FILE *file)
 *             -1, 失败
 *
 */
-int readCFG(const char* _fileName, key_buffer_t* cfg)
+int readCFG(const char* _fileName, unsigned char* cfg_buffer)
 {
 
     FILE* fp = NULL;
-    long len;
+    int len;
     int i;
     char cmd[200];
     
@@ -68,17 +70,23 @@ int readCFG(const char* _fileName, key_buffer_t* cfg)
     
     rewind(fp);
 
-    cfg->len = len;
+    //cfg->len = len;
     
 
-    cfg->data = (unsigned char*)malloc(len);
+    //cfg->data = (unsigned char*)malloc(len);
+    
     printf("\nlen is %d\n",len);
 
-    fread(cfg->data, len, 1, fp); // 二进制读
+    if(len < 128)
+        fread(cfg_buffer, len, 1, fp); // 二进制读
+    else{
+            printf("len too long\n");
+            return -1;
+        }
     
     printf("\n============================\n");
-    for(i = 0; i< cfg->len;i++){
-        printf("%02x ",cfg->data[i]);
+    for(i = 0; i< len;i++){
+        printf("%02x ",cfg_buffer[i]);
     }
     printf("\n============================\n");
     
@@ -90,7 +98,7 @@ int readCFG(const char* _fileName, key_buffer_t* cfg)
     
     printf("get cfg\n");
     
-    return 0;        
+    return len;        
 }
 
 
@@ -229,8 +237,8 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
             }   
         }
 #endif
-    memset(p2p_buffer,0,sizeof(p2p_buffer));
-    memset(mac_buffer,0,sizeof(mac_buffer));
+    //memset(p2p_buffer,0,sizeof(p2p_buffer));
+    //memset(mac_buffer,0,sizeof(mac_buffer));
     switch(if_tag){
 
         case UBUS_SERVER_P2P:
@@ -310,10 +318,10 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
 
             }
 */
-            
+            controll_eg.basecfg.data = base_cfg_buffer;
             printf("base cfg path:%s\n",pStr);
 
-            readCFG(pStr,&controll_eg.basecfg);
+            controll_eg.basecfg.len = readCFG(pStr,base_cfg_buffer);
             
 
             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_UPDATE_BASECFG,0,0,NULL);
@@ -329,11 +337,12 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
                 free(&controll_eg.ctlcfg.data);
 
             }
-*/
+*/          
+            controll_eg.ctlcfg.data = ctrl_cfg_buffer;
             printf("controll_eg.ctlcfg.data is %02X\n",controll_eg.ctlcfg.data);
             printf("ctrl cfg path:%s\n",pStr);
             
-            readCFG(pStr,&controll_eg.ctlcfg);
+            controll_eg.ctlcfg.len = readCFG(pStr,ctrl_cfg_buffer);
 
             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_UPDATE_READERCFG,0,0,NULL);
             break;
@@ -520,12 +529,16 @@ void ubus_interface_init(void)
 {
     osal_task_t *tid;
 
-
+    memset(p2p_buffer,0,sizeof(p2p_buffer));
+    memset(mac_buffer,0,sizeof(mac_buffer));
+    memset(ctrl_cfg_buffer,0,sizeof(ctrl_cfg_buffer));    
+    memset(base_cfg_buffer,0,sizeof(base_cfg_buffer));
     tid = osal_task_create("tk_ubus_server",
                         ubus_server_thread_entry,
                         NULL,LESS_THREAD_STACK_SIZE, RT_SYS_THREAD_PRIORITY);
 
     osal_assert(tid != NULL);
 
+    
 
 }
