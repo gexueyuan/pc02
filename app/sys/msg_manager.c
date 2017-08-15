@@ -41,6 +41,8 @@ void ubus_321_find(void)
         return;
     }
 
+    printf("321 ubus id update,0x%X\n",id_322);
+
 
 }
 
@@ -175,7 +177,7 @@ void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int st
 
         id_322 = id;
 
-        printf("\n===========321id is %d,ubus client=============\n",id);
+        printf("\n===========321id is %X,ubus client=============\n",id);
         
     }
 
@@ -264,6 +266,11 @@ void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strle
             break;
 
         case UBUS_CLIENT_SEND_DOOR_INFO:
+            str_buffer = (unsigned char*)malloc(strlen);
+            memcpy(str_buffer,strhex,strlen);
+            break;
+
+        case UBUS_CLIENT_SEND_ID_INFO:
             str_buffer = (unsigned char*)malloc(strlen);
             memcpy(str_buffer,strhex,strlen);
             break;
@@ -436,7 +443,7 @@ void get_wl_4(uint8_t *p_id,uint8_t *data_wl,int *wlen)
 
         id_322 = id;
 
-        printf("\n===========321id is %d,get wl=============\n",id);
+        printf("\n===========321id is 0x%X,get wl=============\n",id);
         
     }
 
@@ -662,7 +669,7 @@ int get_rtc_data(uint8_t *data_rtc)
 
         id_322 = id;
 
-        printf("\n===========321id is %d,get wl=============\n",id);
+        printf("\n===========321id is 0X%X=============\n",id);
         
     }
     
@@ -770,9 +777,10 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
 //        
 //        }
        // sleep(1);
-        state_alternate(USB_COMM_STATE_INIT,&controll_eg.usb_ccid_322[p_msg->argc]);
-        OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "%s: initialize complete\n", __FUNCTION__);
-
+       OSAL_MODULE_DBGPRT(p_controll_eg->usb_ccid_322[p_msg->argc].usb_port, OSAL_DEBUG_INFO, "port %d: state init\n",p_msg->argc);
+       
+        state_alternate(USB_COMM_STATE_INIT,&p_controll_eg->usb_ccid_322[p_msg->argc]);
+       
         break;
         
     case SYS_MSG_SEND_CE:
@@ -958,10 +966,43 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
            
        
        }
+        break;
         
+   case SYS_MSG_ID_REMOTE_OPEN:
+    
+       for(i = 0;i < MAX_322_NUM;i++ ){
+       
+           if(controll_eg.usb_ccid_322[i].ccid322_exist){
+               
+               state_alternate(USB_ID_REMOTE_OPEN,&controll_eg.usb_ccid_322[i]);
+               //break;
+           }
+           
+       
+       }
+        break;
         
-    break;
+    case ZMQ_MSG_ID:
+        OSAL_MODULE_DBGPRT(controll_eg.usb_ccid_322[p_msg->argc].usb_port, OSAL_DEBUG_INFO, "get zmq msg\n");
+        state_alternate(USB_COMM_ID_READ,&controll_eg.usb_ccid_322[p_msg->argc]);
+        
+/*
+        for(i = 0;i < MAX_322_NUM;i++ ){
+        
+            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+                
+                state_alternate(USB_COMM_ID_READ,&controll_eg.usb_ccid_322[i]);
+            }
+            
+        
+        }
+*/
+        break;
 
+    case ZMQ_RESULT:
+        state_alternate(USB_COMM_ID_DOOR_SERVER,&controll_eg.usb_ccid_322[p_msg->argc]);
+        break;
+        
     case SYS_MSG_ALARM_CLEAR:
      
         for(i = 0;i < MAX_322_NUM;i++ ){
@@ -983,7 +1024,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
             //printf("322 usb test %d\n",p_msg->argc);
             state_alternate(USB_322_TEST,&controll_eg.usb_ccid_322[p_msg->argc]);
             break;
-        
+      
     default:
         break;
     }

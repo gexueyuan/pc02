@@ -13,7 +13,7 @@
 #define __CV_CMS_DEF_H__
 
 #include "cv_osal.h"
-
+#include "zmq.h"
 
 /*****************************************************************************
  * declaration of variables and functions                                    *
@@ -78,12 +78,17 @@ enum SYSTEM_MSG_TYPE{
 
     SYS_MSG_REMOTE_OPEN,
     
+    SYS_MSG_ID_REMOTE_OPEN,
+    
     SYS_MSG_UPDATE_MACKEY,    
     SYS_MSG_UPDATE_P2PKEY,    
     SYS_MSG_UPDATE_BASECFG,
     SYS_MSG_UPDATE_TIMECFG,    
     SYS_MSG_UPDATE_ALERTCFG,    
-    SYS_MSG_UPDATE_READERCFG,    
+    SYS_MSG_UPDATE_READERCFG,
+
+    ZMQ_MSG_ID,
+    ZMQ_RESULT,
     
     SYS_MSG_ALARM_ACTIVE,
     SYS_MSG_ALARM_CLEAR,
@@ -207,7 +212,7 @@ typedef enum _DOOR_CFG_INDEX {
 
 typedef enum _USB_COMM_STATE {
     
-    USB_COMM_STATE_DEFAULT = 0,
+    USB_COMM_STATE_DEFAULT = 0x0000,
     USB_COMM_STATE_IDLE,
     USB_COMM_STATE_INIT,
     USB_COMM_STATE_INIT_END,
@@ -231,7 +236,11 @@ typedef enum _USB_COMM_STATE {
 
     USB_COMM_CLEAR_ALARM,
     USB_322_TEST,
+    USB_COMM_ID_READ,
     
+    USB_COMM_ID_DOOR_SERVER,
+
+    USB_ID_REMOTE_OPEN,
 } E_USB_COMM_STATE;
 
 typedef enum _DOOR_STATE {
@@ -260,6 +269,7 @@ typedef enum _UBUS_INTERFACE {
     UBUS_SERVER_MACKEY = 0x0101,
     UBUS_SERVER_P2P = 0x0102,
     UBUS_SERVER_TMSYNC = 0x0103,
+    UBUS_SERVER_321UBUS_UPDATE = 0x0104,
     UBUS_SERVER_BASE_CFG = 0x0201,
     UBUS_SERVER_TIME_CFG = 0x0301,
     UBUS_SERVER_ALARM_CFG = 0x0401,
@@ -274,6 +284,8 @@ typedef enum _UBUS_INTERFACE {
     UBUS_SERVER_ALARM = 0x002B,
     
     UBUS_SERVER_REMOTE = 0x0B02,
+
+    UBUS_SERVER_REMOTE_ID = 0x0B03,
 } E_UBUS_INTERFACE;
 
 
@@ -302,6 +314,8 @@ typedef enum _UBUS_CLIENT {
     UBUS_CLIENT_SEND_ALARM = 0x9002,
 
     UBUS_CLIENT_SEND_DOOR_INFO = 0x9003,
+
+    UBUS_CLIENT_SEND_ID_INFO = 0x9004,
 } E_UBUS_CLIENT;
 
 
@@ -446,6 +460,20 @@ typedef struct _usb_ccid_322 {
     uint8_t toggle_alarm;
     uint8_t rtc_sync;
     /**/
+
+    /*zmq start*/
+    void *context;
+    void *zmq_client;
+    void *zmq_server;
+    void *zmq_answer;
+    void *zmq_sn;
+    unsigned char *zmq_cli_addr;
+    unsigned char *zmq_server_addr;   
+    unsigned char *zmq_answer_addr;
+    int zmq_len;
+    uint8_t zmq_buffer[10240];
+	zmq_pollitem_t pollitems;
+    /*zmq end*/
     
     /*os task start*/
     osal_task_t   *task_322;
