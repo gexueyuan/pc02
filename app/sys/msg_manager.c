@@ -31,6 +31,7 @@ static struct blob_buf b;
 static unsigned char ce_send_fg = 0;
 static unsigned char info_send_fg = 0;
 uint32_t id_322 = 0;
+uint32_t id_net = 0;
 
 void ubus_321_find(void)
 {
@@ -42,6 +43,21 @@ void ubus_321_find(void)
     }
 
     printf("321 ubus id update,0x%X\n",id_322);
+
+
+}
+
+
+void ubus_pc02nbi_find(void)
+{
+
+    if (ubus_lookup_id(ctx, "pc02nbi", &id_net)) {
+        
+        fprintf(stderr, "Failed to look up pc02nbi object\n");
+        return;
+    }
+
+    printf("pc02nbi ubus id update,0x%X\n",id_net);
 
 
 }
@@ -238,10 +254,22 @@ void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strle
 
     unsigned char* str_buffer = NULL;
 
-	if (ubus_lookup_id(ctx, "pc02nbi", &id)) {
-		fprintf(stderr, "Failed to look up pc02nbi object\n");
-		return;
-	}
+     id = id_net;
+
+    if(id == 0){
+
+        
+    	if (ubus_lookup_id(ctx, "pc02nbi", &id)) {
+    		fprintf(stderr, "Failed to look up pc02nbi object\n");
+    		return;
+    	}
+
+        id_net = id;
+
+        printf("\n===========pc02nbi id is %X,ubus client=============\n",id);
+        
+    }
+
 
 	blob_buf_init(&b, 0);
 	
@@ -864,6 +892,8 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
 
         printf("================find 321 id===============\n");
         ubus_321_find();
+        printf("================find nbi id===============\n");
+        ubus_pc02nbi_find();
         
         for(i = 0;i < MAX_322_NUM;i++ ){
         
