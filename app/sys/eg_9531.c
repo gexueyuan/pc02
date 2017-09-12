@@ -223,3 +223,69 @@ int cfg_reader_RD(char *filename)
     return 1;
 }
 #endif
+#if 0
+#include "cv_cms_def.h"
+
+#define WAN_OFFSET 0
+#define LAN_OFFSET 6
+#define WIFI_OFFSET 0x1002
+int openwrt_mac_write(char *nic, char *value,int count)
+{ 
+
+    int size = 0;    
+    struct mtd_info_user mtdInfo;    
+    struct erase_info_user mtdEraseInfo;    
+    int fd = open(/dev/mtd5, O_RDWR | O_SYNC);    
+    unsigned char *buf, *ptr;
+    int i;
+    if(fd < 0) {
+        printf("Could not open mtd device: %s\n", /dev/mtd5);
+        return -1;
+    }
+    if(ioctl(fd, MEMGETINFO, &mtdInfo)) { 
+        printf("Could not get MTD device info from %s\n", /dev/mtd5);
+        close(fd);
+        return -1;
+    } 
+    mtdEraseInfo.length = size = mtdInfo.erasesize;
+    buf = (unsigned char *)malloc(size);
+    if(NULL == buf){
+        printf("Allocate memory for size failed.\n");
+        close(fd);
+        return -1;
+        }    
+    if(read(fd, buf, size) != size){ 
+        printf("read() %s failed\n", /dev/mtd5);
+        goto write_fail;
+        }    
+    mtdEraseInfo.start = 0x0;
+    for (mtdEraseInfo.start; mtdEraseInfo.start < mtdInfo.size; mtdEraseInfo.start += mtdInfo.erasesize) { 
+        ioctl(fd, MEMUNLOCK, &mtdEraseInfo); 
+        if(ioctl(fd, MEMERASE, &mtdEraseInfo)){ 
+            printf("Failed to erase block on %s at 0x%x\n", /dev/mtd5, mtdEraseInfo.start);
+            goto write_fail; 
+        }    
+    }    
+    if (!strcmp(nic, "wan"))
+        ptr = buf + WAN_OFFSET;    
+    else if(!strcmp(nic, "lan"))        
+        ptr = buf + LAN_OFFSET;    
+    else if(!strcmp(nic, "ath0"))        
+        ptr = buf + WIFI_OFFSET;        
+    memcpy(ptr,value,count);    
+    lseek(fd, 0, SEEK_SET);    
+    if (write(fd, buf, size) != size) { 
+        printf("write() %s failed\n", /dev/mtd5);        
+        goto write_fail;    
+        }    
+    close(fd);        
+    free(buf);    
+    return 0;
+
+write_fail:    
+        close(fd);    
+        free(buf);    
+        return -1;
+}
+
+#endif

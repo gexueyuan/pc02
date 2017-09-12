@@ -30,8 +30,15 @@ static struct blob_buf b;
 
 static unsigned char ce_send_fg = 0;
 static unsigned char info_send_fg = 0;
+static unsigned char return_send_fg = 0;
+static unsigned char return_base_fg = 0;
 uint32_t id_322 = 0;
 uint32_t id_net = 0;
+unsigned char return_buffer[128] = {0};
+uint8_t return_array[3][MAX_322_NUM] = {0};
+#define CFG_NAME_LEN  68
+
+osal_sem_t *sem_net_process;
 
 void ubus_321_find(void)
 {
@@ -254,6 +261,16 @@ void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strle
 
     unsigned char* str_buffer = NULL;
 
+     /* Take the semaphore. */
+     if(osal_sem_take(sem_net_process, 3000) != OSAL_EOK){
+         
+         printf("Semaphore return failed. \n");
+         
+         osal_sem_release(sem_net_process);
+         //osal_sem_release(p_usb_ccid->sem_state);
+         //break;
+     }
+
      id = id_net;
 
     if(id == 0){
@@ -261,6 +278,8 @@ void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strle
         
     	if (ubus_lookup_id(ctx, "pc02nbi", &id)) {
     		fprintf(stderr, "Failed to look up pc02nbi object\n");
+            
+            osal_sem_release(sem_net_process);
     		return;
     	}
 
@@ -303,7 +322,20 @@ void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strle
             memcpy(str_buffer,strhex,strlen);
             break;
 
+        case UBUS_CLIENT_RETURN:
+            str_buffer = (unsigned char*)malloc(strlen);
+            memcpy(str_buffer,strhex,strlen);
+            break;
+            
+        case UBUS_CLIENT_SEND_BAT:
+            str_buffer = (unsigned char*)malloc(strlen);
+            memcpy(str_buffer,strhex,strlen);
+            break;
+            
+
         default:
+            str_buffer = (unsigned char*)malloc(strlen);
+            memcpy(str_buffer,strhex,strlen);
             break;
         
 
@@ -318,6 +350,8 @@ void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strle
 
     if(str_buffer != NULL)
         free(str_buffer);
+
+    osal_sem_release(sem_net_process);
 }
 
 static void get_wl_data_cb(struct ubus_request *req,
@@ -584,10 +618,30 @@ int get_audit_data(unsigned int tag,unsigned char* strhex,int strlen,uint8_t *da
     key_buffer_t wl_buffer;
 
     memset(&wl_buffer,0,sizeof(wl_buffer));
+    
+/*
 	if (ubus_lookup_id(ctx, "ubus321", &id)) {
 		fprintf(stderr, "Failed to look up ubus321 object\n");
 		return -1;
 	}
+*/
+     id = id_322;
+
+    if(id == 0){
+
+        
+    	if (ubus_lookup_id(ctx, "ubus321", &id)) {
+    		fprintf(stderr, "Failed to look up ubus321 object\n");
+    		return;
+    	}
+
+        id_322 = id;
+
+        printf("\n===========321id is 0x%X,get wl=============\n",id);
+        
+    }
+
+
 	blob_buf_init(&b, 0);
 	
 	blobmsg_add_u32(&b, "tag", tag);
@@ -786,7 +840,9 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
     uint32_t type = 0; 
     int i;
     unsigned char door_state[2];
+    uint16_t return_value;
     //msg_manager_t *p_sys = &p_controll_eg->msg_manager;
+    uint8_t index_cnt = 0;
     
     switch(p_msg->id){
         
@@ -814,7 +870,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
     case SYS_MSG_SEND_CE:
         
         ce_send_fg++;
-        
+        index_cnt = 0;
         if(ce_send_fg >= p_controll_eg->cnt_322){
 
             update_ce();
@@ -824,6 +880,23 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
             
             printf("===========request p2p key===============\n");
             ubus_client_process(UBUS_CLIENT_GETP2P,NULL,NULL,0);
+
+            
+            printf("\n===========list active 322+pr11===============\n");
+            
+            for(i = 0;i < MAX_322_NUM;i++ ){
+            
+                if(controll_eg.usb_ccid_322[i].ccid322_exist){
+                    
+                    controll_eg.index_322[index_cnt] = controll_eg.usb_ccid_322[i].ccid322_index;
+                    printf("%02X ",controll_eg.index_322[index_cnt]);    
+                    index_cnt++;
+            
+                }
+                
+            
+            }
+            printf("\n==============================================\n");
         }
 
 
@@ -911,7 +984,20 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
 
     case SYS_MSG_UPDATE_BASECFG:
         //update_cfg();
+        index_cnt = 0;
         
+        for(i = 0;i < MAX_322_NUM;i++ ){
+        
+            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+                
+                //memcpy(&controll_eg.ctrl_cfg_rt[8 + index_cnt],);//8,9 is return data;10,index
+                controll_eg.base_cfg_rt[11 + index_cnt] = controll_eg.usb_ccid_322[i].ccid322_index;
+                index_cnt++;
+
+            }
+            
+        
+        }
         for(i = 0;i < MAX_322_NUM;i++ ){
         
             if(controll_eg.usb_ccid_322[i].ccid322_exist){
@@ -935,6 +1021,21 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
         break;
         
     case SYS_MSG_UPDATE_READERCFG:
+
+        index_cnt = 0;
+        
+        for(i = 0;i < MAX_322_NUM;i++ ){
+        
+            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+                
+                //memcpy(&controll_eg.ctrl_cfg_rt[8 + index_cnt],);//8,9 is return data;10-index
+                controll_eg.ctrl_cfg_rt[11 + index_cnt] = controll_eg.usb_ccid_322[i].ccid322_index;
+                index_cnt++;
+
+            }
+            
+        
+        }
         
         for(i = 0;i < MAX_322_NUM;i++ ){
         
@@ -957,7 +1058,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
                 
                 //controll_eg.usb_ccid_322[i].usb_state = USB_COMM_STATE_P2P;
                 state_alternate(USB_COMM_ALARM_OPEN,&controll_eg.usb_ccid_322[i]);
-                //break;
+                break;
             }
             
         
@@ -1054,6 +1155,81 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
             //printf("322 usb test %d\n",p_msg->argc);
             state_alternate(USB_322_TEST,&controll_eg.usb_ccid_322[p_msg->argc]);
             break;
+
+    case SYS_MSG_322_RETURN:
+        
+        //sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_322_RETURN,USB_COMM_STATE_RDCFG,return_req,NULL);
+        
+        if(p_msg->len == USB_COMM_STATE_RDCFG){
+            
+            return_send_fg++;
+            printf("\nport %d ctrl cfg return\n",(0x00FF0000&p_msg->argc)>>16);
+           if( (0x9000 != (0x0000FFFF&p_msg->argc))||(0x900A != (0x0000FFFF&p_msg->argc))){
+               controll_eg.ctrl_cfg_rt[68] = 0x90;
+               controll_eg.ctrl_cfg_rt[69] = 0x00;
+            }else{
+            
+               controll_eg.ctrl_cfg_rt[68] = (0x0000FF00&p_msg->argc)>>8;
+               controll_eg.ctrl_cfg_rt[69] = (0x000000FF&p_msg->argc);
+
+            }
+            
+            if(return_send_fg >= p_controll_eg->cnt_322){
+
+                
+                
+                //memcpy(return_buffer,controll_eg.ctrl_cfg_rt,51);//ctrl_cfg_rt is 51 Byte buffers
+                
+                //memcpy(return_buffer[51],(uint8_t*)(&return_array),return_send_fg * 3);
+                
+                printf("\n");
+                for(i = 0;i < 71;i++){
+
+                    printf("0x%x ",controll_eg.ctrl_cfg_rt[i]);
+                }
+                printf("\n");
+                controll_eg.ctrl_cfg_rt[70] = 1;
+                ubus_net_process(UBUS_CLIENT_RETURN,NULL,controll_eg.ctrl_cfg_rt,71);//path:68,return:2,num:1
+                return_send_fg = 0;
+                osal_sem_release(controll_eg.sem_ctrl_cfg);        
+            }
+
+
+        }
+        else if(p_msg->len == USB_COMM_STATE_CFG){
+            
+
+             return_base_fg++;
+            printf("\nport %d base cfg return\n",(0x00FF0000&p_msg->argc)>>16);
+            if( (0x9000 != (0x0000FFFF&p_msg->argc))||(0x900A != (0x0000FFFF&p_msg->argc))){
+                controll_eg.base_cfg_rt[68] = 0x90;
+                controll_eg.base_cfg_rt[69] = 0x00;
+             }else{
+             
+                controll_eg.base_cfg_rt[68] = (0x0000FF00&p_msg->argc)>>8;
+                controll_eg.base_cfg_rt[69] = (0x000000FF&p_msg->argc);
+
+             }
+             
+             if(return_base_fg >= p_controll_eg->cnt_322){
+
+                 
+                 
+                 printf("\n");
+                 for(i = 0;i < 71;i++){
+
+                     printf("0x%x ",controll_eg.base_cfg_rt[i]);
+                 }
+                 controll_eg.base_cfg_rt[70] = 1;
+                 ubus_net_process(UBUS_CLIENT_RETURN,NULL,controll_eg.base_cfg_rt,71);//path:68,return:2,num:1
+                 return_base_fg = 0;
+                 osal_sem_release(controll_eg.sem_base_cfg);        
+             }
+
+
+        }
+
+        break;
       
     default:
         break;
@@ -1102,7 +1278,10 @@ void msg_manager_init(void)
 
 
     osal_task_t *tid;
-
+    
+    sem_net_process= osal_sem_create("sem_net_process", 1);
+    osal_assert(sem_net_process != NULL);
+    
     ubus_clien_init();
     /* object for sys */
     p_msg->queue_msg = osal_queue_create("q-msg", SYS_QUEUE_SIZE, SYS_MQ_MSG_SIZE);
@@ -1111,7 +1290,8 @@ void msg_manager_init(void)
     p_msg->task_msg = osal_task_create("task-msg",
                            msg_thread_entry, p_msg,
                            DEF_THREAD_STACK_SIZE, RT_SYS_THREAD_PRIORITY);
-    osal_assert(p_msg->task_msg != NULL);      
+    osal_assert(p_msg->task_msg != NULL); 
+
 
 }
 

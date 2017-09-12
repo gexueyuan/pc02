@@ -19,13 +19,17 @@
 #include "cv_cms_def.h"
 #include "ubus_mgr.h"
 
+
 static struct ubus_context *ctx;
 static struct blob_buf b;
 unsigned char p2p_buffer[128] = {0};
 unsigned char mac_buffer[128] = {0};
-unsigned char base_cfg_buffer[128] = {0};
-unsigned char ctrl_cfg_buffer[128] = {0};
 
+unsigned char base_cfg_buffer[128] = {0};
+//unsigned char base_cfg_rt[128] = {0};
+
+unsigned char ctrl_cfg_buffer[128] = {0};
+//unsigned char ctrl_cfg_rt[128] = {0};
 extern void ubus_321_find(void);
 
 
@@ -186,11 +190,12 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
 {
     struct blob_attr *tb[__REQ_MAX];
     unsigned  int if_tag;
-    int i;
-    int len ;
+    int i = 0;
+    int len = 0;
     uint8_t *pStr;
     unsigned char *data ;
     uint8_t path_name[256];
+    unsigned char *remote_buffer;
     blobmsg_parse(fun2_message_parse_policy, __REQ_MAX, tb, blob_data(msg), blob_len(msg));
 
     if (!tb[REQ_TAG])
@@ -302,6 +307,9 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
             
                 if(controll_eg.usb_ccid_322[i].ccid322_exist){
 
+                   controll_eg.usb_ccid_322[i].rtc_sync = 0xAA;
+                    
+
                    sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_INFO_PUSH,0,controll_eg.usb_ccid_322[i].ccid322_index,NULL);
                     
                    // state_alternate(USB_COMM_REMOTE_OPEN,&controll_eg.usb_ccid_322[i]);
@@ -321,15 +329,21 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
         case UBUS_SERVER_BASE_CFG:
 
             
-/*
-            if(controll_eg.basecfg.data != NULL){
-
-                free(&controll_eg.basecfg.data);
-
+            /* Take the semaphore. */
+            printf("\nget base cfg\n");
+            if(osal_sem_take(controll_eg.sem_base_cfg, OSAL_WAITING_FOREVER) != OSAL_EOK)
+            {
+               printf("\n Semaphore return failed. \n");
+               return 0;
             }
-*/
+
             controll_eg.basecfg.data = base_cfg_buffer;
             printf("base cfg path:%s\n",pStr);
+
+            //strcpy(controll_eg.base_cfg_rt,pStr);/*/tmp/pc02nbi/xxxxx.bin*/
+
+            StrToHex(controll_eg.base_cfg_rt,&pStr[13],2);
+            StrToHex(&controll_eg.base_cfg_rt[2],&pStr[UBUS_STR_NUM_OFFSET],UBUS_STR_NUM_CN/2);
 
             controll_eg.basecfg.len = readCFG(pStr,base_cfg_buffer);
             
@@ -341,16 +355,24 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
             
         case UBUS_SERVER_READER_CFG:
             
-/*
-            if(controll_eg.ctlcfg.data != NULL){
-
-                free(&controll_eg.ctlcfg.data);
-
-            }
-*/          
+            
+            printf("\nget ctrl cfg\n");
+            /* Take the semaphore. */
+            if(osal_sem_take(controll_eg.sem_ctrl_cfg, OSAL_WAITING_FOREVER) != OSAL_EOK)
+            {
+               printf("\n Semaphore return failed. \n");
+               return 0;
+            }          
             controll_eg.ctlcfg.data = ctrl_cfg_buffer;
-            printf("controll_eg.ctlcfg.data is %02X\n",controll_eg.ctlcfg.data);
+            printf("\ncontroll_eg.ctlcfg.data address is %02X\n",controll_eg.ctlcfg.data);
             printf("ctrl cfg path:%s\n",pStr);
+            
+            //memcpy(controll_eg.ctrl_cfg_rt,pStr,strlen(pStr));
+            //strcpy(controll_eg.ctrl_cfg_rt,pStr);/*/tmp/pc02nbi/xxxxx.bin*/
+            
+            StrToHex(controll_eg.ctrl_cfg_rt,&pStr[13],2);
+            StrToHex(&controll_eg.ctrl_cfg_rt[2],&pStr[UBUS_STR_NUM_OFFSET],UBUS_STR_NUM_CN/2);
+
             
             controll_eg.ctlcfg.len = readCFG(pStr,ctrl_cfg_buffer);
 
@@ -378,26 +400,51 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
             
         case UBUS_SERVER_REMOTE:
             
-
-            //printf("sizeof(p_controll_eg->remote_buffer) is %d\n",sizeof(p_controll_eg->remote_buffer));
-            memset(p_controll_eg->remote_buffer,0,sizeof(p_controll_eg->remote_buffer));
-            //printf("ctrl remote path:%s\n",pStr);
+#if 1
+                /* Take the semaphore. */
+            if(osal_sem_take(controll_eg.sem_remote, OSAL_WAITING_FOREVER) != OSAL_EOK)
+            {
+               printf("\n Semaphore return failed. \n");
+               return 0;
+            }
+            memset(p_controll_eg->remote_buffer,0,sizeof(p_controll_eg->remote_buffer));//32+data
             
-            //readCFG(pStr,p_controll_eg->remote_buffer);
-
+            if(len > 32)
+                len = len - 32;//len=remote data exclude 32bytes 
+            else
+                printf("\nremote buffer len is %d,something wrong!\n",len);
+            
             controll_eg.remote_buffer[0] = (unsigned char)((len&0xFF00)>>8);
             controll_eg.remote_buffer[1] = (unsigned char)(len&0x00FF);
-
-            //printf("len is %d,buffer[0]:%d,buffer[1]:%d\n",len,p_controll_eg->remote_buffer[0],p_controll_eg->remote_buffer[1]);
             
-            memcpy(&controll_eg.remote_buffer[2],data,len);
+            memcpy(&controll_eg.remote_buffer[2],data,len + 32);//copy all data
 
             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_REMOTE_OPEN,0,0,NULL);
+#else
+            remote_buffer = (unsigned char*)malloc(len + 2);
+
+            if(remote_buffer == NULL){
+
+                printf("malloc failed\n");
+                break;
+
+            }
+            memset(remote_buffer,0,len + 2);
+            remote_buffer[0] = (unsigned char)((len&0xFF00)>>8);
+            remote_buffer[1] = (unsigned char)(len&0x00FF);
+
+            memcpy(&remote_buffer[2],data,len);
+
+            sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_REMOTE_OPEN,0,(uint32_t)remote_buffer,NULL);
+#endif
             break;
             
          case UBUS_SERVER_CLEAR_ALARM:
              memset(p_controll_eg->alarm_clear,0,sizeof(p_controll_eg->alarm_clear));
-             memcpy(p_controll_eg->alarm_clear,data,sizeof(p_controll_eg->alarm_clear));
+             if(len == 16)               
+                memcpy(p_controll_eg->alarm_clear,data,16);
+             else if(len == 48)
+                memcpy(p_controll_eg->alarm_clear,data,sizeof(p_controll_eg->alarm_clear));
              sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_ALARM_CLEAR,0,0,NULL);
             break;
             

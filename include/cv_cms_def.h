@@ -62,6 +62,16 @@
 #define SYS_MQ_MSG_SIZE 2048
 #define WNET_MQ_MSG_SIZE 1280
 
+
+/*return interface*/
+
+//.bin = 4,transnum = 12
+#define UBUS_STR_NUM_CN  12 
+#define UBUS_STR_NUM_OFFSET   52 
+#define UBUS_STRHEX_DATA_OFFSET   32
+
+/**/
+
 enum SYSTEM_MSG_TYPE{
     SYS_MSG_BASE = 0x0000,
     SYS_MSG_INITED,
@@ -93,6 +103,7 @@ enum SYSTEM_MSG_TYPE{
     SYS_MSG_ALARM_ACTIVE,
     SYS_MSG_ALARM_CLEAR,
     SYS_MSG_322_USBTEST,
+    SYS_MSG_322_RETURN,
     SYS_MSG_XXX,
 };
 
@@ -299,6 +310,8 @@ typedef enum _UBUS_CLIENT {
     UBUS_CLIENT_GETWL = 0x3001,
     UBUS_CLIENT_GETWLCFG = 0x3002,
 
+    UBUS_CLIENT_RETURN = 0x3005,
+
     UBUS_CLIENT_GETP2P = 0x4003,
     UBUS_CLIENT_GETMAC = 0x4004,
     
@@ -316,6 +329,10 @@ typedef enum _UBUS_CLIENT {
     UBUS_CLIENT_SEND_DOOR_INFO = 0x9003,
 
     UBUS_CLIENT_SEND_ID_INFO = 0x9004,
+
+    UBUS_CLIENT_SEND_BAT = 0x9005,
+
+    UBUS_CLIENT_SEND_StatisticsInfo = 0x9006,
 } E_UBUS_CLIENT;
 
 
@@ -459,6 +476,7 @@ typedef struct _usb_ccid_322 {
     uint8_t toggle_transmit;
     uint8_t toggle_alarm;
     uint8_t rtc_sync;
+    uint8_t alarm_period;
     /**/
 
     /*zmq start*/
@@ -505,6 +523,7 @@ typedef struct _Controller {
 
 /*322 obj */
     usb_ccid_322_t usb_ccid_322[MAX_322_NUM + 1];
+    uint8_t index_322[MAX_322_NUM + 1];
     uint8_t cnt_322;
     msg_manager_t msg_manager;
 
@@ -519,16 +538,24 @@ typedef struct _Controller {
     uint8_t rtc_encrypt[16];
     uint8_t alarm_buffer[64];
     uint8_t remote_buffer[1200];
-    uint8_t alarm_clear[16];
-    uint8_t alarm_opendoor;
+    uint8_t alarm_clear[48];
+    uint8_t alarm_opendoor;   
 /*alarm*/
 /*cfg*/
-    key_buffer_t basecfg;
+    key_buffer_t basecfg;   
+    unsigned char base_cfg_rt[128];
     key_buffer_t ctlcfg;
+    unsigned char ctrl_cfg_rt[128];
     reader_cfg_t reader_cfg[8];
     uint8_t sys_ctrl;
     uint8_t legacy_WG;
-/*cfg end*/    
+/*cfg end*/
+
+/*os relate*/
+    osal_sem_t *sem_remote;
+    osal_sem_t *sem_base_cfg;
+    osal_sem_t *sem_ctrl_cfg;
+/*os relate*/
 } Controller_t;
 
 /**
@@ -599,6 +626,61 @@ static inline float cv_ntohf(float f32)
 
 	return ret;
 }
+
+/* 
+ * 将字符转换为数值 
+ * */  
+static inline int c2i(char ch)  
+{  
+        // 如果是数字，则用数字的ASCII码减去48, 如果ch = '2' ,则 '2' - 48 = 2  
+        if(isdigit(ch))  
+                return ch - 48;  
+  
+        // 如果是字母，但不是A~F,a~f则返回  
+        if( ch < 'A' || (ch > 'F' && ch < 'a') || ch > 'z' )  
+                return -1;  
+  
+        // 如果是大写字母，则用数字的ASCII码减去55, 如果ch = 'A' ,则 'A' - 55 = 10  
+        // 如果是小写字母，则用数字的ASCII码减去87, 如果ch = 'a' ,则 'a' - 87 = 10  
+        if(isalpha(ch))  
+                return isupper(ch) ? ch - 55 : ch - 87;  
+  
+        return -1;  
+} 
+
+
+
+/*
+// C prototype : void StrToHex(BYTE *pbDest, BYTE *pbSrc, int nLen)
+// parameter(s): [OUT] pbDest - 输出缓冲区
+//	[IN] pbSrc - 字符串
+//	[IN] nLen - 16进制数的字节数(字符串的长度/2)
+// return value: 
+// remarks : 将字符串转化为16进制数
+*/
+static inline void StrToHex(unsigned char *pbDest, unsigned char *pbSrc, int nLen)
+{
+    char h1,h2;
+    unsigned char s1,s2;
+    int i;
+
+    for (i=0; i<nLen; i++)
+    {
+    h1 = pbSrc[2*i];
+    h2 = pbSrc[2*i+1];
+
+    s1 = toupper(h1) - 0x30;
+    if (s1 > 9) 
+    s1 -= 7;
+
+    s2 = toupper(h2) - 0x30;
+    if (s2 > 9) 
+    s2 -= 7;
+
+    pbDest[i] = s1*16 + s2;
+}
+}
+
 
 
 /*****************************************************************************

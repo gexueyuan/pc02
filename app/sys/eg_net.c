@@ -40,7 +40,6 @@
 extern   void usb_transparent(unsigned char *data_u,int length);
 //extern void back_poll(void);
 
-extern void StrToHex(unsigned char *pbDest, unsigned char *pbSrc, int nLen);
 
 int  sockfd;  
 char  buf[MAXDATASIZE];  
@@ -98,61 +97,6 @@ int print_time()
 
 
 }
-
-/* 
- * 将字符转换为数值 
- * */  
-int c2i(char ch)  
-{  
-        // 如果是数字，则用数字的ASCII码减去48, 如果ch = '2' ,则 '2' - 48 = 2  
-        if(isdigit(ch))  
-                return ch - 48;  
-  
-        // 如果是字母，但不是A~F,a~f则返回  
-        if( ch < 'A' || (ch > 'F' && ch < 'a') || ch > 'z' )  
-                return -1;  
-  
-        // 如果是大写字母，则用数字的ASCII码减去55, 如果ch = 'A' ,则 'A' - 55 = 10  
-        // 如果是小写字母，则用数字的ASCII码减去87, 如果ch = 'a' ,则 'a' - 87 = 10  
-        if(isalpha(ch))  
-                return isupper(ch) ? ch - 55 : ch - 87;  
-  
-        return -1;  
-} 
-
-
-
-/*
-// C prototype : void StrToHex(BYTE *pbDest, BYTE *pbSrc, int nLen)
-// parameter(s): [OUT] pbDest - 输出缓冲区
-//	[IN] pbSrc - 字符串
-//	[IN] nLen - 16进制数的字节数(字符串的长度/2)
-// return value: 
-// remarks : 将字符串转化为16进制数
-*/
-void StrToHex(unsigned char *pbDest, unsigned char *pbSrc, int nLen)
-{
-    char h1,h2;
-    unsigned char s1,s2;
-    int i;
-
-    for (i=0; i<nLen; i++)
-    {
-    h1 = pbSrc[2*i];
-    h2 = pbSrc[2*i+1];
-
-    s1 = toupper(h1) - 0x30;
-    if (s1 > 9) 
-    s1 -= 7;
-
-    s2 = toupper(h2) - 0x30;
-    if (s2 > 9) 
-    s2 -= 7;
-
-    pbDest[i] = s1*16 + s2;
-}
-}
-
 
 
 static bool_t net_state = 1;
