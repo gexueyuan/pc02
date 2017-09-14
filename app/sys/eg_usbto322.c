@@ -148,6 +148,7 @@ const uint8_t pid_322[] = {0x80,0xCA,0xCE,0x45,0x00};
 const uint8_t sn_pr11[] = {0xFC,0xA0,0x00,0x00,0x05,0x80,0xCA,0xCE,0x09,0x00};
 const uint8_t pid_pr11[] = {0xFC,0xA0,0x00,0x00,0x05,0x80,0xCA,0xCE,0x50,0x00};
 const uint8_t ctrl_cfg[] = {0x80,0xCA,0xCE,0x47,0x00};
+const uint8_t base_cfg[] = {0x80,0xCA,0xCE,0x48,0x00};
 
 const uint8_t change_mode[] = {0xFC,0xDE,0x00,0xAA,0x00};
 
@@ -1029,6 +1030,43 @@ end:
 
 }
 
+/*
+int get_data(void * context,usb_ccid_322_t *p_usb_ccid,const unsigned char  *apdu,int apdu_len)
+{
+	unsigned char output[2048] = {0};
+
+    int ret = 0;
+
+    ret = usb_transmit(context,apdu,apdu_len,output,sizeof(output),p_usb_ccid);
+    
+    if(ret <= 0){
+    
+        
+        memset(output, 0, sizeof(output));
+        ret = luareader_pop_value(context, (char *)output, sizeof(output));
+        printf("luareader_pop_value(%p)=%d(%s)\n", context, ret, output);
+            
+    }else{
+    
+        if(memcmp(&output[ret - 2],confirm,sizeof(confirm)) == 0){
+            
+                print_rec(output,ret);
+    
+                p_usb_ccid->door_index = output[8];////door no get
+                p_usb_ccid->pre_door_state[0] = p_usb_ccid->door_index;
+                p_usb_ccid->now_door_state[0] = p_usb_ccid->door_index;
+            }
+        else{
+            
+            print_rec(output,ret);
+            
+        }
+    }
+    
+
+}
+*/
+
 
 unsigned char lu_test[] = {0x00,0x84,0x00,0x00,0x08};
 volatile  int cnt = 0;
@@ -1869,19 +1907,19 @@ if(tail_check == 1){
 
                 memcpy(&apud_data[sizeof(result_head) + 1],acl_data,17);//result:1 + RTC:16
 
-                memcpy(&apud_data[sizeof(result_head) + 1 + 17],&acl_data[207],1);//name-L:1
+                memcpy(&apud_data[sizeof(result_head) + 1 + 17],&acl_data[271],1);//name-L:1
                 
-                memcpy(&apud_data[sizeof(result_head) + 1 + 17 + 1],&acl_data[208],acl_data[207]);//name-V:v
+                memcpy(&apud_data[sizeof(result_head) + 1 + 17 + 1],&acl_data[272],acl_data[271]);//name-V:v
 
-                memcpy(&apud_data[sizeof(result_head) + 1 + 17 + 1 + acl_data[207]],&acl_data[17],232);
+                memcpy(&apud_data[sizeof(result_head) + 1 + 17 + 1 + acl_data[271]],&acl_data[17],232);
 
-                print_send(apud_data,sizeof(result_head) + 1 + 17 + 1 + acl_data[207] + 232);
+                print_send(apud_data,sizeof(result_head) + 1 + 17 + 1 + acl_data[271] + 232);
                 
                 //ret = usb_transmit(context,open_door,sizeof(open_door),output,sizeof(output),p_usb_ccid);
                 
                 //print_send(test_o,195);
                 //ret = usb_transmit(context,test_o,195,output,sizeof(output),p_usb_ccid);
-                ret = usb_transmit(context,apud_data,sizeof(result_head) + 1 + 17 + 1 + acl_data[207] + 232,output,sizeof(output),p_usb_ccid);
+                ret = usb_transmit(context,apud_data,sizeof(result_head) + 1 + 17 + 1 + acl_data[271] + 232,output,sizeof(output),p_usb_ccid);
 
             }           
 
@@ -1898,17 +1936,21 @@ if(tail_check == 1){
 */
                 
                 ubus_client_process(UBUS_CLIENT_LOG,NULL,log_data,log_len);
-                /* Take the semaphore. */
-                if(osal_sem_take(sem_alarm, OSAL_WAITING_FOREVER) != OSAL_EOK)
-                {
-                   printf("\n%s Semaphore return failed. \n",p_usb_ccid->usb_port);
-                   continue;
-                }
-                
-                    controll_eg.alarm_opendoor++;
-                    printf("\nalarm cnt is %d\n",controll_eg.alarm_opendoor);
 
-                osal_sem_release(sem_alarm);
+
+                if(output[106] == 0x01)//open success
+                {
+                
+                    controll_eg.alarm_flag = 0xAA;
+
+                    OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "begin to block alarm\n");
+
+                    osal_timer_change(controll_eg.timer_alarm,6000);// 6 sec
+
+                    osal_timer_start(controll_eg.timer_alarm);
+
+
+                }
 /*
                 gettimeofday( &_end, NULL );
                 printf("start : %d.%d\n", _end.tv_sec, _end.tv_usec);
@@ -2084,28 +2126,22 @@ else if(tail_check == 2){
 
         print_rec(output,ret);
 
-        // Take the semaphore. 
-        if(osal_sem_take(sem_alarm, OSAL_WAITING_FOREVER) != OSAL_EOK)
-        {
-           printf("\n%s Semaphore return failed. \n",p_usb_ccid->usb_port);
-           continue;
-        }
-      
+  
         
-            if(controll_eg.alarm_opendoor > 0){
-                controll_eg.alarm_opendoor--;
+            if(controll_eg.alarm_flag == 0xAA){
+                
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "open door,drop alarm!\n");
+                
             }
             else{
                 
-                if(controll_eg.alarm_opendoor == 0){
+                if(controll_eg.alarm_flag == 0){
                     
                     OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "send alarm to server!\n");
                     ubus_net_process(UBUS_CLIENT_SEND_ALARM,NULL,output,ret - 2);
                     
                 }
             }
-        osal_sem_release(sem_alarm);
 
         
         }
@@ -2236,6 +2272,18 @@ void timer_usb_callback(void* parameter)
 }
 
 
+void timer_alarm_callback(void* parameter)
+{
+    unsigned char rtc[16];
+    Controller_t *p_ctl = (Controller_t *)parameter;
+
+    p_ctl->alarm_flag = 0;
+    
+
+    printf("\nend to block alarm\n");
+    
+
+}
 void eg_usbto322_init()
 {
 
@@ -2304,6 +2352,10 @@ void eg_usbto322_init()
 
     controll_eg.sem_ctrl_cfg = osal_sem_create("sem_ctrl_cfg", 1);
     osal_assert(controll_eg.sem_ctrl_cfg != NULL);
+
+    controll_eg.timer_alarm = osal_timer_create("alarm timer",timer_alarm_callback,p_controll_eg,\
+                        EUSB_SEND_PERIOD, TIMER_ONESHOT|TIMER_STOPPED, TIMER_PRIO_NORMAL);
+    osal_assert(controll_eg.timer_alarm != NULL);
     
     for(i = 0;i < dev_index;i++){
 
@@ -2361,6 +2413,7 @@ void eg_usbto322_init()
         eg_zmq_init(p_usb_ccid);
 
     }  
+        
     printf("322 num:%d\n",controll_eg.cnt_322);
     
     //OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "module initial finished\n");
