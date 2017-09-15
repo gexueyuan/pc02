@@ -1003,18 +1003,27 @@ int parse_data(unsigned char* rd_data,int buffer_len,unsigned char* wl_data,int 
             
             break;            
        case CARDPOLLEVENT_ANTENNA:
-            memset(info_statistic,0,sizeof(info_statistic));
-            info_statistic[0] = MAINT_SRC_PR11;//from pr11
-            memcpy(&info_statistic[1],usb_322->pid_pr11,4);//pr11 id 4           
-            memcpy(&info_statistic[5],antenna_broken,strlen(antenna_broken));
-            ubus_net_process(UBUS_CLIENT_SEND_StatisticsInfo,NULL,info_statistic,sizeof(info_statistic));
+           if((controll_eg.push_flag & 0x02) == false){
+            
+                memset(info_statistic,0,sizeof(info_statistic));
+                info_statistic[0] = MAINT_SRC_PR11;//from pr11
+                memcpy(&info_statistic[1],usb_322->pid_pr11,4);//pr11 id 4           
+                memcpy(&info_statistic[5],antenna_broken,strlen(antenna_broken));
+
+                ubus_net_process(UBUS_CLIENT_SEND_StatisticsInfo,NULL,info_statistic,sizeof(info_statistic));
+                controll_eg.push_flag |= 0x02;
+            }
             break;
        case CARDPOLLEVENT_ARMYIC_BROKEN:
-            memset(info_statistic,0,sizeof(info_statistic));
-            info_statistic[0] = MAINT_SRC_PR11;//from pr11
-            memcpy(&info_statistic[1],usb_322->pid_pr11,4);//pr11 id 4
-            memcpy(&info_statistic[5],IC_broken,strlen(IC_broken));
-            ubus_net_process(UBUS_CLIENT_SEND_StatisticsInfo,NULL,info_statistic,sizeof(info_statistic));
+           if((controll_eg.push_flag & 0x04) == false){
+            
+                memset(info_statistic,0,sizeof(info_statistic));
+                info_statistic[0] = MAINT_SRC_PR11;//from pr11
+                memcpy(&info_statistic[1],usb_322->pid_pr11,4);//pr11 id 4
+                memcpy(&info_statistic[5],IC_broken,strlen(IC_broken));
+                ubus_net_process(UBUS_CLIENT_SEND_StatisticsInfo,NULL,info_statistic,sizeof(info_statistic));
+                controll_eg.push_flag |= 0x04;
+            }
             break;
         default:
             //OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_WARN, "error data,%d\n",card_event);
@@ -2154,13 +2163,21 @@ else if(tail_check == -4 ){
         printf("wgp info:\n");
         print_rec(output,ret);
         if(ret == 22){
+            
+            if((controll_eg.push_flag & 0x01) == false){
+                
+                StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,wgp_alarm,NULL);
+                StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,wgp_host_num,output);
+                StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,wgp_slave_num,&output[4]);
+                StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,wgp_num,&output[8]);          
+                StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,wgp_cnt,&output[12]);
+                StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,wgp_time,&output[16]);
 
-            StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,wgp_alarm,NULL);
-            StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,wgp_host_num,output);
-            StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,wgp_slave_num,&output[4]);
-            StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,wgp_num,&output[8]);          
-            StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,wgp_cnt,&output[12]);
-            StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,wgp_time,&output[16]);
+                
+                controll_eg.push_flag |= 0x01;
+            }
+            else
+                printf("\ndo not push wgp info\n");
         }
 
 /*
@@ -2284,6 +2301,27 @@ void timer_alarm_callback(void* parameter)
     
 
 }
+//0-wgp 1-antenna 2-ic broken
+void timer_push_callback(void* parameter)
+{
+    unsigned char rtc[16];
+    Controller_t *p_ctl = (Controller_t *)parameter;
+
+/*
+    if(p_ctl->push_flag & 0x01 ==  TRUE)//0001
+        {}
+    else if(p_ctl->push_flag & 0x02 ==  TRUE)//0010
+        {}
+    else if(p_ctl->push_flag & 0x04 ==  TRUE)//0100
+        {}
+*/
+    p_ctl->push_flag = 0;
+    printf("\nreset push flag\n");
+    
+
+}
+
+
 void eg_usbto322_init()
 {
 
@@ -2356,6 +2394,12 @@ void eg_usbto322_init()
     controll_eg.timer_alarm = osal_timer_create("alarm timer",timer_alarm_callback,p_controll_eg,\
                         EUSB_SEND_PERIOD, TIMER_ONESHOT|TIMER_STOPPED, TIMER_PRIO_NORMAL);
     osal_assert(controll_eg.timer_alarm != NULL);
+
+    controll_eg.timer_push_statics = osal_timer_create("alarm push",timer_push_callback,p_controll_eg,\
+                        600*EUSB_SEND_PERIOD, TIMER_INTERVAL|TIMER_STOPPED, TIMER_PRIO_NORMAL);
+    osal_assert(controll_eg.timer_push_statics != NULL);
+
+    osal_timer_start(controll_eg.timer_push_statics);
     
     for(i = 0;i < dev_index;i++){
 

@@ -541,6 +541,7 @@ typedef struct _Controller {
     uint8_t alarm_clear[48];
     uint8_t alarm_opendoor;
     uint8_t alarm_flag;
+    uint8_t push_flag;
 /*alarm*/
 /*cfg*/
     key_buffer_t basecfg;   
@@ -557,6 +558,7 @@ typedef struct _Controller {
     osal_sem_t *sem_base_cfg;
     osal_sem_t *sem_ctrl_cfg;
     osal_timer_t *timer_alarm;
+    osal_timer_t *timer_push_statics;
 /*os relate*/
 } Controller_t;
 
