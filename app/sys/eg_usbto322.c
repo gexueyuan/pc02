@@ -155,6 +155,7 @@ const uint8_t change_mode[] = {0xFC,0xDE,0x00,0xAA,0x00};
 const uint8_t v_322[] = {0x00,0x26,0x01,0x00,0x00};
 const uint8_t v_322_d21[] = {0x00,0x26,0x01,0x81,0x00};
 const uint8_t v_pr11[] = {0x00,0x26,0x02,0x00,0x00};
+const uint8_t v_pr02[] = {0x00,0x26,0x05,0x00,0x00};
 const uint8_t v_pr11_d21[] = {0x00,0x26,0x02,0x81,0x00};
 
 const uint8_t rd_p2pkey[] = {0x00,0xAA,0x00,0x00, 0x00};
@@ -1312,49 +1313,91 @@ while(1){
             break;
             
 
-        case USB_COMM_STATE_VERSION:
+        case USB_COMM_STATE_VERSION://考虑到每个322分支可能存在不同情况，例如读卡器的有无，所以每个线程都进行读取
 
             //if(sw_version == 0)
                 {
                 
                 sw_version = 0xAA;
+                /**********************************322 version***********************************************/
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get 322 version:");
                 ret = usb_transmit(context,v_322,sizeof(v_322),&output[1],sizeof(output) - 1,p_usb_ccid);
                 output[0] = 0x01;
                 print_rec(output,ret + 1);
-                if(ret > 0)
-                    ubus_client_process(UBUS_CLIENT_SENDVERSION,NULL,output,ret - 1);
+                if(ret > 0){
+                    if(memcmp(confirm,&output[ret - 1],sizeof(confirm)) == 0)//ret~ret +1
+                        ubus_client_process(UBUS_CLIENT_SENDVERSION,NULL,output,ret - 1);//sum -2 = ret + 1 - 2=ret -1
+                    else
+                        OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "bad 322 version:");
+                }
+                /**********************************322 version end***********************************************/
 
-                
+
+                /**********************************322-d21 version***********************************************/
                 memset(output,0,sizeof(output));
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get 322-d21 version:");
                 ret = usb_transmit(context,v_322_d21,sizeof(v_322_d21),&output[1],sizeof(output) - 1,p_usb_ccid);      
                 output[0] = 0x02;
                 print_rec(output,ret + 1);
-                if(ret > 0)
-                    ubus_client_process(UBUS_CLIENT_SENDVERSION,NULL,output,ret - 1);
-                
+                if(ret > 0){
+                    if(memcmp(confirm,&output[ret - 1],sizeof(confirm)) == 0)//ret~ret +1
+                        ubus_client_process(UBUS_CLIENT_SENDVERSION,NULL,output,ret - 1);
+                    else
+                        OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "bad 322-d21 version:");
+                }
+                /**********************************322-d21 version end***********************************************/
+
+
+                /**********************************pr11 or pr02 version***********************************************/
                 memset(output,0,sizeof(output));
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get pr11 version:");
                 ret = usb_transmit(context,v_pr11,sizeof(v_pr11),&output[1],sizeof(output) - 1,p_usb_ccid);
                 output[0] = 0x03;
                 print_rec(output,ret + 1);
-                if(ret > 0)
-                    ubus_client_process(UBUS_CLIENT_SENDVERSION,NULL,output,ret - 1);
-                
+                if(ret > 0){
+                    if(memcmp(confirm,&output[ret - 1],sizeof(confirm)) == 0)//ret~ret +1
+                        ubus_client_process(UBUS_CLIENT_SENDVERSION,NULL,output,ret - 1);
+                    else{
+                        
+                        OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "bad pr11 version,try to get pr02 version\n");
+
+                        memset(output,0,sizeof(output));
+                        OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get pr02 version:");
+                        ret = usb_transmit(context,v_pr02,sizeof(v_pr02),&output[1],sizeof(output) - 1,p_usb_ccid);
+                        output[0] = 0x03;
+                        print_rec(output,ret + 1);
+                        if(ret > 0){
+                            if(memcmp(confirm,&output[ret - 1],sizeof(confirm)) == 0)//ret~ret +1
+                                ubus_client_process(UBUS_CLIENT_SENDVERSION,NULL,output,ret - 1);
+                            else{
+                                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "bad pr02 version,try to get pr02 version\n");
+                                
+                            }
+                        }
+                        
+                    }
+                }
+
+                /**********************************pr11 or pr02 version end***********************************************/
+
+
+                /**********************************pr11-d21 version***********************************************/
                 memset(output,0,sizeof(output));
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get pr11-d21 version:");
                 ret = usb_transmit(context,v_pr11_d21,sizeof(v_pr11_d21),&output[1],sizeof(output) - 1,p_usb_ccid);
                 output[0] = 0x04;
                 print_rec(output,ret + 1);
-                if(ret > 0)
-                    ubus_client_process(UBUS_CLIENT_SENDVERSION,NULL,output,ret - 1);
+                if(ret > 0){
+                    if(memcmp(confirm,&output[ret - 1],sizeof(confirm)) == 0)//ret~ret +1
+                        ubus_client_process(UBUS_CLIENT_SENDVERSION,NULL,output,ret - 1);
+                    else
+                        OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "bad pr11-d21 version:\n");
+                }
 
-                //printf("================find 321 id===============\n");
-                //ubus_321_find();
 
             }
             
+            /**********************************pr11-d21 version end***********************************************/
 /*
             printf("================push time===============\n");
             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_INFO_PUSH,0,p_usb_ccid->ccid322_index,NULL);
