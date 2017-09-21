@@ -126,7 +126,7 @@ const uint8_t basecfg_head[] = {0x00,0x25,0x00,0x00};//+len+data
 
 const uint8_t ctlcfg_head[] = {0x00,0x29,0x00,0x00};//+len+data
 
-const uint8_t result_head[] = {0x00,0x22,0x00,0x00};//+len+data
+const uint8_t result_head[] = {0x00,0x22,0x00,0x00};//+extend len(2 bytes)+data
 
 const uint8_t alarm322_head[] = {0x00,0x23,0x00,0x00,0x10};//+len+data clear and check is all 16 bytes
 
@@ -1110,6 +1110,7 @@ void *eg_usb_thread_entry(void *parameter)
     int remote_len = 0;
     int audit_len = 0;
     int tail_check = 0;
+    unsigned short wl_len = 0;
     unsigned char rtc[16] = {0};
     unsigned char ctrl_info[25] = {0};
 
@@ -1952,26 +1953,31 @@ if(tail_check == 1){
 
                 memcpy(apud_data,result_head,sizeof(result_head));
                 
-                apud_data[sizeof(result_head)] = 17 + 1 + acl_data[207] + 232;//len
+                apud_data[sizeof(result_head)] = 0;//extend len
+
+                wl_len =  17 + 1 + acl_data[271] + 232;//1+rtc(16)+name(l+v = 1+acl_data[271])+232
+
+                apud_data[sizeof(result_head) + 1] = (0xFF00&wl_len)>>8;//extend len
+                apud_data[sizeof(result_head) + 2] = (0x00FF&wl_len);//extend len
 
                 //printf("data len is %d\n",apud_data[sizeof(result_head)]);
-                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "data len is %d\n",apud_data[sizeof(result_head)]);
+                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "data len is %d\n",wl_len);
 
-                memcpy(&apud_data[sizeof(result_head) + 1],acl_data,17);//result:1 + RTC:16
+                memcpy(&apud_data[sizeof(result_head) + 3],acl_data,17);//result:1 + RTC:16
 
-                memcpy(&apud_data[sizeof(result_head) + 1 + 17],&acl_data[271],1);//name-L:1
+                memcpy(&apud_data[sizeof(result_head) + 3 + 17],&acl_data[271],1);//name-L:1
                 
-                memcpy(&apud_data[sizeof(result_head) + 1 + 17 + 1],&acl_data[272],acl_data[271]);//name-V:v
+                memcpy(&apud_data[sizeof(result_head) + 3 + 17 + 1],&acl_data[272],acl_data[271]);//name-V:v
 
-                memcpy(&apud_data[sizeof(result_head) + 1 + 17 + 1 + acl_data[271]],&acl_data[17],232);
+                memcpy(&apud_data[sizeof(result_head) + 3 + 17 + 1 + acl_data[271]],&acl_data[17],232);
 
-                print_send(apud_data,sizeof(result_head) + 1 + 17 + 1 + acl_data[271] + 232);
+                print_send(apud_data,sizeof(result_head) + 3 + 17 + 1 + acl_data[271] + 232);
                 
                 //ret = usb_transmit(context,open_door,sizeof(open_door),output,sizeof(output),p_usb_ccid);
                 
                 //print_send(test_o,195);
                 //ret = usb_transmit(context,test_o,195,output,sizeof(output),p_usb_ccid);
-                ret = usb_transmit(context,apud_data,sizeof(result_head) + 1 + 17 + 1 + acl_data[271] + 232,output,sizeof(output),p_usb_ccid);
+                ret = usb_transmit(context,apud_data,sizeof(result_head) + 3 + 17 + 1 + acl_data[271] + 232,output,sizeof(output),p_usb_ccid);
 
             }           
 
@@ -2308,7 +2314,6 @@ void timer_usb_callback(void* parameter)
         if(p_usb_timer->toggle >= 10){
 
             p_usb_timer->toggle = 0;
-            p_usb_timer->alarm_period = 0xAA;
             //p_usb_timer->usb_state = USB_COMM_STATE_PUSH;
             //printf("push index %d\n",p_usb_timer->ccid322_index);
             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_INFO_PUSH,0,p_usb_timer->ccid322_index,NULL);
@@ -2323,7 +2328,7 @@ void timer_usb_callback(void* parameter)
         else{
             
             p_usb_timer->toggle ++;
-            
+            p_usb_timer->alarm_period = 0xAA;
 
         }
    // }

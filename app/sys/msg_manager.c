@@ -1058,7 +1058,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
                 
                 //controll_eg.usb_ccid_322[i].usb_state = USB_COMM_STATE_P2P;
                 state_alternate(USB_COMM_ALARM_OPEN,&controll_eg.usb_ccid_322[i]);
-                break;
+                //break;
             }
             
         
