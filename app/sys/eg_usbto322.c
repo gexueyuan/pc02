@@ -1720,7 +1720,7 @@ while(1){
            osal_sem_release(p_usb_ccid->sem_state);
             break;
             
-        case USB_COMM_REMOTE_OPEN:
+        case USB_COMM_REMOTE_OPEN://0,1=length;2~34=reserve bytes;34~end=data
             
             OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "remote open\n");
             
@@ -1816,12 +1816,25 @@ while(1){
             memcpy(apud_data,remote_idop_head,sizeof(remote_idop_head));
             apud_data[sizeof(remote_idop_head)] =  0x00;//extend data
             
+/*
             remote_len = ((controll_eg.remote_buffer[0]<<8)|(controll_eg.remote_buffer[1]&0x00FF));
             memcpy(&apud_data[sizeof(remote_idop_head) + 1],&controll_eg.remote_buffer,remote_len + 2); 
             
             print_send(apud_data,sizeof(remote_idop_head) + 1 + 2 + remote_len);
             ret = usb_transmit(context,apud_data,sizeof(remote_idop_head) + 1 + 2 + remote_len,output,sizeof(output),p_usb_ccid);
             print_rec(output,ret);
+*/
+
+            
+            remote_len = ((controll_eg.remote_buffer[0]<<8)|(controll_eg.remote_buffer[1]&0x00FF));//indeed remote data length
+            memcpy(&apud_data[sizeof(remote_idop_head) + 1],&controll_eg.remote_buffer,2); 
+            memcpy(&apud_data[sizeof(remote_idop_head) + 1 + 2],&controll_eg.remote_buffer[34],remote_len);//0,1=len;2~33=ubus data; 34~=remote data
+            
+            print_send(apud_data,sizeof(remote_idop_head) + 1 + 2 + remote_len);
+            ret = usb_transmit(context,apud_data,sizeof(remote_idop_head) + 1 + 2 + remote_len,output,sizeof(output),p_usb_ccid);
+            print_rec(output,ret);
+            
+            
             if(ret > 2){
                 
                 log_len = ret - 2;
@@ -1829,7 +1842,8 @@ while(1){
                 ubus_client_process(UBUS_CLIENT_LOG,NULL,log_data,log_len);
             }
             osal_sem_release(p_usb_ccid->sem_state);
-
+            
+            osal_sem_release(controll_eg.sem_remote);
             break;
 
      case USB_COMM_STATE_DEFAULT:

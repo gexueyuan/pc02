@@ -297,6 +297,8 @@ typedef enum _UBUS_INTERFACE {
     UBUS_SERVER_REMOTE = 0x0B02,
 
     UBUS_SERVER_REMOTE_ID = 0x0B03,
+
+    UBUS_SERVER_NETWORK_STATE = 0x0E0F,
 } E_UBUS_INTERFACE;
 
 
@@ -542,6 +544,7 @@ typedef struct _Controller {
     uint8_t alarm_opendoor;
     uint8_t alarm_flag;
     uint8_t push_flag;
+    uint8_t network_state;//0-offline  1-online
 /*alarm*/
 /*cfg*/
     key_buffer_t basecfg;   

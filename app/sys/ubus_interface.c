@@ -452,20 +452,35 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
         case UBUS_SERVER_REMOTE_ID:
             
 
-            //printf("sizeof(p_controll_eg->remote_buffer) is %d\n",sizeof(p_controll_eg->remote_buffer));
-            memset(p_controll_eg->remote_buffer,0,sizeof(p_controll_eg->remote_buffer));
-            //printf("ctrl remote path:%s\n",pStr);
-            
-            //readCFG(pStr,p_controll_eg->remote_buffer);
+/*
+            memset(p_controll_eg->remote_buffer,0,sizeof(p_controll_eg->remote_buffer));         
+            controll_eg.remote_buffer[0] = (unsigned char)((len&0xFF00)>>8);
+            controll_eg.remote_buffer[1] = (unsigned char)(len&0x00FF);          
+            memcpy(&controll_eg.remote_buffer[2],data,len);
+            sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_ID_REMOTE_OPEN,0,0,NULL);
+*/
 
+            /* Take the semaphore. */
+            if(osal_sem_take(controll_eg.sem_remote, OSAL_WAITING_FOREVER) != OSAL_EOK)
+            {
+               printf("\n Semaphore return failed. \n");
+               return 0;
+            }
+            memset(p_controll_eg->remote_buffer,0,sizeof(p_controll_eg->remote_buffer));//32+data
+            
+            if(len > 32)
+                len = len - 32;//len=remote data exclude 32bytes 
+            else
+                printf("\nID remote buffer len is %d,something wrong!\n",len);
+            
             controll_eg.remote_buffer[0] = (unsigned char)((len&0xFF00)>>8);
             controll_eg.remote_buffer[1] = (unsigned char)(len&0x00FF);
-
-            //printf("len is %d,buffer[0]:%d,buffer[1]:%d\n",len,p_controll_eg->remote_buffer[0],p_controll_eg->remote_buffer[1]);
             
-            memcpy(&controll_eg.remote_buffer[2],data,len);
+            memcpy(&controll_eg.remote_buffer[2],data,len + 32);//copy all data
 
             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_ID_REMOTE_OPEN,0,0,NULL);
+
+            
             break;
         default:
             break;

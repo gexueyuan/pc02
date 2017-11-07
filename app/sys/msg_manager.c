@@ -1104,8 +1104,20 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
        for(i = 0;i < MAX_322_NUM;i++ ){
        
            if(controll_eg.usb_ccid_322[i].ccid322_exist){
-               
-               state_alternate(USB_ID_REMOTE_OPEN,&controll_eg.usb_ccid_322[i]);
+
+                printf("\nnumber %d 322 = 0X%X 0X%X 0X%X 0X%X\n",i,controll_eg.usb_ccid_322[i].pid_322[0],controll_eg.usb_ccid_322[i].pid_322[1],\
+                    controll_eg.usb_ccid_322[i].pid_322[2],controll_eg.usb_ccid_322[i].pid_322[3]);
+
+                printf("\ndes 322 = 0X%X 0X%X 0X%X 0X%X\n",controll_eg.remote_buffer[10],controll_eg.remote_buffer[11],\
+                    controll_eg.remote_buffer[12],controll_eg.remote_buffer[13]);
+
+                if(memcmp(&controll_eg.remote_buffer[10],&controll_eg.usb_ccid_322[i].pid_322[0],4) == 0) {             
+                    printf("\nopen this 322 door\n");
+                    state_alternate(USB_ID_REMOTE_OPEN,&controll_eg.usb_ccid_322[i]);
+                }
+                else{
+                    printf("\n322 id do not match\n");
+                }
                //break;
            }
            
