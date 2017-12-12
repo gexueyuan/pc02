@@ -136,6 +136,7 @@ const uint8_t alarm_op_head[] = {0x00,0x2B,0x00,0x00};//len + data
 
 const uint8_t remote_op_head[] = {0x00,0x27,0x00,0x00};//len + data
 const uint8_t remote_idop_head[] = {0x00,0x27,0x01,0x00};//len + data
+const uint8_t remote_faceop_head[] = {0x00,0x27,0x02,0x00};//len + data
 
 const uint8_t audit_result_head[] = {0x80,0x32,0x80,0x00,0x00};//len + data
 
@@ -772,7 +773,15 @@ int parse_data(unsigned char* rd_data,int buffer_len,unsigned char* wl_data,int 
 
                 printf("find Id card\n");
 
-                return CARDPOLLEVENT_ID;
+                if(controll_eg.network_state){
+                    
+                    printf("\nbegin online gfread\n");
+                    return CARDPOLLEVENT_ID;
+
+                }
+                else{
+                    printf("\nbegin offline gfread\n");
+                }
 
 
             }
@@ -1716,7 +1725,8 @@ while(1){
            ret = usb_transmit(context,apud_data,sizeof(alarm_op_head) + 1 + controll_eg.alarm_buffer[0],output,sizeof(output),p_usb_ccid);
            print_rec(output,ret - 2);
 
-           ubus_net_process(UBUS_CLIENT_SEND_ALARM,NULL,output,ret - 2);
+           //ubus_net_process(UBUS_CLIENT_SEND_ALARM,NULL,output,ret - 2);
+           ubus_client_process(UBUS_CLIENT_LOG,NULL,output,ret - 2);
            osal_sem_release(p_usb_ccid->sem_state);
             break;
             
@@ -1834,17 +1844,122 @@ while(1){
             ret = usb_transmit(context,apud_data,sizeof(remote_idop_head) + 1 + 2 + remote_len,output,sizeof(output),p_usb_ccid);
             print_rec(output,ret);
             
-            
+
+            memset(remote_open_rt_data,0,sizeof(remote_open_rt_data));
             if(ret > 2){
                 
                 log_len = ret - 2;
                 memcpy(log_data,output,log_len);
                 ubus_client_process(UBUS_CLIENT_LOG,NULL,log_data,log_len);
+
+                
+                memcpy(remote_open_rt_data,&controll_eg.remote_buffer[2],8);
+                if(output[124] == 0x01){//124 = result
+                        remote_open_rt_data[8] = 0x90;
+                        remote_open_rt_data[9] = 0x00;
+                    }
+                else{
+                        remote_open_rt_data[8] = 0x00;
+                        remote_open_rt_data[9] = output[124];
+                    }
+                    
+                
             }
+            else{
+            
+                    remote_open_rt_data[8] = output[ret - 2];
+                    remote_open_rt_data[9] = output[ret - 1];
+            
+            }
+            remote_open_rt_data[10] =  p_usb_ccid->ccid322_index;//only one 322 can return
+            
+            remote_open_rt_data[11] =  p_usb_ccid->ccid322_index;//only one 322 can return
+           // memcpy(&remote_open_rt_data[11],&controll_eg.index_322,controll_eg.cnt_322);
+            
+            printf("\nsend ID open return\n");
+            //print_send(remote_open_rt_data,11 + controll_eg.cnt_322);
+            print_send(remote_open_rt_data,12);//modified by gxy 20171127
+            //ubus_net_process(UBUS_CLIENT_RETURN,NULL,remote_open_rt_data,11 + controll_eg.cnt_322);
+            ubus_net_process(UBUS_CLIENT_RETURN,NULL,remote_open_rt_data,12);
+
+
+                
             osal_sem_release(p_usb_ccid->sem_state);
             
             osal_sem_release(controll_eg.sem_remote);
             break;
+        case USB_FACE_REMOTE_OPEN:
+            
+            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "FACE remote open\n");
+            
+            memcpy(apud_data,remote_faceop_head,sizeof(remote_faceop_head));
+            apud_data[sizeof(remote_faceop_head)] =  0x00;//extend data
+            
+/*
+            remote_len = ((controll_eg.remote_buffer[0]<<8)|(controll_eg.remote_buffer[1]&0x00FF));
+            memcpy(&apud_data[sizeof(remote_idop_head) + 1],&controll_eg.remote_buffer,remote_len + 2); 
+            
+            print_send(apud_data,sizeof(remote_idop_head) + 1 + 2 + remote_len);
+            ret = usb_transmit(context,apud_data,sizeof(remote_idop_head) + 1 + 2 + remote_len,output,sizeof(output),p_usb_ccid);
+            print_rec(output,ret);
+*/
+
+            
+            remote_len = ((controll_eg.remote_buffer[0]<<8)|(controll_eg.remote_buffer[1]&0x00FF));//indeed remote data length
+            memcpy(&apud_data[sizeof(remote_faceop_head) + 1],&controll_eg.remote_buffer,2); 
+            memcpy(&apud_data[sizeof(remote_faceop_head) + 1 + 2],&controll_eg.remote_buffer[34],remote_len);//0,1=len;2~33=ubus data; 34~=remote data
+            
+            print_send(apud_data,sizeof(remote_faceop_head) + 1 + 2 + remote_len);
+            ret = usb_transmit(context,apud_data,sizeof(remote_faceop_head) + 1 + 2 + remote_len,output,sizeof(output),p_usb_ccid);
+            print_rec(output,ret);
+            
+
+            memset(remote_open_rt_data,0,sizeof(remote_open_rt_data));
+            if(ret > 2){
+                
+                log_len = ret - 2;
+                memcpy(log_data,output,log_len);
+                ubus_client_process(UBUS_CLIENT_LOG,NULL,log_data,log_len);
+
+                
+                memcpy(remote_open_rt_data,&controll_eg.remote_buffer[2],8);
+                if(output[96] == 0x01){//96 = result
+                        remote_open_rt_data[8] = 0x90;
+                        remote_open_rt_data[9] = 0x00;
+                    }
+                else{
+                        remote_open_rt_data[8] = 0x00;
+                        remote_open_rt_data[9] = output[96];
+                    }
+                    
+                
+            }
+            else{
+            
+                    remote_open_rt_data[8] = output[ret - 2];
+                    remote_open_rt_data[9] = output[ret - 1];
+            
+            }
+            remote_open_rt_data[10] =  p_usb_ccid->ccid322_index;//only one 322 can return
+            
+            remote_open_rt_data[11] =  p_usb_ccid->ccid322_index;//only one 322 can return
+           // memcpy(&remote_open_rt_data[11],&controll_eg.index_322,controll_eg.cnt_322);
+            
+            printf("\nFACE open return\n");
+            //print_send(remote_open_rt_data,11 + controll_eg.cnt_322);
+            print_send(remote_open_rt_data,12);//modified by gxy 20171127
+            //ubus_net_process(UBUS_CLIENT_RETURN,NULL,remote_open_rt_data,11 + controll_eg.cnt_322);
+            ubus_net_process(UBUS_CLIENT_RETURN,NULL,remote_open_rt_data,12);
+
+
+                
+            osal_sem_release(p_usb_ccid->sem_state);
+            
+            osal_sem_release(controll_eg.sem_remote);
+            break;
+
+
+
 
      case USB_COMM_STATE_DEFAULT:
             break;

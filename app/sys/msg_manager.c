@@ -39,6 +39,8 @@ uint8_t return_array[3][MAX_322_NUM] = {0};
 #define CFG_NAME_LEN  68
 
 osal_sem_t *sem_net_process;
+osal_sem_t *sem_321_process;
+
 
 void ubus_321_find(void)
 {
@@ -188,6 +190,17 @@ void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int st
 
     unsigned char* str_buffer = NULL;
 
+    /* Take the semaphore. */
+    if(osal_sem_take(sem_321_process, 3000) != OSAL_EOK){
+     
+     printf("Semaphore return failed. \n");
+     
+     osal_sem_release(sem_321_process);
+     //osal_sem_release(p_usb_ccid->sem_state);
+     //break;
+    }
+    
+
      id = id_322;
 
     if(id == 0){
@@ -195,6 +208,8 @@ void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int st
         
     	if (ubus_lookup_id(ctx, "ubus321", &id)) {
     		fprintf(stderr, "Failed to look up 321 object\n");
+            
+            osal_sem_release(sem_321_process);
     		return;
     	}
 
@@ -249,6 +264,9 @@ void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int st
 
     if(str_buffer != NULL)
         free(str_buffer);
+    
+    osal_sem_release(sem_321_process);
+    
 }
 
 void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strlen)
@@ -1098,6 +1116,32 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
        
        }
         break;
+
+   case SYS_MSG_FACE_REMOTE_OPEN:
+    
+       for(i = 0;i < MAX_322_NUM;i++ ){
+       
+           if(controll_eg.usb_ccid_322[i].ccid322_exist){
+
+                printf("\nnumber %d 322 = 0X%X 0X%X 0X%X 0X%X\n",i,controll_eg.usb_ccid_322[i].pid_322[0],controll_eg.usb_ccid_322[i].pid_322[1],\
+                    controll_eg.usb_ccid_322[i].pid_322[2],controll_eg.usb_ccid_322[i].pid_322[3]);
+
+                printf("\ndes 322 = 0X%X 0X%X 0X%X 0X%X\n",controll_eg.remote_buffer[10],controll_eg.remote_buffer[11],\
+                    controll_eg.remote_buffer[12],controll_eg.remote_buffer[13]);
+
+                if(memcmp(&controll_eg.remote_buffer[10],&controll_eg.usb_ccid_322[i].pid_322[0],4) == 0) {             
+                    printf("\nopen this 322 door\n");
+                    state_alternate(USB_FACE_REMOTE_OPEN,&controll_eg.usb_ccid_322[i]);
+                }
+                else{
+                    printf("\n322 id do not match\n");
+                }
+               //break;
+           }
+           
+       
+       }
+        break;
         
    case SYS_MSG_ID_REMOTE_OPEN:
     
@@ -1290,6 +1334,9 @@ void msg_manager_init(void)
 
 
     osal_task_t *tid;
+
+    sem_321_process= osal_sem_create("sem_321_process", 1);
+    osal_assert(sem_321_process != NULL);
     
     sem_net_process= osal_sem_create("sem_net_process", 1);
     osal_assert(sem_net_process != NULL);

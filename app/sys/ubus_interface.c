@@ -448,18 +448,32 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
              sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_ALARM_CLEAR,0,0,NULL);
             break;
             
+        case UBUS_SERVER_FACE:
+            /* Take the semaphore. */
+            if(osal_sem_take(controll_eg.sem_remote, OSAL_WAITING_FOREVER) != OSAL_EOK)
+            {
+               printf("\n Semaphore return failed. \n");
+               return 0;
+            }
+            memset(p_controll_eg->remote_buffer,0,sizeof(p_controll_eg->remote_buffer));//32+data
+            
+            if(len > 32)
+                len = len - 32;//len=remote data exclude 32bytes 
+            else
+                printf("\nID remote buffer len is %d,something wrong!\n",len);
+            
+            controll_eg.remote_buffer[0] = (unsigned char)((len&0xFF00)>>8);
+            controll_eg.remote_buffer[1] = (unsigned char)(len&0x00FF);
+            
+            memcpy(&controll_eg.remote_buffer[2],data,len + 32);//copy all data
 
+            sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_FACE_REMOTE_OPEN,0,0,NULL);
+
+            
+            break;
+            
         case UBUS_SERVER_REMOTE_ID:
             
-
-/*
-            memset(p_controll_eg->remote_buffer,0,sizeof(p_controll_eg->remote_buffer));         
-            controll_eg.remote_buffer[0] = (unsigned char)((len&0xFF00)>>8);
-            controll_eg.remote_buffer[1] = (unsigned char)(len&0x00FF);          
-            memcpy(&controll_eg.remote_buffer[2],data,len);
-            sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_ID_REMOTE_OPEN,0,0,NULL);
-*/
-
             /* Take the semaphore. */
             if(osal_sem_take(controll_eg.sem_remote, OSAL_WAITING_FOREVER) != OSAL_EOK)
             {
@@ -482,6 +496,34 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
 
             
             break;
+    case UBUS_SERVER_NETWORK_STATE:
+        
+            //controll_eg.network_state = data[0];
+
+            if(0 == data[0]){
+
+                    if(1 == controll_eg.network_state){
+
+
+                        printf("\nnetwork offline\n");
+                    }
+                }
+            else{
+
+                //printf("\nnetwork online\n");
+                
+                if(0 == controll_eg.network_state){
+                
+                
+                    printf("\nnetwork offline\n");
+                }
+            }
+            
+            controll_eg.network_state = data[0];
+
+            sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_NET_STATE,0,controll_eg.network_state,NULL);
+            break;
+            
         default:
             break;
 
