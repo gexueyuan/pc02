@@ -43,6 +43,8 @@ OSAL_DEBUG_ENTRY_DEFINE(eg_usbto322);
 
 #define USE_TIMESTAMP
 
+#define NET_STATE "/tmp/pc02_connect"
+
 extern   void get_wl(uint8_t *id_lv,uint8_t *data_wl,int *wlen);
 extern   void get_wl_4(uint8_t *id_lv,uint8_t *data_wl,int *wlen);
 extern   int get_audit_data(unsigned int tag,unsigned char* strhex,int strlen,uint8_t *data_wl,int *wlen);
@@ -189,6 +191,8 @@ unsigned char* test_o = (unsigned char*)"\x00\x22\x00\x00\xBE\x01\xF6\xBA\x57\xB
 
 const uint8_t id_reader[] = {0x00,0x01,0x00,0x02,0x01,0x01};
 
+const uint8_t id_reader_deal_OK[] = {0x00,0x01,0x00,0x02,0x01,0x03};
+
 const uint8_t id_info_get[] = {0x00,0xc2,0x00,0x00,0x00};
 
 const uint8_t id_cmd_1[] = {0x80,0xCA,0xCE,0x4E,0x4,0x0,0x0,0x0,0xD0};
@@ -196,6 +200,10 @@ const uint8_t id_cmd_1[] = {0x80,0xCA,0xCE,0x4E,0x4,0x0,0x0,0x0,0xD0};
 const uint8_t wgp_info_get[] = {0xF0,0xF2,0x01,0xFD,0x00,0x00};
 
 const uint8_t wgp_info_clear[] = {0xF0,0xF2,0x01,0xFE,0x01,0xFF};
+
+
+uint8_t net_state[] = {0xFC,0xA0,0x00,0x00,0x09,0x80,0x34,0x00,0x00,0x04,0x09,0x00,0x01,0x80};
+
 
 /* 统计信息 GBK*/
 char *antenna_broken = "PR11天线损坏";//{0x50,0x52,0x31,0x31,0xBE,0xFC,0xC3,0xDC,0xD0,0xBE,0xC6,0xAC,0xCB,0xF0,0xBB,0xB5};
@@ -265,6 +273,33 @@ int readFile(const char* _fileName, void* _buf, int _bufLen)
 
     fclose(fp);
     return 0;        
+}
+
+
+int file_exist(const char* _fileName)
+{
+
+    if((access(_fileName,F_OK))!=-1)   
+    {   
+        printf("\n文件%s存在.\n",_fileName);
+        return 1;
+    }
+    else{
+        
+        printf("\n文件%s不存在.\n",_fileName);
+        return 0;
+
+    }
+
+
+
+}
+
+int net_state_read(void)
+{
+
+    return file_exist(NET_STATE);
+
 }
 
 void print_array(const  char* tag,unsigned char* send,int len)
@@ -1727,6 +1762,7 @@ while(1){
 
            //ubus_net_process(UBUS_CLIENT_SEND_ALARM,NULL,output,ret - 2);
            ubus_client_process(UBUS_CLIENT_LOG,NULL,output,ret - 2);
+           OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "\nsend alarm log to 321\n");
            osal_sem_release(p_usb_ccid->sem_state);
             break;
             
@@ -2028,6 +2064,32 @@ while(1){
         osal_sem_release(p_usb_ccid->sem_state);
         break;
 
+    case  USB_NET_STATE:
+
+        //net_state[sizeof(net_state) - 1] = (controll_eg.network_state << 7);
+
+        if(controll_eg.network_state){
+
+            net_state[sizeof(net_state) - 1] = 0x00;
+
+        }
+        else{
+
+            net_state[sizeof(net_state) - 1] = 0x80;
+
+        }
+
+        OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "send net_state to pr11\n");
+        print_send(net_state,sizeof(net_state));
+        ret = usb_transmit(context,net_state,sizeof(net_state),output,sizeof(output),p_usb_ccid);
+        print_rec(output,ret);
+        
+        if(controll_eg.network_state)
+            zmq_socket_send(p_usb_ccid->zmq_client,id_reader_deal_OK,sizeof(id_reader_deal_OK));
+        
+        osal_sem_release(p_usb_ccid->sem_state);
+        break;
+
         default:
             break;
         }
@@ -2037,7 +2099,29 @@ while(1){
             
           //OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "poll start\n");
             //log_message(p_usb_ccid->usb_port,3,"poll start\n");
-          ret = usb_transmit(context,car_detect,sizeof(car_detect),output,sizeof(output),p_usb_ccid);
+          if(0xAA == p_usb_ccid->WG_ERROR){
+            
+              memset(output,0,sizeof(output));
+              OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get pr11-d21 version:");
+              ret = usb_transmit(context,v_pr11_d21,sizeof(v_pr11_d21),&output[1],sizeof(output) - 1,p_usb_ccid);
+              output[0] = 0x04;
+              print_rec(output,ret + 1);
+              if(ret > 0){
+                  if(memcmp(confirm,&output[ret - 1],sizeof(confirm)) == 0){//ret~ret +1
+                      OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "clear WG ERROR FLAG\n");
+                      p_usb_ccid->WG_ERROR = 0;
+                  }
+                  else
+                      OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "bad pr11-d21 version:\n");
+              }
+
+
+          }
+          else{
+            //controll_eg.WG_ERROR = 0;
+            
+            memset(output,0,sizeof(output));
+            ret = usb_transmit(context,car_detect,sizeof(car_detect),output,sizeof(output),p_usb_ccid);
           //OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "poll end\n");
           //print_rec(output,ret);
          //log_message(p_usb_ccid->usb_port,3,"poll end\n");
@@ -2356,6 +2440,11 @@ else if(tail_check == -4 ){
             }
             else
                 printf("\ndo not push wgp info\n");
+//            printf("\nsleep 30s\n");
+//            msleep(30000);
+//            printf("\nsleep end\n");
+                p_usb_ccid->WG_ERROR = 0xAA;
+                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "WG ERROR FLAG UP!\n");
         }
 
 /*
@@ -2366,6 +2455,7 @@ else if(tail_check == -4 ){
 */
 
 
+}
 }
 
           /***************POLL  END***************/
@@ -2577,6 +2667,13 @@ void eg_usbto322_init()
     osal_assert(controll_eg.timer_push_statics != NULL);
 
     osal_timer_start(controll_eg.timer_push_statics);
+
+    controll_eg.network_state = net_state_read();
+
+    if(controll_eg.network_state)
+        OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "\ninit----network online\n");
+    else
+        OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "\ninit----network offline\n");
     
     for(i = 0;i < dev_index;i++){
 

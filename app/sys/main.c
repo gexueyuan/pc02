@@ -28,7 +28,7 @@
 
 #define RELEASE
 
-#define FIRMWARE_VERSION "V1.0.7" 
+#define FIRMWARE_VERSION "V1.0.9" 
 
 #ifdef RELEASE
 #define FIRMWARE_IDEN "rel" 
@@ -83,22 +83,23 @@ void global_init(void)
     system("mkdir /tmp/322ce");
 
     
-    get_version();
+    //get_version();
 }
 
 
 int main(int argc, char *argv[])
 {
 //    system("./hostapd -d /etc/hostapd.conf -B");
-    global_init();
 
     if (argc > 1 && !strcmp(argv[1], "-v")){
         
         //printf("\n%s\n",_version);
+        
+        get_version();
         return 0;
         
     }
-
+    global_init();
 
     ubus_interface_init();
     msg_manager_init();

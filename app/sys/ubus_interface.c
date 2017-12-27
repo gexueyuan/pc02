@@ -499,28 +499,29 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
     case UBUS_SERVER_NETWORK_STATE:
         
             //controll_eg.network_state = data[0];
-
+            //pr11默认状态是在线状态
             if(0 == data[0]){
 
                     if(1 == controll_eg.network_state){
 
 
                         printf("\nnetwork offline\n");
+                        //sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_NET_STATE,0,controll_eg.network_state,NULL);
                     }
                 }
             else{
 
                 //printf("\nnetwork online\n");
                 
-                if(0 == controll_eg.network_state){
-                
-                
-                    printf("\nnetwork offline\n");
-                }
+                    if(0 == controll_eg.network_state){
+                    
+                    
+                        printf("\nnetwork offline\n");
+                        //sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_NET_STATE,0,controll_eg.network_state,NULL);
+                    }
             }
             
             controll_eg.network_state = data[0];
-
             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_NET_STATE,0,controll_eg.network_state,NULL);
             break;
             

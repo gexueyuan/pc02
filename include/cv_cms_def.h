@@ -105,6 +105,8 @@ enum SYSTEM_MSG_TYPE{
     SYS_MSG_ALARM_CLEAR,
     SYS_MSG_322_USBTEST,
     SYS_MSG_322_RETURN,
+
+    SYS_MSG_NET_STATE,
     SYS_MSG_XXX,
 };
 
@@ -254,6 +256,8 @@ typedef enum _USB_COMM_STATE {
 
     USB_ID_REMOTE_OPEN,
     USB_FACE_REMOTE_OPEN,
+
+    USB_NET_STATE,
 } E_USB_COMM_STATE;
 
 typedef enum _DOOR_STATE {
@@ -472,7 +476,8 @@ typedef struct _usb_ccid_322 {
     uint8_t  now_door_state[2];
     uint8_t  pre_door_state[2];
     void *usb_context;
-    int usb_reconnect_cnt;
+    int usb_reconnect_cnt;  
+    uint8_t WG_ERROR;
     
     
     /*state machine*/
