@@ -209,6 +209,7 @@ uint8_t net_state[] = {0xFC,0xA0,0x00,0x00,0x09,0x80,0x34,0x00,0x00,0x04,0x09,0x
 char *antenna_broken = "PR11天线损坏";//{0x50,0x52,0x31,0x31,0xBE,0xFC,0xC3,0xDC,0xD0,0xBE,0xC6,0xAC,0xCB,0xF0,0xBB,0xB5};
 char *IC_broken = "PR11军密芯片损坏";//{0xBE,0xFC,0xC3,0xDC,0xD0,0xBE,0xC6,0xAC,0xCB,0xF0,0xBB,0xB5};
 char *usb_disconnect = "PC02-322USB通讯中断";
+char *log_failed = "开门失败无日志";
 char *wgp_alarm = "WGP复位警报";
 char *wgp_host_num = "WGP通讯控制器重发计数";
 char *wgp_slave_num = "WGP通讯读卡器重发计数";
@@ -825,7 +826,12 @@ int parse_data(unsigned char* rd_data,int buffer_len,unsigned char* wl_data,int 
 
                 printf("\ncard's battery is %d\n",read_buffer[6]);
 
+				//print_rec(read_buffer, 6);
+
                 ubus_net_process(UBUS_CLIENT_SEND_BAT,NULL,&read_buffer[2],5);
+
+				
+				//print_rec(read_buffer, 6);
 
 
             }
@@ -2228,7 +2234,18 @@ if(tail_check == 1){
 */
                 
             }
+			else{
 
+				OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "\nopen door failed and no-log\n");
+				//StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322 ,log_failed,0);
+				memset(info_statistic,0,sizeof(info_statistic));
+				info_statistic[0] = MAINT_SRC_322;//from 322
+				memcpy(&info_statistic[1],p_usb_ccid->pid_322,4);//322 id 4
+				memcpy(&info_statistic[5],log_failed,strlen(log_failed));
+				memcpy(&info_statistic[37],output,ret);
+				ubus_net_process(UBUS_CLIENT_SEND_StatisticsInfo,NULL,info_statistic,sizeof(info_statistic));
+
+			}
             break;
             
         case CARDPOLLEVENT_WLNUM:

@@ -279,6 +279,13 @@ void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strle
 
     unsigned char* str_buffer = NULL;
 
+	if(controll_eg.network_state == 0){
+
+		printf("\noffline  push  failed!\n");
+
+		return 0;
+	}
+
      /* Take the semaphore. */
      if(osal_sem_take(sem_net_process, 3000) != OSAL_EOK){
          
