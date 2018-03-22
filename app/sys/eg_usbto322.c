@@ -153,6 +153,11 @@ const uint8_t pid_pr11[] = {0xFC,0xA0,0x00,0x00,0x05,0x80,0xCA,0xCE,0x50,0x00};
 const uint8_t ctrl_cfg[] = {0x80,0xCA,0xCE,0x47,0x00};
 const uint8_t base_cfg[] = {0x80,0xCA,0xCE,0x48,0x00};
 
+unsigned char* PR11_NO = (unsigned char*)"\x80\xCA\xCE\x49\x00";
+unsigned char* VER_322 = (unsigned char*)"\x80\xCA\xCE\x4B\x00";
+
+
+
 const uint8_t change_mode[] = {0xFC,0xDE,0x00,0xAA,0x00};
 
 const uint8_t v_322[] = {0x00,0x26,0x01,0x00,0x00};
@@ -218,8 +223,7 @@ char *wgp_cnt = "WGP通讯两线通信次数";
 char *wgp_time="WGP通讯开机时间（秒）";
 /* 统计信息 GBK*/
 
-unsigned char* read_mac = (unsigned char*)"\x80\xCA\xCE\x49\x00";
-unsigned char* read_p2p = (unsigned char*)"\x80\xCA\xCE\x4F\x00";
+
 /*
 * 函数说明: 写二进制文件
 * 参数描述: _fileName, 文件名称
@@ -1197,6 +1201,12 @@ void *eg_usb_thread_entry(void *parameter)
         goto out;
     }
     OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "connect to  %s succeed\n",p_usb_ccid->usb_port);
+
+    OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "%s pr11 state\n",p_usb_ccid->usb_port);
+	print_send(PR11_NO,sizeof(PR11_NO));
+	ret = usb_transmit(context,PR11_NO,strlen(PR11_NO),output,sizeof(output),p_usb_ccid);
+	print_rec(output,ret);
+
 
 
     sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_INITED,0,p_usb_ccid->ccid322_index,NULL);

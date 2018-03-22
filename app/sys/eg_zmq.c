@@ -21,8 +21,43 @@
 
 #define ZMQ_THREAD_STACK_SIZE   (20*1024)
 
+//extern int writeFile(const char* _fileName, void* _buf, int _bufLen);
+
 const unsigned char* zmq_tk[] = {"zmq-1","zmq-2","zmq-3","zmq-4"};
 const unsigned char* zmq_s_tk[] = {"zmq-s-1","zmq-s-2","zmq-s-3","zmq-s-4"};
+
+
+/*
+* 函数说明: 写二进制文件
+* 参数描述: _fileName, 文件名称
+*           _buf, 要写的内存缓冲。
+*           _bufLen, 内存缓冲的长度
+*   返回值: 0, 成功
+*           -1, 失败
+*
+*/
+int writeFile_over(const char* _fileName, void* _buf, int _bufLen)
+{
+    FILE * fp = NULL;
+    if( NULL == _buf || _bufLen <= 0 ) return (-1);
+
+    fp = fopen(_fileName, "wb+"); // 必须确保是以 二进制写入的形式打开
+
+    if( NULL == fp )
+    {
+        return (-1);
+    }
+
+    fwrite(_buf, _bufLen, 1, fp); //二进制写
+
+    fclose(fp);
+    fp = NULL;
+
+    return 0;    
+}
+
+
+
 int zmq_pc02 (void)
 {
     printf ("Connecting to hello world server��\n");
@@ -172,6 +207,117 @@ clear:
 
 
 }
+
+
+void *eg_zmq_cam_thread_entry(void *parameter)
+{
+    //int ret = 0;
+    unsigned short ret;
+	int  rc = 0;
+	int  timeout = 0;
+	#define CAM_BUF_LEN 16
+
+	unsigned char recv_buf[CAM_BUF_LEN];
+	int  recv_len = 0;
+	unsigned char send_buf[CAM_BUF_LEN];
+	int  send_len = 0;
+    
+    unsigned char *zmq_cli_addr;    
+    unsigned char *zmq_server_addr;    
+	
+	void* zmq_context;
+	void* zmq_client_cam;
+	void* zmq_server_cam;
+    
+    unsigned char buffer[16];
+
+    int i;
+    /* Create an empty ?MQ message */
+    
+
+	zmq_context = zmq_ctx_new();
+
+
+    zmq_cli_addr = (unsigned char *)ZMQ_CLI_CAM;
+	zmq_server_addr = (unsigned char *)ZMQ_SERVER_CAM;
+    
+    zmq_client_cam = zmq_socket_new_dealer(zmq_context,zmq_cli_addr);
+    
+	zmq_server_cam = zmq_socket_new_dealer_svr(zmq_context, zmq_server_addr);
+	
+	zmq_pollitem_t pollitems[1];
+	
+	memset(pollitems, 0, sizeof(pollitems));
+	pollitems[0].socket = zmq_server_cam;  
+	pollitems[0].events = ZMQ_POLLIN;
+      
+    //������Ϣ
+    timeout = -1;//block
+    
+    while(1){
+       
+        rc = zmq_poll(pollitems, 1, timeout);
+        
+        if(rc <= 0) {
+            timeout = -1;
+            continue;
+        }
+
+        //zmq
+        if(pollitems[0].revents & ZMQ_POLLIN){
+            
+        	recv_len = zmq_recv(zmq_server_cam, recv_buf,sizeof(recv_buf), 0); 
+            
+        	if (recv_len <= 0){
+                
+        		printf("zmq_recv error=[%d]", zmq_errno());
+        		continue;
+                
+        	}
+            
+        	//�������Ĵ���
+        	//ret = msg_parse_packet(recv_buf, recv_len, send_buf, &send_len);
+            printf("\n------------------------------\n");
+            printf("camera zmq recive:%d\n",recv_len);
+			
+            for(i = 0;i < recv_len;i++){
+
+                printf("%02X ",recv_buf[i]);
+				
+                if(recv_buf[i] == 0xAA){
+
+					writeFile_over("/tmp/camera_config",&recv_buf[i + 1], 1);
+					printf("\nwrite %X to /tmp/camera_config\n",recv_buf[i + 1]);
+
+				}
+
+            }
+			
+            printf("\n------------------------------\n");
+
+            
+        }
+
+
+
+
+    }
+
+clear:
+    /* Release message */
+	zmq_close(zmq_client_cam);
+	zmq_close(zmq_server_cam);
+	zmq_term(zmq_context);
+
+    
+    return 0;
+
+
+
+}
+
+
+
 void eg_zmq_init(usb_ccid_322_t* argv)
 {
 
@@ -185,6 +331,13 @@ void eg_zmq_init(usb_ccid_322_t* argv)
                         argv,ZMQ_THREAD_STACK_SIZE, RT_SYS_THREAD_PRIORITY);
 
     osal_assert(tid != NULL);
+
+
+	tid = osal_task_create("camera config",
+						eg_zmq_cam_thread_entry,
+						NULL,ZMQ_THREAD_STACK_SIZE>>1, RT_SYS_THREAD_PRIORITY);
+
+	osal_assert(tid != NULL);
 
 /*
     tid = osal_task_create(zmq_s_tk[argv->ccid322_index],
