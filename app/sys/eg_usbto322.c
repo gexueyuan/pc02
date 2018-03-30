@@ -221,6 +221,8 @@ char *wgp_slave_num = "WGP通讯读卡器重发计数";
 char *wgp_num = "WGP通讯控制器复位计数";
 char *wgp_cnt = "WGP通讯两线通信次数";
 char *wgp_time="WGP通讯开机时间（秒）";
+char *_322_error="322 返回错误";
+
 /* 统计信息 GBK*/
 
 
@@ -1186,6 +1188,8 @@ void *eg_usb_thread_entry(void *parameter)
     struct timeval _start,_end;
     /**test**/
 
+	unsigned char zmq_output[2048] = {0};
+
     p_usb_ccid = (usb_ccid_322_t*)parameter;
 
     p_usb_ccid->usb_context = luareader_new(0, NULL, NULL);
@@ -1215,6 +1219,7 @@ while(1){
 
 #if 1
     memset(output,0,sizeof(output));
+    memset(zmq_output,0,sizeof(zmq_output));
     memset(apud_data,0,sizeof(apud_data));
     //memset(cfg_return,0,sizeof(cfg_return));
     apud_len = 1024;
@@ -1796,7 +1801,11 @@ while(1){
             print_send(apud_data,sizeof(remote_op_head) + 1 + 2 + remote_len);
             ret = usb_transmit(context,apud_data,sizeof(remote_op_head) + 1 + 2 + remote_len,output,sizeof(output),p_usb_ccid);
             print_rec(output,ret);
-            
+
+            memset(remote_open_rt_data,0,sizeof(remote_open_rt_data));
+			
+			memcpy(remote_open_rt_data,&controll_eg.remote_buffer[2],8);
+			
             if(ret > 2){
                 
                 log_len = ret - 2;
@@ -1840,11 +1849,24 @@ while(1){
             //OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "322 Id return:\n");
             if(ret > 0){
                 print_rec(output,ret);
-                zmq_socket_send(p_usb_ccid->zmq_server,output,ret);
-            }else            
+				memcpy(zmq_output,p_usb_ccid->zmq_magicnum,5);
+				memcpy(&zmq_output[5],output,ret);
+                zmq_socket_send(p_usb_ccid->zmq_server,zmq_output,ret + 5);
+				
+            }else {       
+				
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "322 usb transmit error\n");
-            p_usb_ccid->usb_state = USB_COMM_STATE_DEFAULT;
+				
+				memcpy(zmq_output,p_usb_ccid->zmq_magicnum,5);
+				
+				memcpy(&zmq_output[5],_322_error,sizeof(_322_error));
+				
+				zmq_socket_send(p_usb_ccid->zmq_server,zmq_output,5 + sizeof(_322_error));
+			}
+			p_usb_ccid->usb_state = USB_COMM_STATE_DEFAULT;
             osal_sem_release(p_usb_ccid->sem_state);
+			
+			osal_sem_release(p_usb_ccid->sem_zmq);
             break;
             
         case  USB_COMM_ID_DOOR_SERVER:
@@ -1898,6 +1920,7 @@ while(1){
             
 
             memset(remote_open_rt_data,0,sizeof(remote_open_rt_data));
+			memcpy(remote_open_rt_data,&controll_eg.remote_buffer[2],8);
             if(ret > 2){
                 
                 log_len = ret - 2;
@@ -1967,6 +1990,8 @@ while(1){
             
 
             memset(remote_open_rt_data,0,sizeof(remote_open_rt_data));
+			
+			memcpy(remote_open_rt_data,&controll_eg.remote_buffer[2],8);
             if(ret > 2){
                 
                 log_len = ret - 2;
@@ -2741,6 +2766,9 @@ void eg_usbto322_init()
 
         p_usb_ccid->sem_state = osal_sem_create(device_str[i], 1);
         osal_assert(p_usb_ccid->sem_state != NULL);
+
+        p_usb_ccid->sem_zmq = osal_sem_create(device_str[i], 1);
+        osal_assert(p_usb_ccid->sem_zmq != NULL);
         
         tid = osal_task_create(device_str[i],
                             eg_usb_thread_entry,

@@ -346,6 +346,9 @@ typedef enum _UBUS_CLIENT {
     UBUS_CLIENT_SEND_BAT = 0x9005,
 
     UBUS_CLIENT_SEND_StatisticsInfo = 0x9006,
+
+	
+    UBUS_CLIENT_SEND_CAM322ID = 0x9007,
 } E_UBUS_CLIENT;
 
 
@@ -503,6 +506,7 @@ typedef struct _usb_ccid_322 {
     unsigned char *zmq_server_addr;   
     unsigned char *zmq_answer_addr;
     int zmq_len;
+	unsigned char zmq_magicnum[5];
     uint8_t zmq_buffer[10240];
 	zmq_pollitem_t pollitems;
     /*zmq end*/
@@ -516,6 +520,8 @@ typedef struct _usb_ccid_322 {
     osal_sem_t *sem_322;
 
     osal_sem_t *sem_state;
+
+	osal_sem_t *sem_zmq;
     /*os task end*/
     
 } usb_ccid_322_t;

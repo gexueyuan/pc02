@@ -26,6 +26,8 @@
 const unsigned char* zmq_tk[] = {"zmq-1","zmq-2","zmq-3","zmq-4"};
 const unsigned char* zmq_s_tk[] = {"zmq-s-1","zmq-s-2","zmq-s-3","zmq-s-4"};
 
+extern void print_array(const  char* tag,unsigned char* send,int len);
+
 
 /*
 * 函数说明: 写二进制文件
@@ -152,7 +154,17 @@ void *eg_zmq_thread_entry(void *parameter)
     timeout = -1;//block
     
     while(1){
-       
+
+		     /* Take the semaphore. */
+		if(osal_sem_take(p_zmq_322->sem_zmq, 3000) != OSAL_EOK){
+		 
+			printf("p_zmq_322->sem_zmq  return failed. \n");
+
+			osal_sem_release(p_zmq_322->sem_zmq);
+			//osal_sem_release(p_usb_ccid->sem_state);
+			//break;
+		}
+		memset(p_zmq_322->zmq_magicnum,0,5);
         rc = zmq_poll(pollitems, 1, timeout);
         
         if(rc <= 0) {
@@ -176,16 +188,20 @@ void *eg_zmq_thread_entry(void *parameter)
         	//ret = msg_parse_packet(recv_buf, recv_len, send_buf, &send_len);
             printf("\n------------------------------\n");
             printf("usb zmq recive:\n");
+			/*
             for(i = 0;i < recv_len;i++){
 
                 printf("%02X ",recv_buf[i]);
                 
 
             }
+			*/
+			print_array("zmq recieve", recv_buf, recv_len);
             printf("\n------------------------------\n");
-            memcpy(p_zmq_322->zmq_buffer,recv_buf,recv_len);
+            memcpy(p_zmq_322->zmq_magicnum,recv_buf,5);
+            memcpy(p_zmq_322->zmq_buffer,&recv_buf[5],recv_len - 5);
 
-            p_zmq_322->zmq_len = recv_len;
+            p_zmq_322->zmq_len = recv_len - 5;
             
             sys_add_event_queue(&controll_eg.msg_manager,ZMQ_MSG_ID,0,p_zmq_322->ccid322_index,NULL);
         }
