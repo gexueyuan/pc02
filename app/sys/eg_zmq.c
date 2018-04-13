@@ -198,11 +198,16 @@ void *eg_zmq_thread_entry(void *parameter)
 			*/
 			print_array("zmq recieve", recv_buf, recv_len);
             printf("\n------------------------------\n");
+		#ifdef ZMQ_NUM
             memcpy(p_zmq_322->zmq_magicnum,recv_buf,5);
             memcpy(p_zmq_322->zmq_buffer,&recv_buf[5],recv_len - 5);
 
             p_zmq_322->zmq_len = recv_len - 5;
-            
+        #else
+			memcpy(p_zmq_322->zmq_buffer,recv_buf,recv_len);
+
+            p_zmq_322->zmq_len = recv_len;
+		#endif
             sys_add_event_queue(&controll_eg.msg_manager,ZMQ_MSG_ID,0,p_zmq_322->ccid322_index,NULL);
         }
 

@@ -516,7 +516,7 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
                     if(0 == controll_eg.network_state){
                     
                     
-                        printf("\nnetwork offline\n");
+                        printf("\nnetwork dropped\n");
                         //sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_NET_STATE,0,controll_eg.network_state,NULL);
                     }
             }

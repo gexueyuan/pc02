@@ -94,6 +94,7 @@ typedef enum _CARDPOLLEVENT {
     CARDPOLLEVENT_WL,
     CARDPOLLEVENT_ANTENNA, //0x09       
     CARDPOLLEVENT_ARMYIC_BROKEN,//0x0A
+    CARDPOLLEVENT_FACE,
     CARDPOLLEVENT_ID,
 } E_CARDPOLLEVENT;
 
@@ -1190,6 +1191,8 @@ void *eg_usb_thread_entry(void *parameter)
 
 	unsigned char zmq_output[2048] = {0};
 
+	unsigned char face_req[3] = {0x01,0x90,0x00};
+
     p_usb_ccid = (usb_ccid_322_t*)parameter;
 
     p_usb_ccid->usb_context = luareader_new(0, NULL, NULL);
@@ -1847,7 +1850,8 @@ while(1){
             print_send(p_usb_ccid->zmq_buffer,p_usb_ccid->zmq_len);
             ret = usb_transmit(context,p_usb_ccid->zmq_buffer,p_usb_ccid->zmq_len,output,sizeof(output),p_usb_ccid);
             //OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "322 Id return:\n");
-            if(ret > 0){
+		#ifdef ZMQ_NUM
+			if(ret > 0){
                 print_rec(output,ret);
 				memcpy(zmq_output,p_usb_ccid->zmq_magicnum,5);
 				memcpy(&zmq_output[5],output,ret);
@@ -1863,6 +1867,13 @@ while(1){
 				
 				zmq_socket_send(p_usb_ccid->zmq_server,zmq_output,5 + sizeof(_322_error));
 			}
+		#else
+			if(ret > 0){
+	                print_rec(output,ret);
+	                zmq_socket_send(p_usb_ccid->zmq_server,output,ret);
+	            }else            
+	                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "322 usb transmit error\n");
+		#endif
 			p_usb_ccid->usb_state = USB_COMM_STATE_DEFAULT;
             osal_sem_release(p_usb_ccid->sem_state);
 			
@@ -2125,9 +2136,10 @@ while(1){
         ret = usb_transmit(context,net_state,sizeof(net_state),output,sizeof(output),p_usb_ccid);
         print_rec(output,ret);
         
-        if(controll_eg.network_state)
+        if((controll_eg.network_state)&&(controll_eg.network_state_pre != controll_eg.network_state))
             zmq_socket_send(p_usb_ccid->zmq_client,id_reader_deal_OK,sizeof(id_reader_deal_OK));
-        
+
+		controll_eg.network_state_pre = controll_eg.network_state;
         osal_sem_release(p_usb_ccid->sem_state);
         break;
 
@@ -2238,36 +2250,45 @@ if(tail_check == 1){
             printf("log return\n");
             print_rec(output,ret);
             if(ret > 2){
-                
-                log_len = ret - 2;
-                memcpy(log_data,output,log_len);
-                
-/*
-                gettimeofday( &_start, NULL );
-                printf("start : %d.%d\n", _start.tv_sec, _start.tv_usec);
-*/
-                
-                ubus_client_process(UBUS_CLIENT_LOG,NULL,log_data,log_len);
+
+				if((ret == 3)&&(memcmp(output,face_req,sizeof(face_req)) == 0)){
+
+					
+					ubus_net_process(UBUS_CLIENT_SEND_CAM322ID,NULL,p_usb_ccid->pid_322,4);
+
+				}
+				else{
+					
+	                log_len = ret - 2;
+	                memcpy(log_data,output,log_len);
+	                
+					/*
+	                gettimeofday( &_start, NULL );
+	                printf("start : %d.%d\n", _start.tv_sec, _start.tv_usec);
+					*/
+	                
+	                ubus_client_process(UBUS_CLIENT_LOG,NULL,log_data,log_len);
 
 
-                if(output[106] == 0x01)//open success
-                {
-                
-                    controll_eg.alarm_flag = 0xAA;
+	                if(output[106] == 0x01)//open success
+	                {
+	                
+	                    controll_eg.alarm_flag = 0xAA;
 
-                    OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "begin to block alarm\n");
+	                    OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "begin to block alarm\n");
 
-                    osal_timer_change(controll_eg.timer_alarm,6000);// 6 sec
+	                    osal_timer_change(controll_eg.timer_alarm,6000);// 6 sec
 
-                    osal_timer_start(controll_eg.timer_alarm);
+	                    osal_timer_start(controll_eg.timer_alarm);
 
 
-                }
-/*
-                gettimeofday( &_end, NULL );
-                printf("start : %d.%d\n", _end.tv_sec, _end.tv_usec);
-*/
-                
+	                }
+	/*
+	                gettimeofday( &_end, NULL );
+	                printf("start : %d.%d\n", _end.tv_sec, _end.tv_usec);
+	*/
+	                
+	            }
             }
 			else{
 
@@ -2419,6 +2440,11 @@ if(tail_check == 1){
             OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_WARN, "update mackey,ret = %d\n",ret);
 */
             break;
+
+       case CARDPOLLEVENT_FACE:
+			ubus_net_process(UBUS_CLIENT_SEND_CAM322ID,NULL,p_usb_ccid->pid_322,4);
+            break;
+
        case CARDPOLLEVENT_ID:
             zmq_socket_send(p_usb_ccid->zmq_client,id_reader,sizeof(id_reader));
             break;

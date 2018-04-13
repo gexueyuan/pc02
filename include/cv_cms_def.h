@@ -71,6 +71,7 @@
 #define UBUS_STRHEX_DATA_OFFSET   32
 
 /**/
+//#define ZMQ_NUM
 
 enum SYSTEM_MSG_TYPE{
     SYS_MSG_BASE = 0x0000,
@@ -562,7 +563,8 @@ typedef struct _Controller {
     uint8_t alarm_opendoor;
     uint8_t alarm_flag;
     uint8_t push_flag;
-    uint8_t network_state;//0-offline  1-online
+    uint8_t network_state;//0-offline  1-online   
+	uint8_t network_state_pre;//0-offline  1-online
 /*alarm*/
 /*cfg*/
     key_buffer_t basecfg;   
@@ -592,6 +594,45 @@ typedef struct _Controller {
 */
 
 extern Controller_t controll_eg,*p_controll_eg;
+
+//typedef struct _entrance_log {
+//	uint16_t version;
+//	/***card log***/
+//	uint32_t card_ID;
+//	uint32_t card_cnt;
+//	uint32_t reader_ID;
+//	uint32_t reader_random;
+//	uint8_t card_sign[72];
+//	/**322 log**/
+//	uint32_t _322_ID;
+//	uint32_t _322_cnt;
+//	uint8_t _322_time[6];
+//	uint8_t door_number;
+//	uint8_t in_out;
+//	uint8_t result;
+//	uint8_t RFU;
+//	uint8_t _322_sign[64];
+//	  
+//}__COMPILE_PACK__ entrance_log_t;
+
+
+//typedef struct _desktop_log {
+//    uint16_t version;
+//	/**card log**/
+//	uint32_t card_ID;
+//	uint32_t card_cnt;
+//	uint32_t reader_ID;
+//	uint32_t reader_random;
+//	uint8_t op_type;
+//	uint32_t xxxx;
+//	uint8_t card_sign[72];	
+//	/**desktop reader log**/
+//	uint32_t _322_ID;
+//	uint32_t _322_cnt;
+//	uint8_t  ooooo;
+//	/**322 log**/
+//	
+//}__COMPILE_PACK__ desktop_log_t;
 
 static inline uint16_t cv_ntohs(uint16_t s16)
 {
