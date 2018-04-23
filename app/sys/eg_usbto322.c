@@ -107,8 +107,8 @@ const uint8_t car_detect[] = {0xFC,0xA0,0x00,0x00,0x05,0x80,0x30,0x00,0x00,0x00}
 
 const uint8_t refuse_enter[] = {0xFC,0xA0,0x04,0x00,0x09,0x80,0x32,0x80,0x00,0x04,  0x01,0x00,0x01,0x00};
 
-uint8_t test_all[] = {0xFC,0xA0,0x00,0x00,  /*总长*/0x23  ,0x80,0x34,0x00,0x00, /*长度*/0x18 /**温度范围**/ ,0x02,0x00,0x09,0x32,0x38,0xA1,0xE6,0x2F,0x31,0x35,0xA1,0xE6,\
-                      0x03,0x00,0x04  ,0x32,0x35,0xA1,0xE6,/*天气*/0x04,0x00,0x01,0x01,/*位置北京*/0x05,0x00,0x04,0xB1,0xB1,0xBE,0xA9};
+uint8_t test_all[] = {0xFC,0xA0,0x00,0x00,  /*???*/0x23  ,0x80,0x34,0x00,0x00, /*????*/0x18 /**????Χ**/ ,0x02,0x00,0x09,0x32,0x38,0xA1,0xE6,0x2F,0x31,0x35,0xA1,0xE6,\
+                      0x03,0x00,0x04  ,0x32,0x35,0xA1,0xE6,/*????*/0x04,0x00,0x01,0x01,/*λ?????*/0x05,0x00,0x04,0xB1,0xB1,0xBE,0xA9};
 
 unsigned char  change_app[25] = {0xFC,0xA0,0x04,0x00,0x14,0x00,0xA4,0x04,0x00,0x0F,0x74,0x64,0x72,0x6F,0x6E,0x99,0x05,0x69,0x64,0x52,0x64,0x51,0x34,0x42,0x31};
 
@@ -116,7 +116,7 @@ E_CARDPOLLEVENT card_event;
 
 uint8_t  test_cmd[] = {0xFC,0xC1, 0x01 ,0x00, 0x06,0x80,0xB0,0x55,0xAF,0x01,0x00};
 
- /*透传头*/
+ /*????*/
  const unsigned char transfer_head[] = {0xFC,0xA0,0x00,0x00};//+len+data
 
 const uint8_t cfg_base_head[] = {0x00,0x25,0x00,0x00};//+len+data
@@ -211,29 +211,29 @@ const uint8_t wgp_info_clear[] = {0xF0,0xF2,0x01,0xFE,0x01,0xFF};
 uint8_t net_state[] = {0xFC,0xA0,0x00,0x00,0x09,0x80,0x34,0x00,0x00,0x04,0x09,0x00,0x01,0x80};
 
 
-/* 统计信息 GBK*/
-char *antenna_broken = "PR11天线损坏";//{0x50,0x52,0x31,0x31,0xBE,0xFC,0xC3,0xDC,0xD0,0xBE,0xC6,0xAC,0xCB,0xF0,0xBB,0xB5};
-char *IC_broken = "PR11军密芯片损坏";//{0xBE,0xFC,0xC3,0xDC,0xD0,0xBE,0xC6,0xAC,0xCB,0xF0,0xBB,0xB5};
-char *usb_disconnect = "PC02-322USB通讯中断";
-char *log_failed = "开门失败无日志";
-char *wgp_alarm = "WGP复位警报";
-char *wgp_host_num = "WGP通讯控制器重发计数";
-char *wgp_slave_num = "WGP通讯读卡器重发计数";
-char *wgp_num = "WGP通讯控制器复位计数";
-char *wgp_cnt = "WGP通讯两线通信次数";
-char *wgp_time="WGP通讯开机时间（秒）";
-char *_322_error="322 返回错误";
+/* ?????? GBK*/
+char *antenna_broken = "PR11??????";//{0x50,0x52,0x31,0x31,0xBE,0xFC,0xC3,0xDC,0xD0,0xBE,0xC6,0xAC,0xCB,0xF0,0xBB,0xB5};
+char *IC_broken = "PR11????о???";//{0xBE,0xFC,0xC3,0xDC,0xD0,0xBE,0xC6,0xAC,0xCB,0xF0,0xBB,0xB5};
+char *usb_disconnect = "PC02-322USB???ж?";
+char *log_failed = "????????????";
+char *wgp_alarm = "WGP??λ????";
+char *wgp_host_num = "WGP???????????????";
+char *wgp_slave_num = "WGP???????????????";
+char *wgp_num = "WGP??????????λ????";
+char *wgp_cnt = "WGP????????????";
+char *wgp_time="WGP???????????";
+char *_322_error="322 ???????";
 
-/* 统计信息 GBK*/
+/* ?????? GBK*/
 
 
 /*
-* 函数说明: 写二进制文件
-* 参数描述: _fileName, 文件名称
-*           _buf, 要写的内存缓冲。
-*           _bufLen, 内存缓冲的长度
-*   返回值: 0, 成功
-*           -1, 失败
+* ???????: д?????????
+* ????????: _fileName, ???????
+*           _buf, ?д????滺?塣
+*           _bufLen, ??滺??????
+*   ?????: 0, ???
+*           -1, ???
 *
 */
 int writeFile(const char* _fileName, void* _buf, int _bufLen)
@@ -241,14 +241,14 @@ int writeFile(const char* _fileName, void* _buf, int _bufLen)
     FILE * fp = NULL;
     if( NULL == _buf || _bufLen <= 0 ) return (-1);
 
-    fp = fopen(_fileName, "ab+"); // 必须确保是以 二进制写入的形式打开
+    fp = fopen(_fileName, "ab+"); // ??????????? ??????д????????
 
     if( NULL == fp )
     {
         return (-1);
     }
 
-    fwrite(_buf, _bufLen, 1, fp); //二进制写
+    fwrite(_buf, _bufLen, 1, fp); //??????д
 
     fclose(fp);
     fp = NULL;
@@ -257,12 +257,12 @@ int writeFile(const char* _fileName, void* _buf, int _bufLen)
 }
 
 /*
- * 函数说明:  读二进制文件
-*  参数描述: _fileName, 文件名称
-*             _buf, 读出来的数据存放位置
-*             _bufLen, 数据的长度信息
-*    返回值:  0, 成功
-*             -1, 失败
+ * ???????:  ???????????
+*  ????????: _fileName, ???????
+*             _buf, ??????????????λ??
+*             _bufLen, ???????????
+*    ?????:  0, ???
+*             -1, ???
 *
 */
 int readFile(const char* _fileName, void* _buf, int _bufLen)
@@ -270,14 +270,14 @@ int readFile(const char* _fileName, void* _buf, int _bufLen)
     FILE* fp = NULL;
     if( NULL == _buf || _bufLen <= 0 ) return (-1);
 
-    fp = fopen(_fileName, "rb"); // 必须确保是以 二进制读取的形式打开 
+    fp = fopen(_fileName, "rb"); // ??????????? ??????????????? 
 
     if( NULL == fp )
     {
         return (-1);
     }
 
-    fread(_buf, _bufLen, 1, fp); // 二进制读
+    fread(_buf, _bufLen, 1, fp); // ???????
 
     fclose(fp);
     return 0;        
@@ -289,12 +289,12 @@ int file_exist(const char* _fileName)
 
     if((access(_fileName,F_OK))!=-1)   
     {   
-        printf("\n文件%s存在.\n",_fileName);
+        printf("\n???%s????.\n",_fileName);
         return 1;
     }
     else{
         
-        printf("\n文件%s不存在.\n",_fileName);
+        printf("\n???%s??????.\n",_fileName);
         return 0;
 
     }
@@ -555,15 +555,15 @@ void eg_usb_main_proc(char *data,int len)
  @brief   : get systime as acsii
  @param   : 19byte,
 // struct tm {
-//   int tm_sec;         // 秒，范围从 0 到 59				
-//   int tm_min;         // 分，范围从 0 到 59				
-//   int tm_hour;        // 小时，范围从 0 到 23				
-//   int tm_mday;        // 一月中的第几天，范围从 1 到 31	                
-//   int tm_mon;         //月份，范围从 0 到 11				
-//   int tm_year;       //  自 1900 起的年数				
-//   int tm_wday;       //  一周中的第几天，范围从 0 到 6		        
-//   int tm_yday;      //   一年中的第几天，范围从 0 到 365	                
-//   int tm_isdst;     //   夏令时							
+//   int tm_sec;         // ????Χ?? 0 ?? 59				
+//   int tm_min;         // ?????Χ?? 0 ?? 59				
+//   int tm_hour;        // С?????Χ?? 0 ?? 23				
+//   int tm_mday;        // ????е???????Χ?? 1 ?? 31	                
+//   int tm_mon;         //?·????Χ?? 0 ?? 11				
+//   int tm_year;       //  ?? 1900 ???????				
+//   int tm_wday;       //  ????е???????Χ?? 0 ?? 6		        
+//   int tm_yday;      //   ????е???????Χ?? 0 ?? 365	                
+//   int tm_isdst;     //   ?????							
 //}
  @return  : 
 *****************************************************************************/
@@ -706,7 +706,7 @@ int check_card(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_len)
             
             if(memcmp(&rd_data[3],resp_code,sizeof(resp_code)) == 0){//3,4 322 return 90 00,no alarm
                 
-                    //在无卡片,无警报的时候处理门状态上报 
+                    //??????,??????????????????? 
                     
                     usb_322->now_door_state[1] = rd_data[2];//door state=2
              
@@ -720,7 +720,7 @@ int check_card(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_len)
                      return 0;
             } else if(memcmp(&rd_data[3],alarm_code,sizeof(alarm_code)) == 0){
             
-                //无卡时，处理322警报
+                //??????????322????
                 //OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_INFO, "90 0A ALARM!\n");
                 //free(read_buffer);
                 return 2;
@@ -760,7 +760,7 @@ int check_card(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_len)
         return -2;
     }
 
-/*添加900A以后,这个字段9000或者900A都是正确的，以后不予判断
+/*???900A???,??????9000????900A????????????????ж?
     if((memcmp(&rd_data[buffer_len - 2],resp_code,2)) ||
         (memcmp(&rd_data[buffer_len - 4],resp_code,2))){
         //OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "reader return error\n");
@@ -1382,7 +1382,7 @@ while(1){
             break;
             
 
-        case USB_COMM_STATE_VERSION://考虑到每个322分支可能存在不同情况，例如读卡器的有无，所以每个线程都进行读取
+        case USB_COMM_STATE_VERSION://????????322???????????????????????????????????????????????ж??
 
             //if(sw_version == 0)
                 {
@@ -1724,7 +1724,8 @@ while(1){
         
         /************************************************finish************************************************************/
             p_usb_ccid->init_flag |= INIT_MASK_CE;
-            //update_ce();       
+            //update_ce(); 
+            //msleep(1000);//waiting for another thread detect pr11 or 322	
             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_SEND_CE,0,0,NULL);
             //sleep(1);
             //sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_SEND_CTRLINFO,0,0,NULL);
@@ -2586,6 +2587,8 @@ out:
 
         controll_eg.cnt_322--;
 
+		sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_SEND_CE,0,0,NULL);
+
         OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "thread exit!\n");
 
         printf("322 thread num is %d\n",controll_eg.cnt_322);
@@ -2771,7 +2774,7 @@ void eg_usbto322_init()
         p_usb_ccid->now_door_state[0] = 0x01;
         p_usb_ccid->now_door_state[1] = 0x02;
         p_usb_ccid->pre_door_state[0] = 0x01;
-        p_usb_ccid->pre_door_state[1] = 0x02;//门初始状态 关闭
+        p_usb_ccid->pre_door_state[1] = 0x02;//?????? ???
         
         strcpy(&(p_usb_ccid->usb_port),device_str[i]);
 
