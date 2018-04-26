@@ -71,7 +71,7 @@
 #define UBUS_STRHEX_DATA_OFFSET   32
 
 /**/
-//#define ZMQ_NUM
+#define ZMQ_NUM
 
 enum SYSTEM_MSG_TYPE{
     SYS_MSG_BASE = 0x0000,
