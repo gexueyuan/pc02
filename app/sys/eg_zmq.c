@@ -19,8 +19,6 @@
 
 #define R_BUFFER 2048
 
-#define ZMQ_THREAD_STACK_SIZE   (20*1024)
-
 //extern int writeFile(const char* _fileName, void* _buf, int _bufLen);
 
 const unsigned char* zmq_tk[] = {"zmq-1","zmq-2","zmq-3","zmq-4"};
@@ -32,9 +30,9 @@ extern void print_array(const  char* tag,unsigned char* send,int len);
 /*
 * 函数说明: 写二进制文件
 * 参数描述: _fileName, 文件名称
-*           _buf, 要写的内存缓冲。
-*           _bufLen, 内存缓冲的长度
-*   返回值: 0, 成功
+*           _buf, 要写的内存缓冲�??
+*           _bufLen, 内存缓冲的长�?
+*   返回�?: 0, 成功
 *           -1, 失败
 *
 */
@@ -349,25 +347,16 @@ void eg_zmq_init(usb_ccid_322_t* argv)
     
     tid = osal_task_create(zmq_tk[argv->ccid322_index],
                         eg_zmq_thread_entry,
-                        argv,ZMQ_THREAD_STACK_SIZE, RT_SYS_THREAD_PRIORITY);
+                        argv,PC02_ZMQ_THREAD_STACK_SIZE, PC02_ZMQ_THREAD_PRIORITY);
 
     osal_assert(tid != NULL);
 
 
 	tid = osal_task_create("camera config",
 						eg_zmq_cam_thread_entry,
-						NULL,ZMQ_THREAD_STACK_SIZE>>1, RT_SYS_THREAD_PRIORITY);
+						NULL,PC02_ZMQ_THREAD_STACK_SIZE>>1, PC02_ZMQ_THREAD_PRIORITY);
 
 	osal_assert(tid != NULL);
-
-/*
-    tid = osal_task_create(zmq_s_tk[argv->ccid322_index],
-                        eg_zmq_rep_entry,
-                        argv,ZMQ_THREAD_STACK_SIZE, RT_SYS_THREAD_PRIORITY);
-
-    osal_assert(tid != NULL);
-*/
-
 
 
 
@@ -482,7 +471,7 @@ void eg_zmq_test(void)
     osal_task_t *tid;
     tid = osal_task_create("test",
                     eg_zmq_test_thread,
-                    NULL,ZMQ_THREAD_STACK_SIZE, RT_SYS_THREAD_PRIORITY);
+                    NULL,PC02_ZMQ_THREAD_STACK_SIZE, PC02_ZMQ_THREAD_PRIORITY);
 
     osal_assert(tid != NULL);
 

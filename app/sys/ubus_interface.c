@@ -226,7 +226,6 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
         pStr = blobmsg_get_string(tb[REQ_STR]);
     }
     blob_buf_init(&b, 0);
-
 #if 0
     if(tb[PUSHDATA_TAG] != NULL) {
         tag = blobmsg_get_u32(tb[PUSHDATA_TAG]);
@@ -305,7 +304,7 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
 
             for(i = 0;i < MAX_322_NUM;i++ ){
             
-                if(controll_eg.usb_ccid_322[i].ccid322_exist){
+                if(controll_eg.usb_ccid_322[i].pr11_exist){
 
                    controll_eg.usb_ccid_322[i].rtc_sync = 0xAA;
                     
@@ -524,6 +523,12 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
             controll_eg.network_state = data[0];
             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_NET_STATE,0,controll_eg.network_state,NULL);
             break;
+	case UBUS_SERVER_RFU:
+
+			
+			printf("\nubus get log\n");
+            sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_RFU,0,0,NULL);
+			break;
             
         default:
             break;
@@ -663,7 +668,7 @@ void ubus_interface_init(void)
     memset(base_cfg_buffer,0,sizeof(base_cfg_buffer));
     tid = osal_task_create("tk_ubus_server",
                         ubus_server_thread_entry,
-                        NULL,LESS_THREAD_STACK_SIZE, RT_SYS_THREAD_PRIORITY);
+                        NULL,PC02_UBUS_THREAD_STACK_SIZE, PC02_UBUS_THREAD_PRIORITY);
 
     osal_assert(tid != NULL);
 

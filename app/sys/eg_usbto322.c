@@ -651,7 +651,7 @@ uint8_t   get_sys_time(unsigned char *time_ptr)//len must be more than 19
     time_ptr[sizeof(time_head) + 1] = 0x00;
     time_ptr[sizeof(time_head) + 2] = 0x07;//L
     //v
-    time_ptr[sizeof(time_head) + 3] = ((unsigned char)timenow-> tm_year) > 100 ? (unsigned char)timenow-> tm_year - 100:17;
+    time_ptr[sizeof(time_head) + 3] = ((unsigned char)timenow-> tm_year) > 100 ? (unsigned char)timenow-> tm_year - 100:17;//×îÍí2017Äê
     time_ptr[sizeof(time_head) + 4] = (unsigned char)timenow-> tm_mon + 1;
     time_ptr[sizeof(time_head) + 5] = (unsigned char)timenow-> tm_mday;
     
@@ -1151,7 +1151,6 @@ void *eg_usb_thread_entry(void *parameter)
     int i = 0;
     unsigned char parse_tag = 0;
     unsigned char acl_data[2048] = {0};
-    unsigned char acl_cfg[256] = {0};
 	unsigned char output[2048] = {0};
     unsigned char usb_port[32] = {0};
     int acl_len = 1024;
@@ -1391,7 +1390,11 @@ while(1){
                 /**********************************322 version***********************************************/
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get 322 version:");
                 ret = usb_transmit(context,v_322,sizeof(v_322),&output[1],sizeof(output) - 1,p_usb_ccid);
-                output[0] = 0x01;
+				#ifdef MULTIVERSION
+				output[0] = p_usb_ccid->ccid322_index + 1 +'0';
+				#else
+				output[0] = 0x01;
+				#endif
                 print_rec(output,ret + 1);
                 if(ret > 0){
                     if(memcmp(confirm,&output[ret - 1],sizeof(confirm)) == 0)//ret~ret +1
@@ -1406,7 +1409,11 @@ while(1){
                 memset(output,0,sizeof(output));
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get 322-d21 version:");
                 ret = usb_transmit(context,v_322_d21,sizeof(v_322_d21),&output[1],sizeof(output) - 1,p_usb_ccid);      
-                output[0] = 0x02;
+#ifdef MULTIVERSION
+				output[0] = p_usb_ccid->ccid322_index + 1 +'0';
+#else
+				output[0] = 0x02;
+#endif
                 print_rec(output,ret + 1);
                 if(ret > 0){
                     if(memcmp(confirm,&output[ret - 1],sizeof(confirm)) == 0)//ret~ret +1
@@ -1415,13 +1422,34 @@ while(1){
                         OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "bad 322-d21 version:");
                 }
                 /**********************************322-d21 version end***********************************************/
+				/**********************************pr11-d21 version***********************************************/
+				memset(output,0,sizeof(output));
+				OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get pr11-d21 version:");
+				ret = usb_transmit(context,v_pr11_d21,sizeof(v_pr11_d21),&output[1],sizeof(output) - 1,p_usb_ccid);
+#ifdef MULTIVERSION
+								output[0] = p_usb_ccid->ccid322_index + 1 +'0';
+#else
+								output[0] = 0x04;
+#endif
+				print_rec(output,ret + 1);
+				if(ret > 0){
+					if(memcmp(confirm,&output[ret - 1],sizeof(confirm)) == 0)//ret~ret +1
+						ubus_client_process(UBUS_CLIENT_SENDVERSION,NULL,output,ret - 1);
+					else
+						OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "bad pr11-d21 version:\n");
+				}
+			/**********************************pr11-d21 version end***********************************************/
 
 
                 /**********************************pr11 or pr02 version***********************************************/
                 memset(output,0,sizeof(output));
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get pr11 version:");
                 ret = usb_transmit(context,v_pr11,sizeof(v_pr11),&output[1],sizeof(output) - 1,p_usb_ccid);
-                output[0] = 0x03;
+#ifdef MULTIVERSION
+								output[0] = p_usb_ccid->ccid322_index + 1 +'0';
+#else
+								output[0] = 0x03;
+#endif
                 print_rec(output,ret + 1);
                 if(ret > 0){
                     if(memcmp(confirm,&output[ret - 1],sizeof(confirm)) == 0)//ret~ret +1
@@ -1433,14 +1461,20 @@ while(1){
                         memset(output,0,sizeof(output));
                         OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get pr02 version:");
                         ret = usb_transmit(context,v_pr02,sizeof(v_pr02),&output[1],sizeof(output) - 1,p_usb_ccid);
-                        output[0] = 0x03;
+#ifdef MULTIVERSION
+										output[0] = p_usb_ccid->ccid322_index + 1 +'0';
+#else
+										output[0] = 0x03;
+#endif
                         print_rec(output,ret + 1);
                         if(ret > 0){
                             if(memcmp(confirm,&output[ret - 1],sizeof(confirm)) == 0)//ret~ret +1
                                 ubus_client_process(UBUS_CLIENT_SENDVERSION,NULL,output,ret - 1);
                             else{
                                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "bad pr02 version,try to get pr02 version\n");
-                                
+								//osal_sem_release(p_usb_ccid->sem_state);
+								//goto out;
+                                                                		
                             }
                         }
                         
@@ -1450,27 +1484,8 @@ while(1){
                 /**********************************pr11 or pr02 version end***********************************************/
 
 
-                /**********************************pr11-d21 version***********************************************/
-                memset(output,0,sizeof(output));
-                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get pr11-d21 version:");
-                ret = usb_transmit(context,v_pr11_d21,sizeof(v_pr11_d21),&output[1],sizeof(output) - 1,p_usb_ccid);
-                output[0] = 0x04;
-                print_rec(output,ret + 1);
-                if(ret > 0){
-                    if(memcmp(confirm,&output[ret - 1],sizeof(confirm)) == 0)//ret~ret +1
-                        ubus_client_process(UBUS_CLIENT_SENDVERSION,NULL,output,ret - 1);
-                    else
-                        OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "bad pr11-d21 version:\n");
-                }
-
-
             }
             
-            /**********************************pr11-d21 version end***********************************************/
-/*
-            printf("================push time===============\n");
-            sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_INFO_PUSH,0,p_usb_ccid->ccid322_index,NULL);
-*/
             
             osal_sem_release(p_usb_ccid->sem_state);
             //p_usb_ccid->usb_state = USB_COMM_STATE_INIT_END;//;
@@ -1638,9 +1653,9 @@ while(1){
             
             log_message(p_usb_ccid->usb_port,3,"sn pr11 read error\n");
             
-            osal_sem_release(p_usb_ccid->sem_state);
-
-            goto out;
+            //osal_sem_release(p_usb_ccid->sem_state);
+			p_usb_ccid->pr11_exist = 0; 		
+            goto JUMP;
             
         }else{
         
@@ -1655,8 +1670,9 @@ while(1){
             
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "read pr11 sn error,thread exit\n");//minus 90 00
                 
-                osal_sem_release(p_usb_ccid->sem_state);
-                goto out;
+                //osal_sem_release(p_usb_ccid->sem_state);
+                p_usb_ccid->pr11_exist = 0; 		
+                goto JUMP;
             }
 
 
@@ -1674,9 +1690,9 @@ while(1){
             printf("luareader_pop_value(%p)=%d(%s)\n", context, ret, output);
             
             log_message(p_usb_ccid->usb_port,3,"pr11 pid read error\n");
-            osal_sem_release(p_usb_ccid->sem_state);
-            
-            goto out;
+            //osal_sem_release(p_usb_ccid->sem_state);
+			p_usb_ccid->pr11_exist = 0; 		
+            goto JUMP;
         
         }else{
         
@@ -1693,9 +1709,9 @@ while(1){
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "read pr11 pid error,thread exit\n");//minus 90 00
 
                 
-                osal_sem_release(p_usb_ccid->sem_state);
-                
-                goto out;
+                //osal_sem_release(p_usb_ccid->sem_state);
+                p_usb_ccid->pr11_exist = 0; 		
+                goto JUMP;
             }
 
 
@@ -1721,7 +1737,7 @@ while(1){
         }
             
         /*********controller info*********/
-        
+JUMP:
         /************************************************finish************************************************************/
             p_usb_ccid->init_flag |= INIT_MASK_CE;
             //update_ce(); 
@@ -2151,8 +2167,7 @@ while(1){
         }
     /***************POLL***************/
             
-          //OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "poll start\n");
-            //log_message(p_usb_ccid->usb_port,3,"poll start\n");
+if(p_usb_ccid->pr11_exist == 1){
           if(0xAA == p_usb_ccid->WG_ERROR){
             
               memset(output,0,sizeof(output));
@@ -2176,23 +2191,11 @@ while(1){
             
             memset(output,0,sizeof(output));
             ret = usb_transmit(context,car_detect,sizeof(car_detect),output,sizeof(output),p_usb_ccid);
-          //OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "poll end\n");
-          //print_rec(output,ret);
-         //log_message(p_usb_ccid->usb_port,3,"poll end\n");
-/*
-          if(ret < 0){
+
           
-              
-              memset(output, 0, sizeof(output));
-              ret = luareader_pop_value(context, (char *)output, sizeof(output));
-              printf("luareader_pop_value(%p)=%d(%s)\n", context, ret, output);
-              
-          
-          }
-*/
-          
-          tail_check = check_card(p_usb_ccid,output,ret);
-          
+          	tail_check = check_card(p_usb_ccid,output,ret);
+          	
+			//print_rec(output,ret);
 if(tail_check == 1){
 
     parse_tag = parse_data(output,ret,acl_data,&acl_len,p_usb_ccid);
@@ -2519,9 +2522,7 @@ else if(tail_check == -4 ){
             }
             else
                 printf("\ndo not push wgp info\n");
-//            printf("\nsleep 30s\n");
-//            msleep(30000);
-//            printf("\nsleep end\n");
+
                 p_usb_ccid->WG_ERROR = 0xAA;
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "WG ERROR FLAG UP!\n");
         }
@@ -2562,7 +2563,7 @@ else if(tail_check == -4 ){
             
             printf("switch value is %d\n",p_usb_ccid->toggle_state);
         }
-
+}
         msleep(30);
 #else
 sleep(2);
@@ -2573,6 +2574,9 @@ sleep(2);
 
 
 out: 
+		
+		//sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_SEND_CE,0,0,NULL);
+		
         luareader_disconnect(context);
 
         luareader_term(context);
@@ -2583,16 +2587,14 @@ out:
 
         osal_timer_delete(p_usb_ccid->timer_322);
 
-        p_usb_ccid->ccid322_exist = 0;
+        p_usb_ccid->pr11_exist = 0;
 
         controll_eg.cnt_322--;
-
-		sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_SEND_CE,0,0,NULL);
 
         OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "thread exit!\n");
 
         printf("322 thread num is %d\n",controll_eg.cnt_322);
-
+		sleep(1);
 
 
 }
@@ -2769,6 +2771,7 @@ void eg_usbto322_init()
         p_usb_ccid->ccid322_index = ret;
         p_usb_ccid->toggle_state = 0;
         p_usb_ccid->ccid322_exist = 1;
+        p_usb_ccid->pr11_exist = 1;//defualt 1,has a reader
         p_usb_ccid->init_flag = 0;
         p_usb_ccid->rtc_sync = 0;//RTC sync
         p_usb_ccid->now_door_state[0] = 0x01;
@@ -2801,7 +2804,7 @@ void eg_usbto322_init()
         
         tid = osal_task_create(device_str[i],
                             eg_usb_thread_entry,
-                            p_usb_ccid,RT_SYS_THREAD_STACK_SIZE, RT_SYS_THREAD_PRIORITY);
+                            p_usb_ccid,PC02_USB__THREAD_STACK_SIZE, PC02_USB_THREAD_PRIORITY);
         
         osal_assert(tid != NULL);
 

@@ -41,6 +41,52 @@ uint8_t return_array[3][MAX_322_NUM] = {0};
 osal_sem_t *sem_net_process;
 osal_sem_t *sem_321_process;
 
+unsigned char log_test[] = { 0x01,0x01,0xD9,0x02,0x00,0x00,0x00,0x00,0x00,0x46,0x03,0x72,0xB5,0x04,0x58,\
+					   0x4A,0x71,0x3E,0x66,0x9A,0x70,0x8F,0x1D,0xCD,0xBA,0xB1,0xD6,0x0F,0x02,0x96,\
+					   0x3B,0x66,0x33,0x2A,0x08,0x06,0xD7,0xEE,0x83,0xD9,0xA4,0x3E,0x24,0x33,0x45,\
+					   0x4B,0xDB,0x74,0x77,0x56,0x8F,0xF4,0x3E,0x03,0xAC,0x75,0xC1,0xC5,0xFF,0x12,\
+					   0x17,0x8F,0x97,0x5D,0x26,0x9C,0x24,0xC8,0xA4,0x1A,0xFE,0x07,0x61,0xF1,0x34,\
+					   0xD1,0x1C,0x53,0xE3,0x8C,0xBB,0xC0,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,\
+					   0x4E,0x57,0xAB,0x0A,\
+					   0x00,0x00,0x41,0x7E,\
+					   0x12,0x05,0x1E,0x09,0x05,0x13,\
+					   0x01,\
+					   0x01,\
+					   0x01,\
+					   0x00,0xB5,0x46,0x4D,0x87,0xC7,0x28,0x0B,0x15,0x79,0x37,0x2E,0xBE,\
+					   0xDC,0x58,0xA0,0x92,0xC7,0xFC,0xE0,0xDA,0x18,0x75,0x80,0xE7,0xCF,0x69,0x59,\
+					   0x44,0xE6,0x87,0x21,0xEB,0x52,0xF5,0x93,0xB1,0x1D,0x49,0xBC,0xDC,0x0B,0xBA,\
+					   0x35,0x04,0xFD,0xA9,0x9C,0xB8,0x94,0x25,0xEA,0xCD,0xCD,0x48,0x48,0xBE,0xC6,\
+					   0xC3,0x61,0xF9,0x07,0x23,0x4B,0x62};
+
+uint8_t  get_log_time(unsigned char *time_ptr)//6 bytes time in log
+{
+    time_t   now;
+    struct   tm  *timenow;
+    unsigned char time_acs[7];
+    short int ascDay;
+
+    if(time_ptr == NULL){
+
+        printf("F[%s] L[%d] ptr is NULL!!!", __FILE__, __LINE__);
+        return 0;
+    }
+    memset(time_acs,0,sizeof(time_acs));
+    time(&now);
+    timenow   =   localtime(&now);
+        
+    time_ptr[0] = ((unsigned char)timenow-> tm_year) > 100 ? (unsigned char)timenow-> tm_year - 100:17;
+    time_ptr[1] = (unsigned char)timenow-> tm_mon + 1;
+    time_ptr[2] = (unsigned char)timenow-> tm_mday;
+    
+    
+    time_ptr[3] = (unsigned char)timenow-> tm_hour;
+    time_ptr[4] = (unsigned char)timenow-> tm_min;
+    time_ptr[5] = (unsigned char)timenow-> tm_sec;
+    //memcpy(time_ptr + sizeof(time_head) + 3,time_acs,sizeof(time_acs));//V
+    return 0;
+}
+
 
 void ubus_321_find(void)
 {
@@ -873,19 +919,6 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
         
     case SYS_MSG_INITED:
 
-       // sleep(5);
-//        
-//        for(i = 0;i < MAX_322_NUM;i++ ){
-//        
-//            if(controll_eg.usb_ccid_322[i].ccid322_exist){
-
-//                //printf("init %d,ccid is %x\n",i,&controll_eg.usb_ccid_322[i]);
-//                state_alternate(USB_COMM_STATE_INIT,&controll_eg.usb_ccid_322[i]);
-//            }
-//            
-//        
-//        }
-       // sleep(1);
        OSAL_MODULE_DBGPRT(p_controll_eg->usb_ccid_322[p_msg->argc].usb_port, OSAL_DEBUG_INFO, "port %d: state init\n",p_msg->argc);
        
         state_alternate(USB_COMM_STATE_INIT,&p_controll_eg->usb_ccid_322[p_msg->argc]);
@@ -911,7 +944,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
             
             for(i = 0;i < MAX_322_NUM;i++ ){
             
-                if(controll_eg.usb_ccid_322[i].ccid322_exist){
+                if(controll_eg.usb_ccid_322[i].pr11_exist){
                     
                     controll_eg.index_322[index_cnt] = controll_eg.usb_ccid_322[i].ccid322_index;
                     printf("%02X ",controll_eg.index_322[index_cnt]);    
@@ -957,7 +990,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
         
         for(i = 0;i < MAX_322_NUM;i++ ){
         
-            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+            if(controll_eg.usb_ccid_322[i].ccid322_exist){//use 322 as flag
 
                 
                 state_alternate(USB_COMM_STATE_VERSION,&controll_eg.usb_ccid_322[i]);
@@ -973,7 +1006,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
         
         for(i = 0;i < MAX_322_NUM;i++ ){
         
-            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+            if(controll_eg.usb_ccid_322[i].pr11_exist){
 
                 
                 state_alternate(USB_COMM_STATE_MACKEY,&controll_eg.usb_ccid_322[i]);
@@ -1012,7 +1045,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
         
         for(i = 0;i < MAX_322_NUM;i++ ){
         
-            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+            if(controll_eg.usb_ccid_322[i].pr11_exist){
                 
                 //memcpy(&controll_eg.ctrl_cfg_rt[8 + index_cnt],);//8,9 is return data;10,index
                 controll_eg.base_cfg_rt[11 + index_cnt] = controll_eg.usb_ccid_322[i].ccid322_index;
@@ -1024,7 +1057,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
         }
         for(i = 0;i < MAX_322_NUM;i++ ){
         
-            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+            if(controll_eg.usb_ccid_322[i].pr11_exist){
                 
                 //controll_eg.usb_ccid_322[i].usb_state = USB_COMM_STATE_P2P;
                 
@@ -1050,7 +1083,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
         
         for(i = 0;i < MAX_322_NUM;i++ ){
         
-            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+            if(controll_eg.usb_ccid_322[i].pr11_exist){
                 
                 //memcpy(&controll_eg.ctrl_cfg_rt[8 + index_cnt],);//8,9 is return data;10-index
                 controll_eg.ctrl_cfg_rt[11 + index_cnt] = controll_eg.usb_ccid_322[i].ccid322_index;
@@ -1063,7 +1096,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
         
         for(i = 0;i < MAX_322_NUM;i++ ){
         
-            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+            if(controll_eg.usb_ccid_322[i].pr11_exist){
                 
                 //controll_eg.usb_ccid_322[i].usb_state = USB_COMM_STATE_P2P;
                 state_alternate(USB_COMM_STATE_RDCFG,&controll_eg.usb_ccid_322[i]);
@@ -1078,7 +1111,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
         
         for(i = 0;i < MAX_322_NUM;i++ ){
         
-            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+            if(controll_eg.usb_ccid_322[i].pr11_exist){
                 
                 //controll_eg.usb_ccid_322[i].usb_state = USB_COMM_STATE_P2P;
                 state_alternate(USB_COMM_ALARM_OPEN,&controll_eg.usb_ccid_322[i]);
@@ -1091,19 +1124,6 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
         
     case SYS_MSG_INFO_PUSH:
         
-/*
-        for(i = 0;i < MAX_322_NUM;i++ ){
-        
-            if(controll_eg.usb_ccid_322[i].ccid322_exist){
-                
-                //controll_eg.usb_ccid_322[i].usb_state = USB_COMM_STATE_P2P;
-                state_alternate(USB_COMM_STATE_PUSH,&controll_eg.usb_ccid_322[i]);
-                //break;
-            }
-            
-        
-        }
-*/
         //printf("get push info %d\n",p_msg->argc);
         state_alternate(USB_COMM_STATE_PUSH,&controll_eg.usb_ccid_322[p_msg->argc]);
         break;
@@ -1113,7 +1133,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
     
        for(i = 0;i < MAX_322_NUM;i++ ){
        
-           if(controll_eg.usb_ccid_322[i].ccid322_exist){
+           if(controll_eg.usb_ccid_322[i].pr11_exist){
                
                state_alternate(USB_COMM_REMOTE_OPEN,&controll_eg.usb_ccid_322[i]);
                //break;
@@ -1127,7 +1147,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
     
        for(i = 0;i < MAX_322_NUM;i++ ){
        
-           if(controll_eg.usb_ccid_322[i].ccid322_exist){
+           if(controll_eg.usb_ccid_322[i].pr11_exist){
 
                 printf("\nnumber %d 322 = 0X%X 0X%X 0X%X 0X%X\n",i,controll_eg.usb_ccid_322[i].pid_322[0],controll_eg.usb_ccid_322[i].pid_322[1],\
                     controll_eg.usb_ccid_322[i].pid_322[2],controll_eg.usb_ccid_322[i].pid_322[3]);
@@ -1153,7 +1173,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
     
        for(i = 0;i < MAX_322_NUM;i++ ){
        
-           if(controll_eg.usb_ccid_322[i].ccid322_exist){
+           if(controll_eg.usb_ccid_322[i].pr11_exist){
 
                 printf("\nnumber %d 322 = 0X%X 0X%X 0X%X 0X%X\n",i,controll_eg.usb_ccid_322[i].pid_322[0],controll_eg.usb_ccid_322[i].pid_322[1],\
                     controll_eg.usb_ccid_322[i].pid_322[2],controll_eg.usb_ccid_322[i].pid_322[3]);
@@ -1179,17 +1199,6 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
         OSAL_MODULE_DBGPRT(controll_eg.usb_ccid_322[p_msg->argc].usb_port, OSAL_DEBUG_INFO, "get zmq msg\n");
         state_alternate(USB_COMM_ID_READ,&controll_eg.usb_ccid_322[p_msg->argc]);
         
-/*
-        for(i = 0;i < MAX_322_NUM;i++ ){
-        
-            if(controll_eg.usb_ccid_322[i].ccid322_exist){
-                
-                state_alternate(USB_COMM_ID_READ,&controll_eg.usb_ccid_322[i]);
-            }
-            
-        
-        }
-*/
         break;
 
     case ZMQ_RESULT:
@@ -1200,7 +1209,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
      
         for(i = 0;i < MAX_322_NUM;i++ ){
         
-            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+            if(controll_eg.usb_ccid_322[i].pr11_exist){
                 
                 state_alternate(USB_COMM_CLEAR_ALARM,&controll_eg.usb_ccid_322[i]);
                 //break;
@@ -1297,7 +1306,7 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
 
         for(i = 0;i < MAX_322_NUM;i++ ){
         
-            if(controll_eg.usb_ccid_322[i].ccid322_exist){
+            if(controll_eg.usb_ccid_322[i].pr11_exist){
                 
                 state_alternate(USB_NET_STATE,&controll_eg.usb_ccid_322[i]);
             }
@@ -1306,6 +1315,13 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
         }
         
         break;
+
+	case SYS_MSG_RFU:
+
+		printf("\nsend log to server,len is %d\n",sizeof(log_test));//for test
+		get_log_time(&log_test[98]);
+		ubus_client_process(UBUS_CLIENT_LOG, NULL, log_test, sizeof(log_test));
+		break;
       
     default:
         break;
@@ -1368,7 +1384,7 @@ void msg_manager_init(void)
 
     p_msg->task_msg = osal_task_create("task-msg",
                            msg_thread_entry, p_msg,
-                           DEF_THREAD_STACK_SIZE, RT_SYS_THREAD_PRIORITY);
+                           PC02_MSG_THREAD_STACK_SIZE, PC02_MSG_THREAD_PRIORITY);
     osal_assert(p_msg->task_msg != NULL); 
 
 
