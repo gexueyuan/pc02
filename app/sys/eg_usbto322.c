@@ -440,7 +440,7 @@ void StatisticsInfo_push(uint8_t src_dev,uint8_t *pid_dev,const char *gbk_str,ui
 
 }
 int usb_transmit(void *context, const unsigned char * apdu,
-            int apdu_len, unsigned char * resp, int max_resp_size,usb_ccid_322_t  *usb_322)
+            int apdu_len, unsigned char * resp, int max_resp_size,usb_ccid_322_t *usb_322)
 {
 
     int ret = 0;
@@ -774,7 +774,7 @@ int check_card(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_len)
 
 }
 
-uint8_t *cardtype[] = {"none","15693","sfz","ID cards","cpu","12.5K","MIFARE"};
+uint8_t *cardtype[7] = {"none","15693","sfz","ID cards","cpu","12.5K","MIFARE"};
 int parse_data(unsigned char* rd_data,int buffer_len,unsigned char* wl_data,int *wl_len,usb_ccid_322_t  *usb_322)
 {
     unsigned char *read_buffer;
@@ -1133,7 +1133,21 @@ int get_data(void * context,usb_ccid_322_t *p_usb_ccid,const unsigned char  *apd
 
 }
 */
+//void get_info_from_cos(uint8_t * apdu,uint16_t apdu_len,)
+//{
 
+
+
+
+
+
+
+
+
+
+
+
+//}
 
 unsigned char lu_test[] = {0x00,0x84,0x00,0x00,0x08};
 volatile  int cnt = 0;
@@ -2490,8 +2504,12 @@ else if(tail_check == 2){
                 
                 if(controll_eg.alarm_flag == 0){
                     
+/*
                     OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "send alarm to server!\n");
                     ubus_net_process(UBUS_CLIENT_SEND_ALARM,NULL,output,ret - 2);
+*/
+                    OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "send alarm to 321!\n");
+					ubus_client_process(UBUS_CLIENT_LOG,NULL,output,ret - 2);
                     
                 }
             }

@@ -365,7 +365,7 @@ typedef struct _config_base_door {
     uint16_t out_timezone_index;/* 出门有效时区索引*/
     uint16_t in_timezone_index;/*进门有效时区索引*/
     uint8_t gmc_connect;/*门磁连接方式,0x01常闭,0x02常开*/
-    int  coercion_code;/*8位数字,胁迫密码*/
+    uint32_t  coercion_code;/*8位数字,胁迫密码*/
 } config_door_base_t;
 
 typedef struct _config_time_door {
