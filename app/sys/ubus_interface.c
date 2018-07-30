@@ -55,13 +55,13 @@ static long get_file_len(FILE *file)
 *             -1, Ê§°Ü
 *
 */
-int readCFG(const char* _fileName, unsigned char* cfg_buffer)
+int readCFG(const  char * _fileName, unsigned char* cfg_buffer)
 {
 
     FILE* fp = NULL;
     int len;
     int i;
-    char cmd[200];
+    //char cmd[200];
     
     if( NULL == _fileName) return (-1);
 
@@ -124,9 +124,9 @@ int readfile(const char* _fileName, unsigned char* cfg)
 {
 
     FILE* fp = NULL;
-    long len;
+    int len;
     int i;
-    char cmd[200];
+    //char cmd[200];
     
     if( NULL == _fileName) return (-1);
 
@@ -192,10 +192,8 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
     unsigned  int if_tag;
     int i = 0;
     int len = 0;
-    uint8_t *pStr;
-    unsigned char *data ;
-    uint8_t path_name[256];
-    unsigned char *remote_buffer;
+    char *pStr = NULL;
+    unsigned char *data=NULL;
     blobmsg_parse(fun2_message_parse_policy, __REQ_MAX, tb, blob_data(msg), blob_len(msg));
 
     if (!tb[REQ_TAG])
@@ -363,7 +361,7 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
                return 0;
             }          
             controll_eg.ctlcfg.data = ctrl_cfg_buffer;
-            printf("\ncontroll_eg.ctlcfg.data address is %02X\n",controll_eg.ctlcfg.data);
+            //printf("\ncontroll_eg.ctlcfg.data address is %02X\n",controll_eg.ctlcfg.data);
             printf("ctrl cfg path:%s\n",pStr);
             
             //memcpy(controll_eg.ctrl_cfg_rt,pStr,strlen(pStr));
@@ -521,7 +519,7 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
             }
             
             controll_eg.network_state = data[0];
-            sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_NET_STATE,0,controll_eg.network_state,NULL);
+            //sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_NET_STATE,0,controll_eg.network_state,NULL);
             break;
 	case UBUS_SERVER_RFU:
 
@@ -625,16 +623,17 @@ void ubus_event_cb(evutil_socket_t fd, short what, void *arg)
     ubus_handle_event(ctx);
 }
 
-int add_ubus_event()
+int add_ubus_event(void)
 {	
     e = event_new(evloop, ctx->sock.fd, EV_READ | EV_PERSIST, ubus_event_cb, ctx);
     event_add(e, NULL);
+	return 0;
 }
 
-int ubus_release(){	ubus_free(ctx); }
-int ubus_init()
+int ubus_release(void){	ubus_free(ctx);return 0; }
+int ubus_init(void)
 {
-    int ret;
+    //int ret = 0;
     const char *ubus_socket = "/var/run/ubus.sock";
     ctx = ubus_connect(ubus_socket);
     if (!ctx) {
@@ -643,8 +642,10 @@ int ubus_init()
         }   
     if (ubus_add_object (ctx, &test_object))
         return -1;
+
+	return 0;
 }  
-void ubus_server_thread_entry(void * parameter)
+void* ubus_server_thread_entry(void * parameter)
 {
 
     ubus_init();
@@ -655,6 +656,8 @@ void ubus_server_thread_entry(void * parameter)
     event_base_dispatch(evloop);
 
     ubus_release();
+
+	return NULL;
 
 }
 

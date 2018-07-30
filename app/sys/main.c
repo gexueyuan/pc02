@@ -28,7 +28,7 @@
 
 #define RELEASE
 
-#define FIRMWARE_VERSION "V1.1.5" 
+#define FIRMWARE_VERSION "V1.1.6" 
 
 #ifdef RELEASE
 #define FIRMWARE_IDEN "rel" 
@@ -38,18 +38,9 @@
 #include "cv_cms_def.h"
 
 extern void osal_dbg_init(void);
-
-
-extern  void eg_usbto322_init();
-
-extern  void ubus_interface_init(void);
-extern void eg_comm_init();
+extern void eg_usbto322_init(void);
+extern void ubus_interface_init(void);
 extern void msg_manager_init(void);
-extern void ubus_server_thread_entry(void * parameter);
-
-//extern    void eg_net_init(void);
-
-//extern    void acl_local_init(void);
 extern void eg_zmq_test(void);
 
 
@@ -57,7 +48,7 @@ eg_global_var_t eg_envar,*p_eg_envar;
 
 Controller_t controll_eg,*p_controll_eg;
 
-unsigned char _version[200];
+char _version[200];
 
 void get_version(void)
 {

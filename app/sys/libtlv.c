@@ -1,3 +1,4 @@
+#ifdef USE_LIBTLV
 #include "global_sys.h"
 #include "libtlv.h"
 
@@ -265,3 +266,4 @@ const unsigned char * UTIL_FindT1L1V(const unsigned char * tlvs, int tlvsLen, un
 	* outLen = 0;
 	return NULL;
 }
+#endif

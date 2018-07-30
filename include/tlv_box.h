@@ -46,7 +46,7 @@ typedef struct _tlv_box
   int m_serialized_bytes;
 } tlv_box_t;
 
-tlv_box_t *tlv_box_create ();
+tlv_box_t *tlv_box_create (void);
 tlv_box_t *tlv_box_parse (unsigned char *buffer, int buffersize);
 int tlv_box_destroy (tlv_box_t * box);
 
@@ -73,7 +73,7 @@ int tlv_box_get_long (tlv_box_t * box, short type, long *value);
 int tlv_box_get_longlong (tlv_box_t * box, short type, long long *value);
 int tlv_box_get_float (tlv_box_t * box, short type, float *value);
 int tlv_box_get_double (tlv_box_t * box, short type, double *value);
-int tlv_box_get_string (tlv_box_t * box, short type, char *value,
+int tlv_box_get_string (tlv_box_t * box, short type, unsigned char *value,
 			short *length);
 int tlv_box_get_bytes (tlv_box_t * box, short type, unsigned char *value,
 		       short *length);

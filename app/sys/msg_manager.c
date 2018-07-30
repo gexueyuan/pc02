@@ -29,7 +29,6 @@ static struct ubus_context *ctx;
 static struct blob_buf b;
 
 static unsigned char ce_send_fg = 0;
-static unsigned char info_send_fg = 0;
 static unsigned char return_send_fg = 0;
 static unsigned char return_base_fg = 0;
 uint32_t id_322 = 0;
@@ -64,7 +63,6 @@ uint8_t  get_log_time(unsigned char *time_ptr)//6 bytes time in log
     time_t   now;
     struct   tm  *timenow;
     unsigned char time_acs[7];
-    short int ascDay;
 
     if(time_ptr == NULL){
 
@@ -153,10 +151,7 @@ static void get_result_data_cb(struct ubus_request *req,
 
 static void update_mackey(void)
 {
-	static struct ubus_request req;
 	uint32_t id;
-	int ret;
-	int ap_index=2;
 
 	if (ubus_lookup_id(ctx, "ubus322", &id)) {
 		fprintf(stderr, "Failed to look up ubus322 object\n");
@@ -168,7 +163,7 @@ static void update_mackey(void)
 	char *a = "\x11\x22\x33\x44\x55\x66\x77\x88\x11\x22\x33\x44\x55\x66\x77\x88\x99\xAA";
 	blobmsg_add_field(&b, BLOBMSG_TYPE_UNSPEC, "strhex", a, 18);
 	
-	int i =	ubus_invoke(ctx, id, "pushdata", b.head, get_result_data_cb, NULL, 3000);
+	ubus_invoke(ctx, id, "pushdata", b.head, get_result_data_cb, NULL, 3000);
 	
 	//printf("%d\n", i);
 	//return ;
@@ -176,10 +171,7 @@ static void update_mackey(void)
 
 static void update_cfg(void)
 {
-	static struct ubus_request req;
 	uint32_t id;
-	int ret;
-	int ap_index=2;
 
 	if (ubus_lookup_id(ctx, "ubus322", &id)) {
 		fprintf(stderr, "Failed to look up ubus322 object\n");
@@ -191,7 +183,7 @@ static void update_cfg(void)
 	char *a = "\x11\x22\x33\x44\x55\x66\x77\x88\x11\x22\x33\x44\x55\x66\x77\x88\x99\xAA";
 	blobmsg_add_field(&b, BLOBMSG_TYPE_UNSPEC, "strhex", a, 18);
 	
-	int i =	ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 3000);
+	ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 3000);
 	
 	//printf("%d\n", i);
 	//return ;
@@ -199,10 +191,7 @@ static void update_cfg(void)
 
 void update_ce(void)
 {
-	static struct ubus_request req;
 	uint32_t id;
-	int ret;
-	int ap_index=2;
 
 	if (ubus_lookup_id(ctx, "pc02nbi", &id)) {
 		fprintf(stderr, "Failed to look up pc02nbi object\n");
@@ -214,7 +203,7 @@ void update_ce(void)
 	//char *a = "\x11\x22\x33\x44\x55\x66\x77\x88\x11\x22\x33\x44\x55\x66\x77\x88\x99\xAA";
 	//blobmsg_add_field(&b, BLOBMSG_TYPE_UNSPEC, "strhex", a, 18);
 	
-	int i =	ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 3000);
+	ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 3000);
 	
 	//printf("%d\n", i);
 	//return ;
@@ -229,10 +218,7 @@ void send_log(unsigned char* log_buffer,int len)
 void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int strlen)
 {
 
-	static struct ubus_request req;
 	uint32_t id;
-	int ret;
-	int ap_index=2;
 
     unsigned char* str_buffer = NULL;
 
@@ -306,7 +292,7 @@ void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int st
 	//char *a = "\x11\x22\x33\x44\x55\x66\x77\x88\x11\x22\x33\x44\x55\x66\x77\x88\x99\xAA";
 	blobmsg_add_field(&b, BLOBMSG_TYPE_UNSPEC, "strhex", str_buffer, strlen);
 	
-	int i =	ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 3000);
+	ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 3000);
 
     if(str_buffer != NULL)
         free(str_buffer);
@@ -318,10 +304,7 @@ void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int st
 void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strlen)
 {
 
-	static struct ubus_request req;
 	uint32_t id;
-	int ret;
-	int ap_index=2;
 
     unsigned char* str_buffer = NULL;
 
@@ -329,7 +312,7 @@ void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strle
 
 		printf("\noffline  push  failed!\n");
 
-		return 0;
+		return;
 	}
 
      /* Take the semaphore. */
@@ -417,7 +400,7 @@ void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strle
 	//char *a = "\x11\x22\x33\x44\x55\x66\x77\x88\x11\x22\x33\x44\x55\x66\x77\x88\x99\xAA";
 	blobmsg_add_field(&b, BLOBMSG_TYPE_UNSPEC, "strhex", str_buffer, strlen);
 	
-	int i =	ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 3000);
+	ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 3000);
 
     if(str_buffer != NULL)
         free(str_buffer);
@@ -429,7 +412,6 @@ static void get_wl_data_cb(struct ubus_request *req,
 				    int type, struct blob_attr *msg)
 {
 	struct blob_attr *tb[__RETURN_MAX];
-	int rc;
 	int len;
     key_buffer_t *wl_lv;
 	blobmsg_parse(return_policy, __RETURN_MAX, tb, blob_data(msg), blob_len(msg));
@@ -441,7 +423,7 @@ static void get_wl_data_cb(struct ubus_request *req,
 
     wl_lv = (key_buffer_t *)req->priv;
         
-	rc = blobmsg_get_u32(tb[RETURN_STATUS]);
+	blobmsg_get_u32(tb[RETURN_STATUS]);
     
     unsigned char *data = (unsigned char *)blobmsg_data(tb[RETURN_STRHEX]);
     
@@ -468,9 +450,7 @@ static void get_wl_data_cb(struct ubus_request *req,
 
 void get_wl(uint8_t *id_lv,uint8_t *data_wl,int *wlen)
 {
-	static struct ubus_request req;
 	uint32_t id;
-	int ret;
     uint8_t id_data[33];//0-len,1~n data
     uint8_t id_len;
 
@@ -497,7 +477,7 @@ void get_wl(uint8_t *id_lv,uint8_t *data_wl,int *wlen)
     
 	blobmsg_add_field(&b, BLOBMSG_TYPE_UNSPEC, "strhex", id_data, id_len);
     
-	int i =	ubus_invoke(ctx, id, "pushdata", b.head, get_wl_data_cb, (void*)&wl_buffer, 3000);
+	ubus_invoke(ctx, id, "pushdata", b.head, get_wl_data_cb, (void*)&wl_buffer, 3000);
 	
 	//printf("%d\n", i);
 	//return ;
@@ -508,7 +488,6 @@ static void get_wl_4_cb(struct ubus_request *req,
 				    int type, struct blob_attr *msg)
 {
 	struct blob_attr *tb[__RETURN_MAX];
-	int rc;
 	int len;
     key_buffer_t *wl_lv;
 	blobmsg_parse(return_policy, __RETURN_MAX, tb, blob_data(msg), blob_len(msg));
@@ -520,7 +499,7 @@ static void get_wl_4_cb(struct ubus_request *req,
 
     wl_lv = (key_buffer_t *)req->priv;
         
-	rc = blobmsg_get_u32(tb[RETURN_STATUS]);
+	blobmsg_get_u32(tb[RETURN_STATUS]);
     
     unsigned char *data = (unsigned char *)blobmsg_data(tb[RETURN_STRHEX]);
     
@@ -551,16 +530,14 @@ void get_wl_4(uint8_t *p_id,uint8_t *data_wl,int *wlen)
 
 
 
-	static struct ubus_request req;
 	uint32_t id;
-	int ret;
     uint8_t id_data[4] = {0};//len = 4
-    uint8_t id_len;
-    struct timeval _start,_end;
     key_buffer_t wl_buffer;
     
 /*
-            gettimeofday( &_start, NULL );
+	struct timeval _start,_end;
+
+    gettimeofday( &_start, NULL );
     printf("ubus look start : %d.%d\n", _start.tv_sec, _start.tv_usec);
 */
     
@@ -605,7 +582,7 @@ void get_wl_4(uint8_t *p_id,uint8_t *data_wl,int *wlen)
     printf("invoke start : %d.%d\n", _start.tv_sec, _start.tv_usec);
 */
 
-	int i =	ubus_invoke(ctx, id, "pushdata", b.head, get_wl_4_cb, (void*)&wl_buffer, 3000);
+	ubus_invoke(ctx, id, "pushdata", b.head, get_wl_4_cb, (void*)&wl_buffer, 3000);
     
 /*
     gettimeofday( &_end, NULL );
@@ -634,7 +611,6 @@ static void get_audit_cb(struct ubus_request *req,
 				    int type, struct blob_attr *msg)
 {
 	struct blob_attr *tb[__RETURN_MAX];
-	int rc;
 	int len;
     key_buffer_t *wl_lv;
 	blobmsg_parse(return_policy, __RETURN_MAX, tb, blob_data(msg), blob_len(msg));
@@ -646,7 +622,7 @@ static void get_audit_cb(struct ubus_request *req,
 
     wl_lv = (key_buffer_t *)req->priv;
         
-	rc = blobmsg_get_u32(tb[RETURN_STATUS]);
+	blobmsg_get_u32(tb[RETURN_STATUS]);
     
     
     if(tb[RETURN_STRHEX] != NULL){
@@ -680,11 +656,8 @@ static void get_audit_cb(struct ubus_request *req,
 }
 int get_audit_data(unsigned int tag,unsigned char* strhex,int strlen,uint8_t *data_wl,int *wlen)
 {
-	static struct ubus_request req;
 	uint32_t id;
-	int ret;
     uint8_t id_data[4] = {0};//len = 4
-    uint8_t id_len;
 
     key_buffer_t wl_buffer;
 
@@ -703,7 +676,7 @@ int get_audit_data(unsigned int tag,unsigned char* strhex,int strlen,uint8_t *da
         
     	if (ubus_lookup_id(ctx, "ubus321", &id)) {
     		fprintf(stderr, "Failed to look up ubus321 object\n");
-    		return;
+    		return -1;
     	}
 
         id_322 = id;
@@ -728,7 +701,7 @@ int get_audit_data(unsigned int tag,unsigned char* strhex,int strlen,uint8_t *da
     
 	blobmsg_add_field(&b, BLOBMSG_TYPE_UNSPEC, "strhex", id_data, strlen);
     
-	int i =	ubus_invoke(ctx, id, "pushdata", b.head, get_audit_cb, (void*)&wl_buffer, 3000);
+	ubus_invoke(ctx, id, "pushdata", b.head, get_audit_cb, (void*)&wl_buffer, 3000);
     printf("F[%s] L[%d],len is %d,%d\n", __FILE__, __LINE__,wl_buffer.len,*wlen);
     //data_wl = wl_buffer.data;
     if(wl_buffer.len < *wlen){
@@ -750,7 +723,6 @@ static void get_rtc_cb(struct ubus_request *req,
 				    int type, struct blob_attr *msg)
 {
 	struct blob_attr *tb[__RETURN_MAX];
-	int rc;
 	int len;
     uint8_t *rtc_data;
 	blobmsg_parse(return_policy, __RETURN_MAX, tb, blob_data(msg), blob_len(msg));
@@ -762,7 +734,7 @@ static void get_rtc_cb(struct ubus_request *req,
 
     rtc_data = (uint8_t *)req->priv;
         
-	rc = blobmsg_get_u32(tb[RETURN_STATUS]);
+	blobmsg_get_u32(tb[RETURN_STATUS]);
     
     
     if(tb[RETURN_STRHEX] != NULL){
@@ -805,9 +777,7 @@ static void get_rtc_cb(struct ubus_request *req,
 
 int get_rtc_data(uint8_t *data_rtc)
 {
-	static struct ubus_request req;
 	uint32_t id;
-	int ret;
 
     
     id = id_322;
@@ -817,7 +787,7 @@ int get_rtc_data(uint8_t *data_rtc)
         
     	if (ubus_lookup_id(ctx, "ubus321", &id)) {
     		fprintf(stderr, "Failed to look up ubus321 object\n");
-    		return;
+    		return -1;
     	}
 
         id_322 = id;
@@ -834,7 +804,7 @@ int get_rtc_data(uint8_t *data_rtc)
     
 	//blobmsg_add_field(&b, BLOBMSG_TYPE_UNSPEC, "strhex", NULL, 0);
     
-	int i =	ubus_invoke(ctx, id, "pushdata", b.head, get_rtc_cb, (void*)data_rtc, 3000);
+	ubus_invoke(ctx, id, "pushdata", b.head, get_rtc_cb, (void*)data_rtc, 3000);
     
 	return 0 ;
 }
@@ -842,22 +812,16 @@ void ubus_clien_init(void)
 {
 
     const char *ubus_socket = NULL;
-    int ch;
 
     uloop_init();
 
     ctx = ubus_connect(ubus_socket);
     if (!ctx) {
         fprintf(stderr, "Failed to connect to ubus\n");
-        return -1;
+        return;
     }
 
-
-    //id_322 = 
-
-
     //client_main();
-
 
 
 }
@@ -908,10 +872,8 @@ int state_alternate(E_USB_COMM_STATE state_d,usb_ccid_322_t * ccid)
 void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
 {
 
-    uint32_t type = 0; 
     int i;
     unsigned char door_state[2];
-    uint16_t return_value;
     //msg_manager_t *p_sys = &p_controll_eg->msg_manager;
     uint8_t index_cnt = 0;
     
@@ -1347,7 +1309,7 @@ void * msg_thread_entry(void *parameter)
         err = osal_queue_recv(p_sys->queue_msg, buf, &len, OSAL_WAITING_FOREVER);
         if (err == OSAL_STATUS_SUCCESS){
             sys_manage_proc(p_sys, p_msg);
-            osal_free(p_msg);
+            //osal_free(p_msg);
         }
         else{
             OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_ERROR, "%s: osal_queue_recv error [%d]\n", __FUNCTION__, err);
@@ -1368,8 +1330,6 @@ void msg_manager_init(void)
 
     msg_manager_t *p_msg = &p_controll_eg->msg_manager;
 
-
-    osal_task_t *tid;
 
     sem_321_process= osal_sem_create("sem_321_process", 1);
     osal_assert(sem_321_process != NULL);

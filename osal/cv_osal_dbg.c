@@ -15,7 +15,7 @@ void cv_debug_print_timestamp(void)
 	printf("(%ld.%06u): ", (long) tv.sec, (unsigned int) tv.usec);
 }
 
-void cv_debug_open_syslog()
+void cv_debug_open_syslog(void)
 {
 	openlog("cv_rsu", LOG_PID | LOG_NDELAY, LOG_USER);
 	cv_debug_syslog++;
@@ -70,7 +70,7 @@ void osal_syslog(int level, const char *fmt, ...)
 
 void osal_printf_unbuf(const char * fmt, ...)
 {
-    uint8_t buffer[1000];
+    char buffer[1000];
     va_list args;
     
     va_start(args, fmt);
@@ -152,7 +152,7 @@ void osal_dbg_dump_data(uint8_t *p, uint32_t len)
 
 void dbg_buf_print(uint8_t *pbuf , uint32_t len)
 {
-    uint32_t i , j=0 ,k;
+    uint32_t i , j=0;
 
     printf("=================================================");
     for(i = 0 ; i < len ; i++) {

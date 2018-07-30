@@ -22,7 +22,7 @@ extern void *zmq_socket_new_push(void *context,char *dest);
 
 
 extern int zmq_poll_recv(void *socket, char *pBuff, int iMaxLen, int iTimeOut);
-extern int zmq_socket_send(void *socket, char *pBuff, int iSendLen);
+extern int zmq_socket_send(void *socket, const unsigned char *pBuff, int iSendLen);
 
 #ifdef __cplusplus
 }

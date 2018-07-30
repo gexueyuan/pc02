@@ -442,7 +442,7 @@ typedef struct _usb_ccid_322 {
     uint8_t door_index;/*0= no exist, 1= exist*/
     uint8_t ccid322_index;    
     uint8_t init_flag;//init mask
-    unsigned char usb_port[16];
+    char usb_port[16];
     unsigned char pid_322[4];
     unsigned char sn_pr11[16];
     unsigned char pid_pr11[4];
@@ -690,7 +690,7 @@ static inline int c2i(char ch)
 // return value: 
 // remarks : 将字符串转化为16进制数
 */
-static inline void StrToHex(unsigned char *pbDest, unsigned char *pbSrc, int nLen)
+static inline void StrToHex(unsigned char *pbDest, char *pbSrc, int nLen)
 {
     char h1,h2;
     unsigned char s1,s2;

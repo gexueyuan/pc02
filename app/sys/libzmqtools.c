@@ -112,7 +112,7 @@ int zmq_poll_recv(void *socket, char *pBuff, int iMaxLen, int iTimeOut){
     return iRcvLen;
 }
 
-int zmq_socket_send(void *socket, char *pBuff, int iSendLen)
+int zmq_socket_send(void *socket, const unsigned char *pBuff, int iSendLen)
 {
 	return zmq_send(socket,pBuff,iSendLen,0);
 }

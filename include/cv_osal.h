@@ -1,14 +1,17 @@
 /*****************************************************************************
- Copyright(C) Beijing Carsmart Technology Co., Ltd.
+ Copyright(C) Tendyron Corporation
  All rights reserved.
  
  @file   : cv_osal.h
  @brief  : This is the OS adapter layer realization.
- @author : wangyf
+
+
+ @author : gexueyuan
  @history:
-           2014-11-12    wangyf    port from project 'cuckoo'. 
+           2016-12-22    gexueyuan    Created file
            ...
 ******************************************************************************/
+
 #ifndef __CV_OSAL_H__
 #define __CV_OSAL_H__
 
@@ -56,7 +59,7 @@ static inline void osal_delay(int usec)
 
 static inline uint32_t osal_get_systemtime(void)
 {
-    struct os_time t;
+    struct os_reltime t;
     if (os_get_reltime(&t)){
         return t.sec*1000 + t.usec/1000;
     }

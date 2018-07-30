@@ -18,7 +18,7 @@
 typedef enum _OPEN_RESULT {
     OR_SUCCESS = 0x01,/* 成功 */
     OR_SUCCESS_C = 0x02,/* 成功，卡片jm算法异常 */
-    OR_SUCCESS_C = 0x03,/* 成功，读卡器jm算法异常 */
+    OR_SUCCESS_R = 0x03,/* 成功，读卡器jm算法异常 */
     OR_INVALID_WL = 0xA0,		
     OR_ILLEGAL,
     OR_OUT_TIME,
@@ -71,7 +71,7 @@ typedef struct _card_log {
 	uint8_t result;
 	uint8_t RFU;
 	uint8_t ctrl_sign[64];
-} card_log_t;
+}__COMPILE_PACK__ card_log_t;
 
 typedef struct _remote_log {
     uint16_t version;
@@ -98,7 +98,7 @@ typedef struct _remote_log {
 	uint8_t result;
 	uint16_t RFU;
 	uint8_t ctrl_sign[64];
-} remote_log_t;
+}__COMPILE_PACK__ remote_log_t;
 
 typedef struct _alarm_log {//88 byte
     uint16_t version;
@@ -114,7 +114,7 @@ typedef struct _alarm_log {//88 byte
 	uint8_t result;
 	uint8_t RFU[3];
 	uint8_t ctrl_sign[64];
-} alarm_log_t;
+}__COMPILE_PACK__ alarm_log_t;
 
 typedef struct _ID_log {//192
     uint16_t version;
@@ -132,7 +132,7 @@ typedef struct _ID_log {//192
 	uint8_t result;
 	uint8_t RFU[3];
 	uint8_t ctrl_sign[64];
-} ID_log_t;
+}__COMPILE_PACK__ ID_log_t;
 
 
 typedef struct _face_remote_log {//162
@@ -151,7 +151,7 @@ typedef struct _face_remote_log {//162
 	uint8_t result;
 	uint8_t RFU;
 	uint8_t ctrl_sign[64];
-} face_remote_log_t;
+}__COMPILE_PACK__ face_remote_log_t;
 
 typedef struct _double_element_log {//162
     uint16_t version;
@@ -174,14 +174,14 @@ typedef struct _double_element_log {//162
 	uint8_t in_out;
 	uint8_t result;
 	uint8_t RFU;
-	uint8_t ctrl_sign[64];	
-} double_element_log_t;
+	uint8_t ctrl_sign322[64];	
+}__COMPILE_PACK__ double_element_log_t;
 
 typedef struct _white_list_cnf {
 	uint32_t card_id;
 	uint8_t name[31];
 	uint8_t door_e[5];
-} white_list_cnf_t;
+}__COMPILE_PACK__ white_list_cnf_t;
 
 
 #endif

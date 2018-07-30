@@ -32,7 +32,7 @@ osal_mutex_t * osal_mutex_create(const char* name)
 
 osal_status_t osal_mutex_delete(osal_mutex_t *mutex)
 {
-    int ret;
+    int ret = OSAL_ERROR;
     if(mutex)
     {  
         ret = os_mutex_destroy(mutex);

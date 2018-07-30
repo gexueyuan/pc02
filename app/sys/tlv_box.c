@@ -25,7 +25,7 @@ tlv_box_release_tlv (value_t value)
 }
 
 tlv_box_t *
-tlv_box_create ()
+tlv_box_create (void)
 {
   tlv_box_t *box = (tlv_box_t *) malloc (sizeof (tlv_box_t));
   box->m_list = key_list_create (tlv_box_release_tlv);
@@ -43,7 +43,7 @@ tlv_box_parse (unsigned char *buffer, int buffersize)
   memcpy (cached, buffer, buffersize);
 
   int offset = 0;
-  short length = 0;
+  //short length = 0;
   while (offset < buffersize)
     {
       short type = (*(short *) (cached + offset));
@@ -307,7 +307,7 @@ tlv_box_get_long (tlv_box_t * box, short type, long *value)
 }
 
 int
-tlv_box_get_string (tlv_box_t * box, short type, char *value, short *length)
+tlv_box_get_string (tlv_box_t * box, short type, unsigned char *value, short *length)
 {
   return tlv_box_get_bytes (box, type, value, length);
 }

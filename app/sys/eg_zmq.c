@@ -21,8 +21,8 @@
 
 //extern int writeFile(const char* _fileName, void* _buf, int _bufLen);
 
-const unsigned char* zmq_tk[] = {"zmq-1","zmq-2","zmq-3","zmq-4"};
-const unsigned char* zmq_s_tk[] = {"zmq-s-1","zmq-s-2","zmq-s-3","zmq-s-4"};
+const char* zmq_tk[] = {"zmq-1","zmq-2","zmq-3","zmq-4"};
+const char* zmq_s_tk[] = {"zmq-s-1","zmq-s-2","zmq-s-3","zmq-s-4"};
 
 extern void print_array(const  char* tag,unsigned char* send,int len);
 
@@ -54,66 +54,24 @@ int writeFile_over(const char* _fileName, void* _buf, int _bufLen)
     fp = NULL;
 
     return 0;    
-}
-
-
-
-int zmq_pc02 (void)
-{
-    printf ("Connecting to hello world server…\n");
-    void *context = zmq_ctx_new ();
-    void *requester = zmq_socket (context, ZMQ_REQ);
-    zmq_connect (requester, "tcp://localhost:18901");
-
-    int request_nbr;
-    for (request_nbr = 0; request_nbr != 10; request_nbr++) {
-        char buffer [10];
-        printf ("Sending Hello %d…\n", request_nbr);
-        zmq_send (requester, "Hello", 5, 0);
-        zmq_recv (requester, buffer, 10, 0);
-        printf ("Received World %d\n", request_nbr);
-    }
-    zmq_close (requester);
-    zmq_ctx_destroy (context);
-    return 0;
-}
-		
-static unsigned short msg_parse_packet(char *recv_buf, int recv_len, char *send_buf, int *send_len)
-{		
-	int  rc;
-	int  tmp_len;
-	int  timeout;
-	int  socket_fd;
-	unsigned short tran_code = 0;
-	
-	//获取交易码
-	iFindTlvList(recv_buf, recv_len, TLV_RD_BEGIN, TLV_TYPE_16, (unsigned char *)&tran_code, &tmp_len);
-
-	
-	return tran_code;
-}
+}		
 void *eg_zmq_thread_entry(void *parameter)
 {
     //int ret = 0;
-    unsigned short ret;
     usb_ccid_322_t *p_zmq_322;
 	int  rc = 0;
 	int  timeout = 0;
 
 	unsigned char recv_buf[MAX_BUF_LEN];
 	int  recv_len = 0;
-	unsigned char send_buf[MAX_BUF_LEN];
-	int  send_len = 0;
     
-    unsigned char *zmq_cli_addr;
+    char *zmq_cli_addr;
     
-    unsigned char *zmq_server_addr;
+    char *zmq_server_addr;
     
-    unsigned char *zmq_answer_addr;
+    char *zmq_answer_addr;
     
-    unsigned char buffer[2048];
 
-    int i;
     /* Create an empty ?MQ message */
     
     p_zmq_322 = (usb_ccid_322_t*)parameter;
@@ -122,14 +80,14 @@ void *eg_zmq_thread_entry(void *parameter)
 
     if(p_zmq_322->ccid322_index == 1){
 
-        zmq_cli_addr = (unsigned char *)ZMQ_CLI_1;
-        zmq_server_addr = (unsigned char *)ZMQ_SERVER_1;
-        zmq_answer_addr = (unsigned char *)ZMQ_ANS_1;
+        zmq_cli_addr = ZMQ_CLI_1;
+        zmq_server_addr = ZMQ_SERVER_1;
+        zmq_answer_addr = ZMQ_ANS_1;
     }
     else{
-        zmq_cli_addr = (unsigned char *)ZMQ_CLI_2;
-        zmq_server_addr = (unsigned char *)ZMQ_SERVER_2;
-        zmq_answer_addr = (unsigned char *)ZMQ_ANS_2;
+        zmq_cli_addr = ZMQ_CLI_2;
+        zmq_server_addr = ZMQ_SERVER_2;
+        zmq_answer_addr = ZMQ_ANS_2;
 
 
     }
@@ -214,7 +172,7 @@ void *eg_zmq_thread_entry(void *parameter)
 
     }
 
-clear:
+//clear:
     /* Release message */
 	zmq_close(p_zmq_322->zmq_server);
 	zmq_close(p_zmq_322->zmq_answer);
@@ -227,7 +185,7 @@ clear:
 
 }
 
-
+#ifdef ZMQ_CAM
 void *eg_zmq_cam_thread_entry(void *parameter)
 {
     //int ret = 0;
@@ -334,7 +292,7 @@ clear:
 
 
 }
-
+#endif
 
 
 void eg_zmq_init(usb_ccid_322_t* argv)
@@ -351,16 +309,38 @@ void eg_zmq_init(usb_ccid_322_t* argv)
 
     osal_assert(tid != NULL);
 
-
+#ifdef ZMQ_CAM
 	tid = osal_task_create("camera config",
 						eg_zmq_cam_thread_entry,
 						NULL,PC02_ZMQ_THREAD_STACK_SIZE>>1, PC02_ZMQ_THREAD_PRIORITY);
 
 	osal_assert(tid != NULL);
 
-
+#endif
 
 }
+#ifdef ZMQ_TEST
+
+int zmq_pc02 (void)
+{
+    printf ("Connecting to hello world server…\n");
+    void *context = zmq_ctx_new ();
+    void *requester = zmq_socket (context, ZMQ_REQ);
+    zmq_connect (requester, "tcp://localhost:18901");
+
+    int request_nbr;
+    for (request_nbr = 0; request_nbr != 10; request_nbr++) {
+        char buffer [10];
+        printf ("Sending Hello %d…\n", request_nbr);
+        zmq_send (requester, "Hello", 5, 0);
+        zmq_recv (requester, buffer, 10, 0);
+        printf ("Received World %d\n", request_nbr);
+    }
+    zmq_close (requester);
+    zmq_ctx_destroy (context);
+    return 0;
+}
+
 
 void *eg_zmq_test_thread(void *parameter)
 {
@@ -477,4 +457,4 @@ void eg_zmq_test(void)
 
 
 }
-
+#endif

@@ -228,6 +228,7 @@ int os_get_reltime(struct os_reltime *t)
     	t->usec = ts.tv_nsec / 1000;
     	return 0;
     }
+	return res;
 }
 
 static void usleep_ex(unsigned usecs)

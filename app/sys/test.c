@@ -1,3 +1,4 @@
+#ifdef USB_HID_TEST
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -221,3 +222,4 @@ int read_event(int fd)
   return 0;
      
 }
+#endif

@@ -1,14 +1,16 @@
 /*****************************************************************************
- Copyright(C) Beijing Carsmart Technology Co., Ltd.
+ Copyright(C) Tendyron Corporation
  All rights reserved.
  
  @file   : cv_osal_dbg.h
  @brief  : This file realize the debug functions
- @author : wangyf
+
+ @author : gexueyuan
  @history:
-           2014-11-14    wangyf    Created file
+           2016-12-22    gexueyuan    Created file
            ...
 ******************************************************************************/
+
 #ifndef __CV_OSAL_DBG_H__
 #define __CV_OSAL_DBG_H__
 

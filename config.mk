@@ -17,7 +17,7 @@ _ENDIAN        = __BIG_ENDIAN
 
 VNET_DRIVER_TYPE  = VNET_DRIVER_TYPE_WIFI
 
-OSFLAG = -DLINUX -D_GNU_SOURCE -DCONFIG_LIBNL30 -D$(_ENDIAN) -D_BYTE_ORDER=$(_ENDIAN) -D$(VNET_DRIVER_TYPE)
+OSFLAG = -DLINUX -D_GNU_SOURCE -DCONFIG_LIBNL30 -D$(_ENDIAN) -D_BYTE_ORDER=$(_ENDIAN) -D$(VNET_DRIVER_TYPE) -std=c99
 
 ifeq ("$(release)", "y")
 	OSFLAG += -D_NDEBUG
@@ -31,7 +31,7 @@ INCLUDEFLAGS += -I$(TOPDIR)/include \
 
 
 		
-WARNING = -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common
+WARNING = -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Wno-unused-function
 #-Werror-implicit-function-declaration
 CFLAGS = -O2 $(OSFLAG) $(WARNING) $(INCLUDEFLAGS)
 

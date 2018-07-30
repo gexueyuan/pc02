@@ -36,13 +36,13 @@ struct event *e;
 #define TAG_GET_SECURE_CHANNEL_PKC	0x0004
 #define TAG_GET_WHITELIST_PKC		0x0005
 
-int ubus_init();  
-int ubus_release();
+int ubus_init(void);  
+int ubus_release(void);
 
-int add_ubus_event();
-int remove_ubus_event();
+int add_ubus_event(void);
+int remove_ubus_event(void);
 
-int add_alarm_timer_event();
-int remove_alarm_timer_event();
+int add_alarm_timer_event(void);
+int remove_alarm_timer_event(void);
 
 #endif //UBUS_MGR_H
