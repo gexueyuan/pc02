@@ -14,9 +14,11 @@
 
 #include "cv_osal.h"
 #include "zmq.h"
+#include "data_format.h"
+#include "list.h"
 
 /*****************************************************************************
- * declaration of variables and functions                                    *
+ * declaration of variables and functions                 *
 *****************************************************************************/
 
 //#define RSU_TEST
@@ -354,7 +356,11 @@ typedef struct _key_buffer {
     unsigned char *data;
 } key_buffer_t;
 
-
+typedef struct _alarm_node {	
+    list_head_t list;
+    uint32_t id_322;
+	E_ALARM_LIST alarm_type;
+} alarm_node_t;
 typedef struct _config_base_door {
     uint8_t open_time;/*开门时间1-10s*/
     uint8_t open_time_disable;/*开门时间(残疾人)1-60s*/
@@ -448,6 +454,7 @@ typedef struct _usb_ccid_322 {
     unsigned char pid_pr11[4];
     uint8_t  now_door_state[2];
     uint8_t  pre_door_state[2];
+	uint8_t door_action;//0xAA-close2open;0x55-open2close;0-nostate
     void *usb_context;
     int usb_reconnect_cnt;  
     uint8_t WG_ERROR;
@@ -531,6 +538,7 @@ typedef struct _Controller {
     uint8_t push_flag;
     uint8_t network_state;//0-offline  1-online   
 	uint8_t network_state_pre;//0-offline  1-online
+	list_head_t alarm_mask_list;
 /*alarm*/
 /*cfg*/
     key_buffer_t basecfg;   
@@ -546,6 +554,7 @@ typedef struct _Controller {
     osal_sem_t *sem_remote;
     osal_sem_t *sem_base_cfg;
     osal_sem_t *sem_ctrl_cfg;
+	osal_sem_t *sem_mask_alarm;
     osal_timer_t *timer_alarm;
     osal_timer_t *timer_push_statics;
 /*os relate*/
@@ -713,6 +722,52 @@ static inline void StrToHex(unsigned char *pbDest, char *pbSrc, int nLen)
 }
 }
 
+/**
+ * 以大端模式将int转成byte[]
+ */
+static void intToBytesBig(int value,uint8_t* des) {
+    des[0] = (uint8_t) ((value >> 24) & 0xFF);
+    des[1] = (uint8_t) ((value >> 16) & 0xFF);
+    des[2] = (uint8_t) ((value >> 8) & 0xFF);
+    des[3] = (uint8_t) (value & 0xFF);
+}
+
+/**
+ * 以小端模式将int转成byte[]
+ *
+ * @param value
+ * @return
+ */
+static void intToBytesLittle(int value,uint8_t* des) {
+    des[3] = (uint8_t) ((value >> 24) & 0xFF);
+    des[2] = (uint8_t) ((value >> 16) & 0xFF);
+    des[1] = (uint8_t) ((value >> 8) & 0xFF);
+    des[0] = (uint8_t) (value & 0xFF);
+}
+
+/**
+ * 以大端模式将byte[]转成int
+ */
+static uint32_t bytesToIntBig(uint8_t* src, int offset) {
+    uint32_t value;
+    value = (uint32_t) (((src[offset] & 0xFF) << 24)
+            | ((src[offset + 1] & 0xFF) << 16)
+            | ((src[offset + 2] & 0xFF) << 8)
+            | (src[offset + 3] & 0xFF));
+    return value;
+}
+
+/**
+ * 以小端模式将byte[]转成int
+ */
+ static int bytesToIntLittle(uint8_t* src, int offset) {
+    int value;
+    value = (int) ((src[offset] & 0xFF)
+            | ((src[offset + 1] & 0xFF) << 8)
+            | ((src[offset + 2] & 0xFF) << 16)
+            | ((src[offset + 3] & 0xFF) << 24));
+    return value;
+}
 
 
 /*****************************************************************************

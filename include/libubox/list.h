@@ -42,10 +42,13 @@
 	})
 #endif
 
-struct list_head {
-	struct list_head *next;
-	struct list_head *prev;
-};
+//struct list_head {
+//	struct list_head *next;
+//	struct list_head *prev;
+//};
+typedef struct list_head {
+	struct list_head *next, *prev;
+}list_head_t;
 
 #define LIST_HEAD_INIT(name) { &(name), &(name) }
 #undef LIST_HEAD

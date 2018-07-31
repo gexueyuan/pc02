@@ -29,7 +29,6 @@ OSAL_DEBUG_ENTRY_DEFINE(eg_usbto322);
 #include "luareader.h"
 
 #include "libzmqtools.h"
-#include "data_format.h"
 
 
 #define USB_FAILED    0x6E00
@@ -106,9 +105,6 @@ const uint8_t car_detect[] = {0xFC,0xA0,0x00,0x00,0x05,0x80,0x30,0x00,0x00,0x00}
 
 
 const uint8_t refuse_enter[] = {0xFC,0xA0,0x04,0x00,0x09,0x80,0x32,0x80,0x00,0x04,  0x01,0x00,0x01,0x00};
-
-uint8_t test_all[] = {0xFC,0xA0,0x00,0x00,  /*???*/0x23  ,0x80,0x34,0x00,0x00, /*????*/0x18 /**????Χ**/ ,0x02,0x00,0x09,0x32,0x38,0xA1,0xE6,0x2F,0x31,0x35,0xA1,0xE6,\
-                      0x03,0x00,0x04  ,0x32,0x35,0xA1,0xE6,/*????*/0x04,0x00,0x01,0x01,/*λ?????*/0x05,0x00,0x04,0xB1,0xB1,0xBE,0xA9};
 
 unsigned char  change_app[25] = {0xFC,0xA0,0x04,0x00,0x14,0x00,0xA4,0x04,0x00,0x0F,0x74,0x64,0x72,0x6F,0x6E,0x99,0x05,0x69,0x64,0x52,0x64,0x51,0x34,0x42,0x31};
 
@@ -211,29 +207,30 @@ const uint8_t wgp_info_clear[] = {0xF0,0xF2,0x01,0xFE,0x01,0xFF};
 uint8_t net_state[] = {0xFC,0xA0,0x00,0x00,0x09,0x80,0x34,0x00,0x00,0x04,0x09,0x00,0x01,0x80};
 
 
-/* ?????? GBK*/
-char *antenna_broken = "PR11??????";//{0x50,0x52,0x31,0x31,0xBE,0xFC,0xC3,0xDC,0xD0,0xBE,0xC6,0xAC,0xCB,0xF0,0xBB,0xB5};
-char *IC_broken = "PR11????о???";//{0xBE,0xFC,0xC3,0xDC,0xD0,0xBE,0xC6,0xAC,0xCB,0xF0,0xBB,0xB5};
-char *usb_disconnect = "PC02-322USB???ж?";
-char *log_failed = "????????????";
-char *wgp_alarm = "WGP??λ????";
-char *wgp_host_num = "WGP???????????????";
-char *wgp_slave_num = "WGP???????????????";
-char *wgp_num = "WGP??????????λ????";
-char *wgp_cnt = "WGP????????????";
-char *wgp_time="WGP???????????";
-char *_322_error="322 ???????";
+/* 统计信息 GBK*/
+char *antenna_broken = "PR11天线损坏";//{0x50,0x52,0x31,0x31,0xBE,0xFC,0xC3,0xDC,0xD0,0xBE,0xC6,0xAC,0xCB,0xF0,0xBB,0xB5};
+char *IC_broken = "PR11军密芯片损坏";//{0xBE,0xFC,0xC3,0xDC,0xD0,0xBE,0xC6,0xAC,0xCB,0xF0,0xBB,0xB5};
+char *usb_disconnect = "PC02-322USB通讯中断";
+char *log_failed = "开门失败无日志";
+char *wgp_alarm = "WGP复位警报";
+char *wgp_host_num = "WGP通讯控制器重发计数";
+char *wgp_slave_num = "WGP通讯读卡器重发计数";
+char *wgp_num = "WGP通讯控制器复位计数";
+char *wgp_cnt = "WGP通讯两线通信次数";
+char *wgp_time="WGP通讯开机时间（秒）";
+char *_322_error="322 返回错误";
 
-/* ?????? GBK*/
+/* 统计信息 GBK*/
+
 
 
 /*
-* ???????: д?????????
-* ????????: _fileName, ???????
-*           _buf, ?д????滺?塣
-*           _bufLen, ??滺??????
-*   ?????: 0, ???
-*           -1, ???
+* 函数说明: 写二进制文件
+* 参数描述: _fileName, 文件名称
+*           _buf, 要写的内存缓冲。
+*           _bufLen, 内存缓冲的长度
+*   返回值: 0, 成功
+*           -1, 失败
 *
 */
 int writeFile(const char* _fileName, void* _buf, int _bufLen)
@@ -241,14 +238,14 @@ int writeFile(const char* _fileName, void* _buf, int _bufLen)
     FILE * fp = NULL;
     if( NULL == _buf || _bufLen <= 0 ) return (-1);
 
-    fp = fopen(_fileName, "ab+"); // ??????????? ??????д????????
+    fp = fopen(_fileName, "ab+"); // 必须确保是以 二进制写入的形式打开
 
     if( NULL == fp )
     {
         return (-1);
     }
 
-    fwrite(_buf, _bufLen, 1, fp); //??????д
+    fwrite(_buf, _bufLen, 1, fp); //二进制写
 
     fclose(fp);
     fp = NULL;
@@ -257,12 +254,12 @@ int writeFile(const char* _fileName, void* _buf, int _bufLen)
 }
 
 /*
- * ???????:  ???????????
-*  ????????: _fileName, ???????
-*             _buf, ??????????????λ??
-*             _bufLen, ???????????
-*    ?????:  0, ???
-*             -1, ???
+ * 函数说明:  读二进制文件
+*  参数描述: _fileName, 文件名称
+*             _buf, 读出来的数据存放位置
+*             _bufLen, 数据的长度信息
+*    返回值:  0, 成功
+*             -1, 失败
 *
 */
 int readFile(const char* _fileName, void* _buf, int _bufLen)
@@ -270,14 +267,14 @@ int readFile(const char* _fileName, void* _buf, int _bufLen)
     FILE* fp = NULL;
     if( NULL == _buf || _bufLen <= 0 ) return (-1);
 
-    fp = fopen(_fileName, "rb"); // ??????????? ??????????????? 
+    fp = fopen(_fileName, "rb"); // 必须确保是以 二进制读取的形式打开 
 
     if( NULL == fp )
     {
         return (-1);
     }
 
-    fread(_buf, _bufLen, 1, fp); // ???????
+    fread(_buf, _bufLen, 1, fp); // 二进制读
 
     fclose(fp);
     return 0;        
@@ -289,12 +286,12 @@ int file_exist(const char* _fileName)
 
     if((access(_fileName,F_OK))!=-1)   
     {   
-        printf("\n???%s????.\n",_fileName);
+        printf("\n文件%s存在.\n",_fileName);
         return 1;
     }
     else{
         
-        printf("\n???%s??????.\n",_fileName);
+        printf("\n文件%s不存在.\n",_fileName);
         return 0;
 
     }
@@ -544,21 +541,127 @@ int alloc_322_index(char * port_name)
 
     return -1;
 }
-uint8_t alarm_fileter(unsigned char* log,int len,int type)//alarm 0103
+
+/*****************************************************************************
+ * implementation of functions                                               *
+*****************************************************************************/
+void init_alarm_mask_list(void)
+{
+    INIT_LIST_HEAD(&controll_eg.alarm_mask_list);
+
+}
+
+static void remove_alarm_list(alarm_node_t *node)
+{
+
+    list_del(&node->list);
+
+}
+int alarm_mask(uint32_t id,E_ALARM_LIST type)
+{
+    alarm_node_t *pos;
+
+    int err; 
+    err = osal_sem_take(controll_eg.sem_mask_alarm, OSAL_WAITING_FOREVER);
+    osal_assert(err == OSAL_STATUS_SUCCESS);
+
+    list_for_each_entry(pos, alarm_node_t, &controll_eg.alarm_mask_list, list){
+        if (id == pos->id_322 && type == pos->alarm_type){
+			
+		    osal_printf("mask alarm  id=0X%X and type = 0X%X\n",id,type);       
+			remove_alarm_list(pos);
+			osal_free(pos);
+			osal_sem_release(controll_eg.sem_mask_alarm);
+            return 0;//drop this alarm
+        }
+    }
+    osal_sem_release(controll_eg.sem_mask_alarm);
+	osal_printf("not mask alarm id=0X%X and type = 0X%X\n",id,type); 	  
+	return 1;//don't drop this alarm	
+}
+
+void alarm_add(uint32_t id,E_ALARM_LIST type)
+{
+
+	alarm_node_t *p_alarm = NULL;
+	
+    alarm_node_t *pos = NULL;
+
+    int err; 
+    err = osal_sem_take(controll_eg.sem_mask_alarm, OSAL_WAITING_FOREVER);
+    osal_assert(err == OSAL_STATUS_SUCCESS);
+
+	list_for_each_entry(pos, alarm_node_t, &controll_eg.alarm_mask_list, list){
+        if ((pos->id_322 == id) && (pos->alarm_type == type)){
+            p_alarm = pos;
+			
+		    osal_printf("find exist id=0X%X and type = 0X%X",id,type);       
+            break;
+        }
+    }
+	if(p_alarm == NULL){
+		p_alarm = (alarm_node_t*)malloc(sizeof(alarm_node_t));
+		if(p_alarm != NULL){
+		    memset(p_alarm,0,sizeof(alarm_node_t));
+		    //memcpy(p_alarm->pid,temporary_id,RCP_TEMP_ID_LEN);
+			p_alarm->id_322 = id;
+			p_alarm->alarm_type = type;
+		    list_add(&p_alarm->list,&controll_eg.alarm_mask_list);
+			
+			osal_printf("add alarm id=0X%X and type = 0X%X",id,type); 	  
+		}
+		else{
+		    osal_printf("malloc error!");       
+		}
+	}
+    osal_sem_release(controll_eg.sem_mask_alarm);
+
+}
+
+void empty_list(void)
+{
+    alarm_node_t *pos = NULL;
+/*
+    list_for_each_entry(pos, test_comm_node_t, &test_comm_list, list){
+        list_del(&pos->list);
+        free(pos);
+    }
+*/
+    while (!list_empty(&controll_eg.alarm_mask_list)) {
+        pos = list_first_entry(&controll_eg.alarm_mask_list, alarm_node_t, list);
+        list_del(&pos->list);
+        free(pos);
+        }
+    
+}
+
+uint8_t alarm_fileter(unsigned char* log,int len,usb_ccid_322_t  *usb_322)//alarm 0103
 {
 	alarm_log_t* get_log = NULL;
 
+	int ret = 1;
+
+	//printf("sizeof(alarm_log_t) = %d\n",sizeof(alarm_log_t));
 	if(len != sizeof(alarm_log_t)){
-		printf("alarm len wrong");
-		return 0;
+		printf("\nalarm len wrong,don't drop\n");
+		return ret;
 	}
 	
-	get_log = (alarm_log_t*)malloc(len);
+	//get_log = (alarm_log_t*)malloc(len);
 
-	memcpy(get_log,log,sizeof(alarm_log_t));
-	return get_log->alarm_type;
+	//memcpy(get_log,log,sizeof(alarm_log_t));
+	
+	//return get_log->alarm_type;
+	get_log = (alarm_log_t*)log;
+	
+	OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_INFO, "\n alarm_fileter 322id = 0x%X,type = 0X%X\n",get_log->ctrl_322_id,get_log->alarm_type);
+	if((get_log->alarm_type == ALARM_322_force)||\
+		(get_log->alarm_type == ALARM_322_abnormal))
+		ret = alarm_mask(get_log->ctrl_322_id,get_log->alarm_type);
+	
+	//free(get_log);
 
-	free(get_log);
+	return ret;//don't drop this alarm
 
 }
 void eg_usb_main_proc(char *data,int len)
@@ -570,16 +673,17 @@ void eg_usb_main_proc(char *data,int len)
  @brief   : get systime as acsii
  @param   : 19byte,
 // struct tm {
-//   int tm_sec;         // ????Χ?? 0 ?? 59				
-//   int tm_min;         // ?????Χ?? 0 ?? 59				
-//   int tm_hour;        // С?????Χ?? 0 ?? 23				
-//   int tm_mday;        // ????е???????Χ?? 1 ?? 31	                
-//   int tm_mon;         //?·????Χ?? 0 ?? 11				
-//   int tm_year;       //  ?? 1900 ???????				
-//   int tm_wday;       //  ????е???????Χ?? 0 ?? 6		        
-//   int tm_yday;      //   ????е???????Χ?? 0 ?? 365	                
-//   int tm_isdst;     //   ?????							
+//   int tm_sec;         // 秒，范围从 0 到 59				
+//   int tm_min;         // 分，范围从 0 到 59				
+//   int tm_hour;        // 小时，范围从 0 到 23				
+//   int tm_mday;        // 一月中的第几天，范围从 1 到 31	                
+//   int tm_mon;         //月份，范围从 0 到 11				
+//   int tm_year;       //  自 1900 起的年数				
+//   int tm_wday;       //  一周中的第几天，范围从 0 到 6		        
+//   int tm_yday;      //   一年中的第几天，范围从 0 到 365	                
+//   int tm_isdst;     //   夏令时							
 //}
+
  @return  : 
 *****************************************************************************/
 //const uint8_t time_head[] = {0xFC,0xA0,0x00,0x00,0x19,0x80,0x34,0x00,0x00,0x13};
@@ -717,12 +821,20 @@ int check_card(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_len)
             
             if(memcmp(&rd_data[3],resp_code,sizeof(resp_code)) == 0){//3,4 322 return 90 00,no alarm
                 
-                    //??????,??????????????????? 
+                    //在无卡片,无警报的时候处理门状态上报
                     
                     usb_322->now_door_state[1] = rd_data[2];//door state=2
              
                     if(usb_322->now_door_state[1] != usb_322->pre_door_state[1]){
-             
+
+						 if(usb_322->pre_door_state[1] == 0x02){
+						 	usb_322->door_action = 0xAA;
+						 	OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_INFO, "\ndoor opened\n");
+						 	}
+						 else if(usb_322->pre_door_state[1] == 0x01){
+						 	usb_322->door_action = 0x55;
+						 	OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_INFO, "\ndoor closed\n");
+						 }
                          usb_322->pre_door_state[1] = usb_322->now_door_state[1];
              
                          sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_SEND_DRSTATE,2,0,usb_322->now_door_state);
@@ -731,7 +843,7 @@ int check_card(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_len)
                      return 0;
             } else if(memcmp(&rd_data[3],alarm_code,sizeof(alarm_code)) == 0){
             
-                //??????????322????
+                //无卡时，处理322警报
                 //OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_INFO, "90 0A ALARM!\n");
                 //free(read_buffer);
                 return 2;
@@ -778,7 +890,8 @@ int check_card(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_len)
         return -2;
     }
 
-/*???900A???,??????9000????900A????????????????ж?
+/*添加900A以后,这个字段9000或者900A都是正确的，以后不予判断
+
     if((memcmp(&rd_data[buffer_len - 2],resp_code,2)) ||
         (memcmp(&rd_data[buffer_len - 4],resp_code,2))){
         //OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "reader return error\n");
@@ -1179,6 +1292,7 @@ volatile  uint8_t sw_version = 0;
 void *eg_usb_thread_entry(void *parameter)
 {
     int ret = 0;
+	int i =0;
     unsigned char parse_tag = 0;
     unsigned char acl_data[2048] = {0};
 	unsigned char output[2048] = {0};
@@ -1406,7 +1520,7 @@ while(1){
             break;
             
 
-        case USB_COMM_STATE_VERSION://????????322???????????????????????????????????????????????ж??
+        case USB_COMM_STATE_VERSION://考虑到每个322分支可能存在不同情况，例如读卡器的有无，所以每个线程都进行读取
 
             //if(sw_version == 0)
                 {
@@ -2303,9 +2417,10 @@ if(tail_check == 1){
 	                ubus_client_process(UBUS_CLIENT_LOG,NULL,log_data,log_len);
 
 
-	                if(output[106] == 0x01)//open success
+	                if((output[106] == 0x01)||(output[106] == 0x02)||(output[106] == 0x03))//open success
 	                {
 	                
+/*
 	                    controll_eg.alarm_flag = 0xAA;
 
 	                    OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "begin to block alarm\n");
@@ -2314,6 +2429,32 @@ if(tail_check == 1){
 
 	                    osal_timer_start(controll_eg.timer_alarm);
 
+	                                        		
+*/					
+					//if(p_usb_ccid->door_action == 0xAA){
+						//p_usb_ccid->door_action = 0;
+					     for(i = 0;i < MAX_322_NUM;i++ ){
+							OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "i=%d\n",i);
+            				if(controll_eg.usb_ccid_322[i].ccid322_exist){
+
+								
+								OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "i=%d\n",i);
+                				if(memcmp(controll_eg.usb_ccid_322[i].pid_322,p_usb_ccid->pid_322,4)){
+									
+								OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "id pass\n",i);
+								if(controll_eg.usb_ccid_322[i].door_action == 0xAA){
+									
+									OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "action AA\n");
+									p_usb_ccid->door_action = 0;
+									alarm_add(bytesToIntBig(controll_eg.usb_ccid_322[i].pid_322,0), ALARM_322_force);
+									alarm_add(bytesToIntBig(controll_eg.usb_ccid_322[i].pid_322,0), ALARM_322_abnormal);
+								}
+							}
+            			}
+            
+        
+        				}
+					//}
 
 	                }
 	/*
@@ -2491,8 +2632,9 @@ if(tail_check == 1){
 else if(tail_check == 2){
 
 
-    if((p_usb_ccid->rtc_sync == 0xAA)&&(p_usb_ccid->alarm_period == 0xAA)){
-        
+    //if((p_usb_ccid->rtc_sync == 0xAA)&&(p_usb_ccid->alarm_period == 0xAA)){
+	if(p_usb_ccid->rtc_sync == 0xAA){
+		
         get_rtc_data(rtc);
         p_usb_ccid->alarm_period = 0;
         OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "\nget 322 alarm,send rtc encrypt:\n");
@@ -2508,26 +2650,38 @@ else if(tail_check == 2){
 
         print_rec(output,ret);
 
-  
-        
+  			
+    	controll_eg.alarm_flag = alarm_fileter(output, ret - 2, p_usb_ccid);
+
+		if(controll_eg.alarm_flag){
+
+				OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "send alarm to 321!\n");
+				ubus_client_process(UBUS_CLIENT_LOG,NULL,output,ret - 2);
+		}
+		else{
+			
+			if(controll_eg.alarm_flag == 0){
+				
+				OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "open door,drop alarm!\n");			   
+				
+			}
+		}
+			
+/*
             if(controll_eg.alarm_flag == 0xAA){
-                
-                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "open door,drop alarm!\n");
-                
+				
+                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "open door,drop alarm!\n");              
             }
             else{
                 
                 if(controll_eg.alarm_flag == 0){
                     
-/*
-                    OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "send alarm to server!\n");
-                    ubus_net_process(UBUS_CLIENT_SEND_ALARM,NULL,output,ret - 2);
-*/
                     OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "send alarm to 321!\n");
 					ubus_client_process(UBUS_CLIENT_LOG,NULL,output,ret - 2);
                     
                 }
             }
+*/
 
         
         }
@@ -2597,7 +2751,7 @@ else if(tail_check == -4 ){
             printf("switch value is %d\n",p_usb_ccid->toggle_state);
         }
 }
-        msleep(5);
+        osal_sleep(10);
 #else
 sleep(2);
 #endif
@@ -2768,6 +2922,11 @@ void eg_usbto322_init(void)
 
     controll_eg.sem_ctrl_cfg = osal_sem_create("sem_ctrl_cfg", 1);
     osal_assert(controll_eg.sem_ctrl_cfg != NULL);
+
+	controll_eg.sem_mask_alarm = osal_sem_create("sem_mask_alarm", 1);
+    osal_assert(controll_eg.sem_mask_alarm != NULL);
+
+	init_alarm_mask_list();
 
     controll_eg.timer_alarm = osal_timer_create("alarm timer",timer_alarm_callback,p_controll_eg,\
                         EUSB_SEND_PERIOD, TIMER_ONESHOT|TIMER_STOPPED, TIMER_PRIO_NORMAL);

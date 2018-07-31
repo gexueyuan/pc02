@@ -108,7 +108,7 @@ typedef struct _alarm_log {//88 byte
 	uint8_t ctrl_time[6];
 	uint8_t alarm_src;
 	uint8_t alarm_type;
-	uint8_t power_time[6];
+	//uint8_t power_time[6];
 	uint8_t door_num;
 	uint8_t in_out;
 	uint8_t result;

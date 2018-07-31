@@ -18,7 +18,15 @@
 #include "count.h"
 #include "cv_cms_def.h"
 #include "ubus_mgr.h"
+//#include "cv_osal.h"
 
+//extern Controller_t controll_eg;
+//extern Controller_t *p_controll_eg;
+//extern osal_status_t sys_add_event_queue(msg_manager_t *p_sys, 
+//                             uint16_t msg_id, 
+//                             uint16_t msg_len, 
+//                             uint32_t msg_argc,
+//                             void    *msg_argv);
 
 static struct ubus_context *ctx;
 static struct blob_buf b;

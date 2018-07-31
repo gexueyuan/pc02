@@ -1,3 +1,5 @@
+#ifndef _LINUX_LIST_H_
+
 #ifndef LIST_H
 #define LIST_H
 
@@ -87,14 +89,14 @@ static inline void __list_del(struct list_head *prev, struct list_head *next)
  */
 static inline void list_del(struct list_head *entry)
 {
-#if DEBUG
+#ifdef DEBUG
 	// tangqi added for debugging purpose...
 	if(entry->next == 0 || entry->prev == 0){
 		printf("list entry is trying to be deleted, but it was deleted already!!!\n");
 		}
 #endif 
 	__list_del(entry->prev, entry->next);
-#if DEBUG
+#ifdef DEBUG
 	entry->next = (void *) 0;
 	entry->prev = (void *) 0;   
 #endif 
@@ -222,3 +224,4 @@ static inline int list_empty(struct list_head *head)
 	     pos = n, n = list_entry(n->member.next, type, member))
 
 #endif /* LIST_H */
+#endif

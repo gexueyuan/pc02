@@ -17,13 +17,13 @@
 #define MODULE_NAME "msg_manager"
 #include "cv_osal_dbg.h"
 OSAL_DEBUG_ENTRY_DEFINE(msg_manager);
-#include "cv_cms_def.h"
 
 #include <sys/time.h>
 #include <unistd.h>
 #include <libubox/ustream.h>
 #include "libubus.h"
 #include "count.h"
+#include "cv_cms_def.h"
 
 static struct ubus_context *ctx;
 static struct blob_buf b;
