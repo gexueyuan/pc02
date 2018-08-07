@@ -97,23 +97,16 @@ typedef enum _CARDPOLLEVENT {
     CARDPOLLEVENT_ID,
 } E_CARDPOLLEVENT;
 
-const unsigned char test1[] = {0xFC,0xA0,0x00,0x00,0x05,0x80,0xCA,0xCE,0x52,0x00};//{0xe0,0xfd,0x00,0x00,0x00,0x00,0x20,0xB1,0xC8,0xFE,0xF7,0x63,0x81,0xF6,0xB6,0x75,0x80,0xEF,0xD2,0xC3,0xAA,0xC4,0x7E,0x5A,0x58,0xC0,0xDD,0x5F,0x66,0x96,0x61,0x5C,0xC1,0x26,0x8B,0xA1,0xB1,0xF4,0x86};
 
 const unsigned char check[] = {0x00,0xA4,0x04,0x00,0x00};//+len+data
 
 const uint8_t car_detect[] = {0xFC,0xA0,0x00,0x00,0x05,0x80,0x30,0x00,0x00,0x00};
 
-
-const uint8_t refuse_enter[] = {0xFC,0xA0,0x04,0x00,0x09,0x80,0x32,0x80,0x00,0x04,  0x01,0x00,0x01,0x00};
-
 unsigned char  change_app[25] = {0xFC,0xA0,0x04,0x00,0x14,0x00,0xA4,0x04,0x00,0x0F,0x74,0x64,0x72,0x6F,0x6E,0x99,0x05,0x69,0x64,0x52,0x64,0x51,0x34,0x42,0x31};
 
 E_CARDPOLLEVENT card_event;
 
-uint8_t  test_cmd[] = {0xFC,0xC1, 0x01 ,0x00, 0x06,0x80,0xB0,0x55,0xAF,0x01,0x00};
-
- /*????*/
- const unsigned char transfer_head[] = {0xFC,0xA0,0x00,0x00};//+len+data
+const unsigned char transfer_head[] = {0xFC,0xA0,0x00,0x00};//+len+data
 
 const uint8_t cfg_base_head[] = {0x00,0x25,0x00,0x00};//+len+data
 
@@ -183,13 +176,8 @@ osal_sem_t *sem_ctrlinfo;
 osal_sem_t *sem_alarm;
 
 const uint8_t open_door[] = {0x80,0xDD,0x33,0x00,0x03,0x01,0x00,0x02};
-
-const uint8_t test_p2p[] = {0xE0,0xFD,0x00,0x00,0x21,0x08,0xF8,0x19,0x94,0x85,0x3C,0x1D,0xBC,0x72,0xCA,0x6B,0x95,0xA7,0xAE,0xB5,0x6F,0xA8,0x84,0xC9,0x99,0x62,0x50,0x46,0x7F,0x06,0xBD,0x40,0xC4,0xC2,0x24,0x50,0x04,0xE7};
                                             /*0*/   /*1*/   /*2*/   /*3*/   /*4*/
 const char* usb_port_def[MAX_322_NUM + 1] = {"1-1.1","1-1.2","1-1.3","1-1.4","1-1.5"};
-
-unsigned char* test_o = (unsigned char*)"\x00\x22\x00\x00\xBE\x01\xF6\xBA\x57\xB5\x61\xDD\x09\xE4\x39\xCF\x52\x4D\xF1\x6F\x2B\xC8\x04\xC0\xEE\xCB\xC4\x3A\x41\x20\x97\x11\x05\x19\x0F\x0F\x0F\x12\x05\x19\x0F\x0F\x0F\x99\xF0\x8B\xA6\x68\x92\xA0\x4C\xC7\x72\x0A\x4D\xC2\x29\x49\x7D\x81\x6C\x1A\x20\x94\x7A\x2A\xA0\xF2\xDE\xCC\x8E\xC1\x2F\x3D\x1D\x2A\x6E\x2B\x9D\xAF\x19\xD6\x8C\x9D\x23\x06\x28\x0B\x30\xB0\xAB\xDB\xE4\x11\x4A\x28\x2E\x2B\x56\x85\xDE\x4B\x0B\x9A\x35\xFF\xCA\xF4\xB7\x31\x9A\x15\xED\xA0\x47\xDC\x66\x4A\x95\x79\xD7\xFB\x8B\x9C\xF3\x50\x10\xFE\x75\xA4\x6B\xDF\x76\x95\x84\x27\xE9\x1D\xFB\x34\xF4\xE8\x04\x32\xF5\xE3\xB3\xBA\x83\xF2\xEF\x5B\x24\x50\x7D\x4F\x95\x76\x95\x73\x72\x71\xD6\xE9\x0A\x7D\xBF\x5F\xFB\xB6\x8E\xA6\xE3\xE9\xE6\xFC\xF5\x1C\x4A\xE9\x30\xDC\x28\xBF\x57\x87\xE6\x80\x00\x00\x00\xC5\x39\x64\x35";
-
 
 const uint8_t id_reader[] = {0x00,0x01,0x00,0x02,0x01,0x01};
 
@@ -486,9 +474,9 @@ int usb_transmit(void *context, const unsigned char * apdu,
             usb_322->usb_reconnect_cnt++;
             
             OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "connect failed\n");
-
+			
+			StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,usb_disconnect,0);
             if(usb_322->usb_reconnect_cnt >= 10){
-                StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,usb_disconnect,0);
                 OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "connect failed 10 times,reboot!!!\n");
                 system("reboot");
             }
@@ -608,7 +596,7 @@ void alarm_add(uint32_t id,E_ALARM_LIST type)
 			p_alarm->alarm_type = type;
 		    list_add(&p_alarm->list,&controll_eg.alarm_mask_list);
 			
-			osal_printf("add alarm id=0X%X and type = 0X%X",id,type); 	  
+			osal_printf("add alarm id=0X%X and type = 0X%X\n",id,type); 	  
 		}
 		else{
 		    osal_printf("malloc error!");       
@@ -1347,12 +1335,13 @@ void *eg_usb_thread_entry(void *parameter)
         goto out;
     }
     OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "connect to  %s succeed\n",p_usb_ccid->usb_port);
+	
 
     OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "%s pr11 state\n",p_usb_ccid->usb_port);
 	print_send(PR11_NO,sizeof(PR11_NO));
 	ret = usb_transmit(context,PR11_NO,sizeof(PR11_NO),output,sizeof(output),p_usb_ccid);
 	print_rec(output,ret);
-
+	
 
 
     sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_INITED,0,p_usb_ccid->ccid322_index,NULL);
@@ -2434,9 +2423,7 @@ if(tail_check == 1){
 					//if(p_usb_ccid->door_action == 0xAA){
 						//p_usb_ccid->door_action = 0;
 					     for(i = 0;i < MAX_322_NUM;i++ ){
-							OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "i=%d\n",i);
             				if(controll_eg.usb_ccid_322[i].ccid322_exist){
-
 								
 								OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "i=%d\n",i);
                 				if(memcmp(controll_eg.usb_ccid_322[i].pid_322,p_usb_ccid->pid_322,4)){
@@ -2869,7 +2856,6 @@ void eg_usbto322_init(void)
 
     usb_ccid_322_t *p_usb_ccid;
 
-    
 	void * context = luareader_new(0, NULL, NULL);
 
 

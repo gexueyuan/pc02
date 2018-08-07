@@ -1,21 +1,15 @@
-/*
- * File      : application.c
- * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2006, RT-Thread Development Team
- *
- * The license and distribution terms for this file may be
- * found in the file LICENSE in this distribution or at
- * http://www.rt-thread.org/license/LICENSE
- *
- * Change Logs:
- * Date           Author       Notes
- * 2009-01-05     Bernard      the first version
- */
+/*****************************************************************************
+ Copyright(C) Tendyron Corporation
+ All rights reserved.
+ 
+ @file   : main.c
+ @brief  : main
+ @author : gexueyuan
+ @history:
+           2016-12-22    gexueyuan    Created file
+           ...
+******************************************************************************/
 
-/**
- * @addtogroup STM32
- */
-/*@{*/
 
 
 #include "cv_osal.h"
@@ -28,7 +22,7 @@
 
 #define RELEASE
 
-#define FIRMWARE_VERSION "V1.1.7" 
+#define FIRMWARE_VERSION "V1.1.8" 
 
 #ifdef RELEASE
 #define FIRMWARE_IDEN "rel" 

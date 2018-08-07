@@ -1,12 +1,12 @@
 /*****************************************************************************
- Copyright(C) Beijing Carsmart Technology Co., Ltd.
+ Copyright(C) Tendyron Corporation
  All rights reserved.
  
  @file   : version.h
  @brief  : version.h header file
- @author : wanglei
+ @author : gexueyuan
  @history:
-           2015-8-13    wanglei    Created file
+           2016-12-22    gexueyuan    Created file
            ...
 ******************************************************************************/
 
