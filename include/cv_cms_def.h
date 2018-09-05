@@ -320,16 +320,6 @@ typedef enum _UBUS_CLIENT {
 } E_UBUS_CLIENT;
 
 
-typedef enum _SN_322 {
-    
-    SN_322_1 = 0,
-    SN_322_2,
-    SN_322_3,
-    SN_322_4,
-    
-    SN_322_MX,
-} E_SN_322;
-
 typedef enum _INIT_MASK {
     
     INIT_MASK_CE  = 0x01,
@@ -343,8 +333,10 @@ typedef enum _INIT_MASK {
 } E_INIT_MASK;
 
 
+//1-321,4-322
+#define MAX_322_NUM 	4
+#define MAX_USB_NUM 	(MAX_322_NUM + 1)
 
-#define MAX_322_NUM SN_322_MX
 
 #define CEPATH_PR11 "/tmp/322ce/pr11ce"
 #define CEPATH_322 "/tmp/322ce/322ce"
@@ -516,8 +508,8 @@ typedef struct _msg_manager {
 typedef struct _Controller {
 
 /*322 obj */
-    usb_ccid_322_t usb_ccid_322[MAX_322_NUM + 1];
-    uint8_t index_322[MAX_322_NUM + 1];
+    usb_ccid_322_t usb_ccid_322[MAX_322_NUM ];/*0-321£¬1~4-322*/
+    uint8_t index_322[MAX_322_NUM ];
     uint8_t cnt_322;
     msg_manager_t msg_manager;
 

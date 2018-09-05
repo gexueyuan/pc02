@@ -315,7 +315,7 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
                    controll_eg.usb_ccid_322[i].rtc_sync = 0xAA;
                     
 
-                   sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_INFO_PUSH,0,controll_eg.usb_ccid_322[i].ccid322_index,NULL);
+                   sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_INFO_PUSH,0,controll_eg.usb_ccid_322[i].ccid322_index - 1,NULL);
                     
                    // state_alternate(USB_COMM_REMOTE_OPEN,&controll_eg.usb_ccid_322[i]);
                     //break;

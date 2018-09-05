@@ -84,12 +84,20 @@ void *eg_zmq_thread_entry(void *parameter)
         zmq_server_addr = ZMQ_SERVER_1;
         zmq_answer_addr = ZMQ_ANS_1;
     }
-    else{
+    else if(p_zmq_322->ccid322_index == 2){
         zmq_cli_addr = ZMQ_CLI_2;
         zmq_server_addr = ZMQ_SERVER_2;
         zmq_answer_addr = ZMQ_ANS_2;
-
-
+    }
+	else if(p_zmq_322->ccid322_index == 3){
+        zmq_cli_addr = ZMQ_CLI_3;
+        zmq_server_addr = ZMQ_SERVER_3;
+        zmq_answer_addr = ZMQ_ANS_3;
+    }
+	else if(p_zmq_322->ccid322_index == 4){
+        zmq_cli_addr = ZMQ_CLI_4;
+        zmq_server_addr = ZMQ_SERVER_4;
+        zmq_answer_addr = ZMQ_ANS_4;
     }
     
     p_zmq_322->zmq_client = zmq_socket_new_dealer(p_zmq_322->context,zmq_cli_addr);
@@ -164,7 +172,7 @@ void *eg_zmq_thread_entry(void *parameter)
 
             p_zmq_322->zmq_len = recv_len;
 		#endif
-            sys_add_event_queue(&controll_eg.msg_manager,ZMQ_MSG_ID,0,p_zmq_322->ccid322_index,NULL);
+            sys_add_event_queue(&controll_eg.msg_manager,ZMQ_MSG_ID,0,p_zmq_322->ccid322_index - 1,NULL);
         }
 
 
@@ -301,9 +309,9 @@ void eg_zmq_init(usb_ccid_322_t* argv)
 
     osal_task_t *tid;
 
-    printf("zmq name is %s\n",zmq_tk[argv->ccid322_index]);
+    printf("zmq name is %s\n",zmq_tk[argv->ccid322_index - 1]);
     
-    tid = osal_task_create(zmq_tk[argv->ccid322_index],
+    tid = osal_task_create(zmq_tk[argv->ccid322_index - 1],
                         eg_zmq_thread_entry,
                         argv,PC02_ZMQ_THREAD_STACK_SIZE, PC02_ZMQ_THREAD_PRIORITY);
 

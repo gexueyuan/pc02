@@ -34,7 +34,6 @@ static unsigned char return_base_fg = 0;
 uint32_t id_322 = 0;
 uint32_t id_net = 0;
 unsigned char return_buffer[128] = {0};
-uint8_t return_array[3][MAX_322_NUM] = {0};
 #define CFG_NAME_LEN  68
 
 osal_sem_t *sem_net_process;
