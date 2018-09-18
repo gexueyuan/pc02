@@ -1157,6 +1157,12 @@ void sys_manage_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
         //printf("get push info %d\n",p_msg->argc);
         state_alternate(USB_COMM_STATE_PUSH,&controll_eg.usb_ccid_322[p_msg->argc]);
         break;
+	
+    case SYS_MSG_RTC_PUSH:
+	   
+	   //printf("get push info %d\n",p_msg->argc);
+	   state_alternate(USB_COMM_RTC_PUSH,&controll_eg.usb_ccid_322[p_msg->argc]);
+	   break;
 
 
    case SYS_MSG_REMOTE_OPEN:

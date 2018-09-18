@@ -29,6 +29,7 @@ OSAL_DEBUG_ENTRY_DEFINE(eg_usbto322);
 #include "luareader.h"
 
 #include "libzmqtools.h"
+#include "tlv_box.h"
 
 
 #define USB_FAILED    0x6E00
@@ -191,6 +192,8 @@ const uint8_t wgp_info_get[] = {0xF0,0xF2,0x01,0xFD,0x00,0x00};
 
 const uint8_t wgp_info_clear[] = {0xF0,0xF2,0x01,0xFE,0x01,0xFF};
 
+const uint8_t push_rtc[] = {0x80,0x19,0x00,0x00,0x10};
+const uint8_t get_slow_log[] = {0xF0,0xF3,0x00,0x00,0x00};
 
 uint8_t net_state[] = {0xFC,0xA0,0x00,0x00,0x09,0x80,0x34,0x00,0x00,0x04,0x09,0x00,0x01,0x80};
 
@@ -207,6 +210,14 @@ char *wgp_num = "WGP通讯控制器复位计数";
 char *wgp_cnt = "WGP通讯两线通信次数";
 char *wgp_time="WGP通讯开机时间（秒）";
 char *_322_error="322 返回错误";
+char *time_consuming = "开门指令耗时统计";
+char *id0 = "寻卡开始时间";
+char *id1 = "selectCmdToCard开始时间";
+char *id2 = "E02C指令开始时间";
+char *id3 = "beep开始时间";
+char *id4 = "返cardID给9531的时间";
+char *id5 = "绿灯开始时间";
+char *id6 = "开门成功结束时间";
 
 /* 统计信息 GBK*/
 
@@ -906,6 +917,123 @@ int check_card(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_len)
 
 }
 
+int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_len)
+{
+
+	#define  reader_tag   0x0A01	
+	#define  _322_tag     0x0A02
+	#define  door_tag     0x0B01
+	#define  wg_tag	      0x0B02
+	#define  n531_tag	  0x0B03
+	#define  alarm_tag	  0x0B04
+	
+    uint8_t resp_code[] = {0x90,0x00};
+    uint8_t resp_code_2[] = {0x90,0x01};
+    
+    
+    uint8_t alarm_code[] = {0x90,0x0A};
+    uint8_t wg_error[] = {0x93,0x01};
+
+    uint8_t wgp_info[]={0x6F,0xFF};
+
+	
+    uint8_t reader_offline[]={0x90,0x0A};
+
+    if(buffer_len == 2){
+        
+        if(memcmp(rd_data,wg_error,sizeof(wg_error)) == 0){
+            
+            OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_INFO, "wg error 9301,sleep 1 sec\n");
+            //sleep(1);
+            //free(read_buffer);
+            return -3;
+        }
+
+        if(memcmp(rd_data,wgp_info,sizeof(wgp_info)) == 0){
+            
+            OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_INFO, "wg error 6FFF,get info\n");
+                      
+            return -4;
+        }
+		if(memcmp(rd_data,reader_offline,sizeof(reader_offline)) == 0){
+			
+			OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_INFO, "reader offline 90 0A \n");
+					  
+			return 2;
+		}
+		
+    }
+    
+	tlv_box_t *parsedBoxes =
+	  tlv_box_parse (rd_data, buffer_len);
+	
+	LOG ("parsedBoxes parse success, %d bytes \n", tlv_box_get_size (parsedBoxes));
+	
+	tlv_box_t *parsedBox_reader;
+	if (tlv_box_get_object (parsedBoxes, reader_tag, &parsedBox_reader) != 0)
+	  {
+		LOG ("tlv_box_get_object parsedBox_reader failed !\n");
+		return -1;
+	  }
+	
+	LOG ("parsedBox_reader parse success, %d bytes \n", tlv_box_get_size (parsedBox_reader));
+
+	tlv_box_t *parsedBox_322;
+	if (tlv_box_get_object (parsedBoxes, _322_tag, &parsedBox_322) != 0)
+	  {
+		LOG ("tlv_box_get_object  parsedBox_322 failed !\n");
+		return -1;
+	  }
+	
+	LOG ("parsedBox_322 parse success, %d bytes \n", tlv_box_get_size (parsedBox_322));
+
+
+	tlv_box_t *parsedBox_door;
+	if (tlv_box_get_object (parsedBox_322, door_tag, &parsedBox_door) != 0)
+	  {
+		LOG ("tlv_box_get_object  parsedBox_door failed !\n");
+		return -1;
+	  }
+	
+	LOG ("parsedBox_door parse success, %d bytes \n", tlv_box_get_size (parsedBox_door));
+	
+	tlv_box_t *parsedBox_wg;
+	if (tlv_box_get_object (parsedBox_322, wg_tag, &parsedBox_wg) != 0)
+	  {
+		LOG ("tlv_box_get_object  parsedBox_wg failed !\n");
+		return -1;
+	  }
+	
+	LOG ("parsedBox_wg parse success, %d bytes \n", tlv_box_get_size (parsedBox_wg));
+	
+	tlv_box_t *parsedBox_9531;
+	if (tlv_box_get_object (parsedBox_322, n531_tag, &parsedBox_9531) != 0)
+	  {
+		LOG ("tlv_box_get_object  parsedBox_9531 failed !\n");
+		return -1;
+	  }
+	
+	LOG ("parsedBox_9531 parse success, %d bytes \n", tlv_box_get_size (parsedBox_9531));
+
+	
+	
+	tlv_box_t *parsedBox_alarm;
+	if (tlv_box_get_object (parsedBox_322, alarm_tag, &parsedBox_alarm) != 0)
+	  {
+		LOG ("tlv_box_get_object  parsedBox_alarm failed !\n");
+		return -1;
+	  }
+	
+	LOG ("parsedBox_alarm parse success, %d bytes \n", tlv_box_get_size (parsedBox_alarm));
+	
+	tlv_box_destroy (parsedBoxes);
+	tlv_box_destroy (parsedBox_reader);
+	tlv_box_destroy (parsedBox_322);
+	tlv_box_destroy (parsedBoxes);
+
+}
+
+
 const char *cardtype[] = {"none","15693","sfz","ID cards","cpu","12.5K","MIFARE"};
 int parse_data(unsigned char* rd_data,int buffer_len,unsigned char* wl_data,int *wl_len,usb_ccid_322_t  *usb_322)
 {
@@ -1298,7 +1426,7 @@ void *eg_usb_thread_entry(void *parameter)
     int acl_len = 1024;
     unsigned char send_data[1024] = {0};
 
-    unsigned char apud_data[1024] = {0};
+    unsigned char apdu_data[1024] = {0};
 
     unsigned char log_data[2048] = {0};
     int log_len = 0;
@@ -1362,7 +1490,7 @@ while(1){
 #if 1
     memset(output,0,sizeof(output));
     memset(zmq_output,0,sizeof(zmq_output));
-    memset(apud_data,0,sizeof(apud_data));
+    memset(apdu_data,0,sizeof(apdu_data));
     //memset(cfg_return,0,sizeof(cfg_return));
     acl_len = 1024;
     log_len = 2048;
@@ -1438,12 +1566,12 @@ while(1){
         case USB_COMM_STATE_CFG:
 
                 
-                memset(apud_data,0,sizeof(apud_data));
+                memset(apdu_data,0,sizeof(apdu_data));
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "send base cfg\n");
                 
-                memcpy(apud_data,basecfg_head,sizeof(basecfg_head));
-                apud_data[sizeof(basecfg_head)] = controll_eg.basecfg.len;//(unsigned char)(0x00FF&controll_eg.mackey.len);
-                memcpy(&apud_data[sizeof(basecfg_head) + 1],&controll_eg.basecfg.data[0],controll_eg.basecfg.len);  
+                memcpy(apdu_data,basecfg_head,sizeof(basecfg_head));
+                apdu_data[sizeof(basecfg_head)] = controll_eg.basecfg.len;//(unsigned char)(0x00FF&controll_eg.mackey.len);
+                memcpy(&apdu_data[sizeof(basecfg_head) + 1],&controll_eg.basecfg.data[0],controll_eg.basecfg.len);  
                 
     /*
                 printf("cfg len is %d\n",controll_eg.basecfg.len);
@@ -1453,8 +1581,8 @@ while(1){
                 }
                 printf("\n===========cfg==============\n");
     */
-                print_send(apud_data,sizeof(basecfg_head) + 1 + controll_eg.basecfg.len);
-                ret = usb_transmit(context,apud_data,sizeof(basecfg_head) + 1 + controll_eg.basecfg.len,output,sizeof(output),p_usb_ccid);
+                print_send(apdu_data,sizeof(basecfg_head) + 1 + controll_eg.basecfg.len);
+                ret = usb_transmit(context,apdu_data,sizeof(basecfg_head) + 1 + controll_eg.basecfg.len,output,sizeof(output),p_usb_ccid);
                 
                 //ret = usb_transmit(context,&controll_eg.basecfg.data,controll_eg.basecfg.len,output,sizeof(output),p_usb_ccid);
                 print_rec(output,ret);
@@ -1484,17 +1612,17 @@ while(1){
         case USB_COMM_STATE_RDCFG:
 
                 
-                memset(apud_data,0,sizeof(apud_data));
+                memset(apdu_data,0,sizeof(apdu_data));
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "send ctrl cfg\n");
                 
-                memcpy(apud_data,ctlcfg_head,sizeof(ctlcfg_head));
-                apud_data[sizeof(ctlcfg_head)] = controll_eg.ctlcfg.len;//(unsigned char)(0x00FF&controll_eg.mackey.len);
-                memcpy(&apud_data[sizeof(ctlcfg_head) + 1],&controll_eg.ctlcfg.data[0],controll_eg.ctlcfg.len); 
+                memcpy(apdu_data,ctlcfg_head,sizeof(ctlcfg_head));
+                apdu_data[sizeof(ctlcfg_head)] = controll_eg.ctlcfg.len;//(unsigned char)(0x00FF&controll_eg.mackey.len);
+                memcpy(&apdu_data[sizeof(ctlcfg_head) + 1],&controll_eg.ctlcfg.data[0],controll_eg.ctlcfg.len); 
 
 
                 
-                print_send(apud_data,sizeof(ctlcfg_head) + 1 + controll_eg.ctlcfg.len);
-                ret = usb_transmit(context,apud_data,sizeof(ctlcfg_head) + 1 + controll_eg.ctlcfg.len,output,sizeof(output),p_usb_ccid);
+                print_send(apdu_data,sizeof(ctlcfg_head) + 1 + controll_eg.ctlcfg.len);
+                ret = usb_transmit(context,apdu_data,sizeof(ctlcfg_head) + 1 + controll_eg.ctlcfg.len,output,sizeof(output),p_usb_ccid);
                // print_rec(output,ret);
                 //ret = usb_transmit(context,&controll_eg.ctlcfg.data,controll_eg.ctlcfg.len,output,sizeof(output),p_usb_ccid);
                 print_rec(output,ret);
@@ -1905,40 +2033,41 @@ JUMP:
 
         case USB_COMM_STATE_PUSH:
             
-
             get_sys_time(send_data);
-            //x_TransmitApdu_hid_hs(&USB_HID_1,send_data,sizeof(time_head)+20,recv_data,&rec_len,timeout);
-           // ret = luareader_transmit(context, send_data, sizeof(time_head)+20, output, sizeof(output));
-           
-            //print_send(send_data,sizeof(time_head)+10);
+
             ret = usb_transmit(context,send_data,sizeof(time_head)+10,output,sizeof(output),p_usb_ccid);
             OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_TRACE, "push time\n");
-            //print_rec(output,ret);
-            //p_usb_ccid->rtc_sync = 0xAA;
-/*
-            print_send(read_mac,strlen(read_mac));
-            ret = usb_transmit(context,read_mac,strlen(read_mac),output,sizeof(output),p_usb_ccid);            
-            print_rec(output,ret);
-            
-            print_send(read_p2p,strlen(read_p2p));
-            ret = usb_transmit(context,read_p2p,strlen(read_p2p),output,sizeof(output),p_usb_ccid);            
-            print_rec(output,ret);
-*/
-            
+         
             osal_sem_release(p_usb_ccid->sem_state);
-           // p_usb_ccid->usb_state = USB_COMM_STATE_IDLE;
             break;
+
+	    case USB_COMM_RTC_PUSH:
+
+		    get_rtc_data(rtc);
+			
+	   		memset(apdu_data,0,sizeof(apdu_data));
+		
+			memcpy(apdu_data,push_rtc,sizeof(push_rtc));
+
+			memcpy(&apdu_data[sizeof(push_rtc)],rtc,sizeof(rtc));
+			
+ 		    OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_TRACE, "push RTC:\n");
+			print_send(apdu_data,sizeof(push_rtc)+sizeof(rtc));
+ 		    ret = usb_transmit(context,apdu_data,sizeof(push_rtc)+sizeof(rtc),output,sizeof(output),p_usb_ccid); 			
+			print_rec(output,ret - 2);
+ 		    osal_sem_release(p_usb_ccid->sem_state);
+ 		    break;
            
-       case USB_COMM_ALARM_OPEN:
+        case USB_COMM_ALARM_OPEN:
         
            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "alarm open\n");
            
-           memcpy(apud_data,alarm_op_head,sizeof(alarm_op_head));
-           apud_data[sizeof(alarm_op_head)] =  controll_eg.alarm_buffer[0];//
-           memcpy(&apud_data[sizeof(alarm_op_head) + 1],&controll_eg.alarm_buffer[1],controll_eg.alarm_buffer[0]); 
+           memcpy(apdu_data,alarm_op_head,sizeof(alarm_op_head));
+           apdu_data[sizeof(alarm_op_head)] =  controll_eg.alarm_buffer[0];//
+           memcpy(&apdu_data[sizeof(alarm_op_head) + 1],&controll_eg.alarm_buffer[1],controll_eg.alarm_buffer[0]); 
 
-           print_send(apud_data,sizeof(alarm_op_head) + 1 + controll_eg.alarm_buffer[0]);
-           ret = usb_transmit(context,apud_data,sizeof(alarm_op_head) + 1 + controll_eg.alarm_buffer[0],output,sizeof(output),p_usb_ccid);
+           print_send(apdu_data,sizeof(alarm_op_head) + 1 + controll_eg.alarm_buffer[0]);
+           ret = usb_transmit(context,apdu_data,sizeof(alarm_op_head) + 1 + controll_eg.alarm_buffer[0],output,sizeof(output),p_usb_ccid);
            print_rec(output,ret - 2);
 
            //ubus_net_process(UBUS_CLIENT_SEND_ALARM,NULL,output,ret - 2);
@@ -1951,15 +2080,15 @@ JUMP:
             
             OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "remote open\n");
             
-            memcpy(apud_data,remote_op_head,sizeof(remote_op_head));
-            apud_data[sizeof(remote_op_head)] =  0x00;//extend data
+            memcpy(apdu_data,remote_op_head,sizeof(remote_op_head));
+            apdu_data[sizeof(remote_op_head)] =  0x00;//extend data
             
             remote_len = ((controll_eg.remote_buffer[0]<<8)|(controll_eg.remote_buffer[1]&0x00FF));//indeed remote data length
-            memcpy(&apud_data[sizeof(remote_op_head) + 1],&controll_eg.remote_buffer,2); 
-            memcpy(&apud_data[sizeof(remote_op_head) + 1 + 2],&controll_eg.remote_buffer[34],remote_len);//0,1=len;2~33=ubus data; 34~=remote data
+            memcpy(&apdu_data[sizeof(remote_op_head) + 1],&controll_eg.remote_buffer,2); 
+            memcpy(&apdu_data[sizeof(remote_op_head) + 1 + 2],&controll_eg.remote_buffer[34],remote_len);//0,1=len;2~33=ubus data; 34~=remote data
             
-            print_send(apud_data,sizeof(remote_op_head) + 1 + 2 + remote_len);
-            ret = usb_transmit(context,apud_data,sizeof(remote_op_head) + 1 + 2 + remote_len,output,sizeof(output),p_usb_ccid);
+            print_send(apdu_data,sizeof(remote_op_head) + 1 + 2 + remote_len);
+            ret = usb_transmit(context,apdu_data,sizeof(remote_op_head) + 1 + 2 + remote_len,output,sizeof(output),p_usb_ccid);
             print_rec(output,ret);
 
             memset(remote_open_rt_data,0,sizeof(remote_open_rt_data));
@@ -2050,14 +2179,14 @@ JUMP:
             if((ret >2)&&(memcmp(&output[ret -2],confirm,sizeof(confirm)) == 0)){
                 
                     OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "make id data:\n");
-                    apud_data[0] = p_usb_ccid->door_index;
+                    apdu_data[0] = p_usb_ccid->door_index;
                     
-                    memcpy(&apud_data[1],output,ret -2);
-                    memcpy(&apud_data[1 + ret -2],&zmq_ans[4],rec_zmq - 4);
-                    //memcpy(&apud_data[1+rec_zmq - 4],output,ret -2);
+                    memcpy(&apdu_data[1],output,ret -2);
+                    memcpy(&apdu_data[1 + ret -2],&zmq_ans[4],rec_zmq - 4);
+                    //memcpy(&apdu_data[1+rec_zmq - 4],output,ret -2);
                     
-                    print_send(apud_data,1+ rec_zmq - 4 + ret -2);
-                    ubus_net_process(UBUS_CLIENT_SEND_ID_INFO,NULL,apud_data,1+rec_zmq - 4+ret -2);
+                    print_send(apdu_data,1+ rec_zmq - 4 + ret -2);
+                    ubus_net_process(UBUS_CLIENT_SEND_ID_INFO,NULL,apdu_data,1+rec_zmq - 4+ret -2);
             }
             osal_sem_release(p_usb_ccid->sem_state);
             break;
@@ -2066,25 +2195,25 @@ JUMP:
             
             OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "ID remote open\n");
             
-            memcpy(apud_data,remote_idop_head,sizeof(remote_idop_head));
-            apud_data[sizeof(remote_idop_head)] =  0x00;//extend data
+            memcpy(apdu_data,remote_idop_head,sizeof(remote_idop_head));
+            apdu_data[sizeof(remote_idop_head)] =  0x00;//extend data
             
 /*
             remote_len = ((controll_eg.remote_buffer[0]<<8)|(controll_eg.remote_buffer[1]&0x00FF));
-            memcpy(&apud_data[sizeof(remote_idop_head) + 1],&controll_eg.remote_buffer,remote_len + 2); 
+            memcpy(&apdu_data[sizeof(remote_idop_head) + 1],&controll_eg.remote_buffer,remote_len + 2); 
             
-            print_send(apud_data,sizeof(remote_idop_head) + 1 + 2 + remote_len);
-            ret = usb_transmit(context,apud_data,sizeof(remote_idop_head) + 1 + 2 + remote_len,output,sizeof(output),p_usb_ccid);
+            print_send(apdu_data,sizeof(remote_idop_head) + 1 + 2 + remote_len);
+            ret = usb_transmit(context,apdu_data,sizeof(remote_idop_head) + 1 + 2 + remote_len,output,sizeof(output),p_usb_ccid);
             print_rec(output,ret);
 */
 
             
             remote_len = ((controll_eg.remote_buffer[0]<<8)|(controll_eg.remote_buffer[1]&0x00FF));//indeed remote data length
-            memcpy(&apud_data[sizeof(remote_idop_head) + 1],&controll_eg.remote_buffer,2); 
-            memcpy(&apud_data[sizeof(remote_idop_head) + 1 + 2],&controll_eg.remote_buffer[34],remote_len);//0,1=len;2~33=ubus data; 34~=remote data
+            memcpy(&apdu_data[sizeof(remote_idop_head) + 1],&controll_eg.remote_buffer,2); 
+            memcpy(&apdu_data[sizeof(remote_idop_head) + 1 + 2],&controll_eg.remote_buffer[34],remote_len);//0,1=len;2~33=ubus data; 34~=remote data
             
-            print_send(apud_data,sizeof(remote_idop_head) + 1 + 2 + remote_len);
-            ret = usb_transmit(context,apud_data,sizeof(remote_idop_head) + 1 + 2 + remote_len,output,sizeof(output),p_usb_ccid);
+            print_send(apdu_data,sizeof(remote_idop_head) + 1 + 2 + remote_len);
+            ret = usb_transmit(context,apdu_data,sizeof(remote_idop_head) + 1 + 2 + remote_len,output,sizeof(output),p_usb_ccid);
             print_rec(output,ret);
             
 
@@ -2135,25 +2264,25 @@ JUMP:
             
             OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "FACE remote open\n");
             
-            memcpy(apud_data,remote_faceop_head,sizeof(remote_faceop_head));
-            apud_data[sizeof(remote_faceop_head)] =  0x00;//extend data
+            memcpy(apdu_data,remote_faceop_head,sizeof(remote_faceop_head));
+            apdu_data[sizeof(remote_faceop_head)] =  0x00;//extend data
             
 /*
             remote_len = ((controll_eg.remote_buffer[0]<<8)|(controll_eg.remote_buffer[1]&0x00FF));
-            memcpy(&apud_data[sizeof(remote_idop_head) + 1],&controll_eg.remote_buffer,remote_len + 2); 
+            memcpy(&apdu_data[sizeof(remote_idop_head) + 1],&controll_eg.remote_buffer,remote_len + 2); 
             
-            print_send(apud_data,sizeof(remote_idop_head) + 1 + 2 + remote_len);
-            ret = usb_transmit(context,apud_data,sizeof(remote_idop_head) + 1 + 2 + remote_len,output,sizeof(output),p_usb_ccid);
+            print_send(apdu_data,sizeof(remote_idop_head) + 1 + 2 + remote_len);
+            ret = usb_transmit(context,apdu_data,sizeof(remote_idop_head) + 1 + 2 + remote_len,output,sizeof(output),p_usb_ccid);
             print_rec(output,ret);
 */
 
             
             remote_len = ((controll_eg.remote_buffer[0]<<8)|(controll_eg.remote_buffer[1]&0x00FF));//indeed remote data length
-            memcpy(&apud_data[sizeof(remote_faceop_head) + 1],&controll_eg.remote_buffer,2); 
-            memcpy(&apud_data[sizeof(remote_faceop_head) + 1 + 2],&controll_eg.remote_buffer[34],remote_len);//0,1=len;2~33=ubus data; 34~=remote data
+            memcpy(&apdu_data[sizeof(remote_faceop_head) + 1],&controll_eg.remote_buffer,2); 
+            memcpy(&apdu_data[sizeof(remote_faceop_head) + 1 + 2],&controll_eg.remote_buffer[34],remote_len);//0,1=len;2~33=ubus data; 34~=remote data
             
-            print_send(apud_data,sizeof(remote_faceop_head) + 1 + 2 + remote_len);
-            ret = usb_transmit(context,apud_data,sizeof(remote_faceop_head) + 1 + 2 + remote_len,output,sizeof(output),p_usb_ccid);
+            print_send(apdu_data,sizeof(remote_faceop_head) + 1 + 2 + remote_len);
+            ret = usb_transmit(context,apdu_data,sizeof(remote_faceop_head) + 1 + 2 + remote_len,output,sizeof(output),p_usb_ccid);
             print_rec(output,ret);
             
 
@@ -2212,12 +2341,12 @@ JUMP:
             
             OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "alarm clear\n");
             
-            memcpy(apud_data,alarm322_clear_head,sizeof(alarm322_clear_head));
+            memcpy(apdu_data,alarm322_clear_head,sizeof(alarm322_clear_head));
             
-            memcpy(&apud_data[sizeof(alarm322_clear_head) ],&controll_eg.alarm_clear[32],16); 
+            memcpy(&apdu_data[sizeof(alarm322_clear_head) ],&controll_eg.alarm_clear[32],16); 
             
-            print_send(apud_data,sizeof(alarm322_clear_head) + 16);
-            ret = usb_transmit(context,apud_data,sizeof(alarm322_clear_head) + 16,output,sizeof(output),p_usb_ccid);
+            print_send(apdu_data,sizeof(alarm322_clear_head) + 16);
+            ret = usb_transmit(context,apdu_data,sizeof(alarm322_clear_head) + 16,output,sizeof(output),p_usb_ccid);
             print_rec(output,ret);
 /*
             if(ret > 2){
@@ -2354,45 +2483,45 @@ if(tail_check == 1){
 
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_WARN, "not passed\n");
                 
-                memcpy(apud_data,result_head,sizeof(result_head));
+                memcpy(apdu_data,result_head,sizeof(result_head));
 
-                apud_data[sizeof(result_head)] = 17;
+                apdu_data[sizeof(result_head)] = 17;
 
-                memcpy(&apud_data[sizeof(result_head) + 1],acl_data,acl_len);
+                memcpy(&apdu_data[sizeof(result_head) + 1],acl_data,acl_len);
 
-                //print_send(apud_data,sizeof(result_head) + 1 + 17);
+                //print_send(apdu_data,sizeof(result_head) + 1 + 17);
                 
-                ret = usb_transmit(context,apud_data,sizeof(result_head) + 1 + 17,output,sizeof(output),p_usb_ccid);
+                ret = usb_transmit(context,apdu_data,sizeof(result_head) + 1 + 17,output,sizeof(output),p_usb_ccid);
             }
             else if(acl_len > 17){
 
-                memcpy(apud_data,result_head,sizeof(result_head));
+                memcpy(apdu_data,result_head,sizeof(result_head));
                 
-                apud_data[sizeof(result_head)] = 0;//extend len
+                apdu_data[sizeof(result_head)] = 0;//extend len
 
                 wl_len =  17 + 1 + acl_data[271] + 232;//1+rtc(16)+name(l+v = 1+acl_data[271])+232
 
-                apud_data[sizeof(result_head) + 1] = (0xFF00&wl_len)>>8;//extend len
-                apud_data[sizeof(result_head) + 2] = (0x00FF&wl_len);//extend len
+                apdu_data[sizeof(result_head) + 1] = (0xFF00&wl_len)>>8;//extend len
+                apdu_data[sizeof(result_head) + 2] = (0x00FF&wl_len);//extend len
 
-                //printf("data len is %d\n",apud_data[sizeof(result_head)]);
+                //printf("data len is %d\n",apdu_data[sizeof(result_head)]);
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "data len is %d\n",wl_len);
 
-                memcpy(&apud_data[sizeof(result_head) + 3],acl_data,17);//result:1 + RTC:16
+                memcpy(&apdu_data[sizeof(result_head) + 3],acl_data,17);//result:1 + RTC:16
 
-                memcpy(&apud_data[sizeof(result_head) + 3 + 17],&acl_data[271],1);//name-L:1
+                memcpy(&apdu_data[sizeof(result_head) + 3 + 17],&acl_data[271],1);//name-L:1
                 
-                memcpy(&apud_data[sizeof(result_head) + 3 + 17 + 1],&acl_data[272],acl_data[271]);//name-V:v
+                memcpy(&apdu_data[sizeof(result_head) + 3 + 17 + 1],&acl_data[272],acl_data[271]);//name-V:v
 
-                memcpy(&apud_data[sizeof(result_head) + 3 + 17 + 1 + acl_data[271]],&acl_data[17],232);
+                memcpy(&apdu_data[sizeof(result_head) + 3 + 17 + 1 + acl_data[271]],&acl_data[17],232);
 
-                print_send(apud_data,sizeof(result_head) + 3 + 17 + 1 + acl_data[271] + 232);
+                print_send(apdu_data,sizeof(result_head) + 3 + 17 + 1 + acl_data[271] + 232);
                 
                 //ret = usb_transmit(context,open_door,sizeof(open_door),output,sizeof(output),p_usb_ccid);
                 
                 //print_send(test_o,195);
                 //ret = usb_transmit(context,test_o,195,output,sizeof(output),p_usb_ccid);
-                ret = usb_transmit(context,apud_data,sizeof(result_head) + 3 + 17 + 1 + acl_data[271] + 232,output,sizeof(output),p_usb_ccid);
+                ret = usb_transmit(context,apdu_data,sizeof(result_head) + 3 + 17 + 1 + acl_data[271] + 232,output,sizeof(output),p_usb_ccid);
 
             }           
 			else{
@@ -2425,22 +2554,9 @@ if(tail_check == 1){
 	                ubus_client_process(UBUS_CLIENT_LOG,NULL,log_data,log_len);
 
 
-	                if((output[106] == 0x01)||(output[106] == 0x02)||(output[106] == 0x03))//open success
-	                {
-	                
-/*
-	                    controll_eg.alarm_flag = 0xAA;
+	                if((output[106] == 0x01)||(output[106] == 0x02)||(output[106] == 0x03)||(output[106] == 0x04))//open success
+	                {					
 
-	                    OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "begin to block alarm\n");
-
-	                    osal_timer_change(controll_eg.timer_alarm,6000);// 6 sec
-
-	                    osal_timer_start(controll_eg.timer_alarm);
-
-	                                        		
-*/					
-					//if(p_usb_ccid->door_action == 0xAA){
-						//p_usb_ccid->door_action = 0;
 					     for(i = 0;i < MAX_322_NUM;i++ ){
             				if(controll_eg.usb_ccid_322[i].ccid322_exist){
 								
@@ -2460,13 +2576,32 @@ if(tail_check == 1){
             
         
         				}
-					//}
+						if(output[106] == 0x04){
+
+							OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get slow log\n");
+							memset(output,0,sizeof(output));
+							ret = usb_transmit(context,get_slow_log,sizeof(get_slow_log),output,sizeof(output),p_usb_ccid);
+							if(ret == 30){
+
+								StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id0,&output[0]);
+								StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id1,&output[4]);							
+								StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id2,&output[8]);
+								StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id3,&output[12]);
+								StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id4,&output[16]);
+								StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id5,&output[20]);
+								StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id6,&output[24]);
+							}
+							else{
+								if(ret > 0)
+									print_rec(output,ret);
+								OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get slow log error\n");
+								
+							}
+								
+
+						} 
 
 	                }
-	/*
-	                gettimeofday( &_end, NULL );
-	                printf("start : %d.%d\n", _end.tv_sec, _end.tv_usec);
-	*/
 	                
 	            }
             }
@@ -2487,31 +2622,31 @@ if(tail_check == 1){
         case CARDPOLLEVENT_WLNUM:
 
            /***********************transfer cmd**************************/
-           memcpy(apud_data,transfer_head,sizeof(transfer_head));
+           memcpy(apdu_data,transfer_head,sizeof(transfer_head));
            
-           apud_data[sizeof(transfer_head)] = 0;//extend length
+           apdu_data[sizeof(transfer_head)] = 0;//extend length
 
-           apud_data[sizeof(transfer_head) + 1] = 0;//extend length char 1
+           apdu_data[sizeof(transfer_head) + 1] = 0;//extend length char 1
 
-           apud_data[sizeof(transfer_head) + 2] = 0;//extend length char 2
+           apdu_data[sizeof(transfer_head) + 2] = 0;//extend length char 2
 
            /************************return data*************************/
            
-           memcpy(&apud_data[sizeof(transfer_head) + 3],audit_result_head,sizeof(audit_result_head));//+lc
+           memcpy(&apdu_data[sizeof(transfer_head) + 3],audit_result_head,sizeof(audit_result_head));//+lc
 
-           apud_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head)] = (unsigned char)((acl_len&0xFF00)>>8); 
-           apud_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head) + 1] = (unsigned char)(acl_len&0x00FF); 
+           apdu_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head)] = (unsigned char)((acl_len&0xFF00)>>8); 
+           apdu_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head) + 1] = (unsigned char)(acl_len&0x00FF); 
 
-           memcpy(&apud_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head) + 2],acl_data,acl_len);
+           memcpy(&apdu_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head) + 2],acl_data,acl_len);
 
            audit_len = sizeof(audit_result_head) + 2 + acl_len;
 
-           apud_data[sizeof(transfer_head) + 1] = (unsigned char)((audit_len&0xFF00)>>8);
-           apud_data[sizeof(transfer_head) + 2] = (unsigned char)(audit_len&0x00FF);//extend length char 2
+           apdu_data[sizeof(transfer_head) + 1] = (unsigned char)((audit_len&0xFF00)>>8);
+           apdu_data[sizeof(transfer_head) + 2] = (unsigned char)(audit_len&0x00FF);//extend length char 2
            
-           print_send(apud_data,sizeof(transfer_head) + 3 + audit_len);
+           print_send(apdu_data,sizeof(transfer_head) + 3 + audit_len);
 
-           ret = usb_transmit(context,apud_data,sizeof(transfer_head) + 3 + audit_len,output,sizeof(output),p_usb_ccid);
+           ret = usb_transmit(context,apdu_data,sizeof(transfer_head) + 3 + audit_len,output,sizeof(output),p_usb_ccid);
            print_rec(output,ret);
             
             break;
@@ -2519,31 +2654,31 @@ if(tail_check == 1){
         case CARDPOLLEVENT_WL:
             
             /***********************transfer cmd**************************/
-            memcpy(apud_data,transfer_head,sizeof(transfer_head));
+            memcpy(apdu_data,transfer_head,sizeof(transfer_head));
             
-            apud_data[sizeof(transfer_head)] = 0;//extend length
+            apdu_data[sizeof(transfer_head)] = 0;//extend length
             
-            apud_data[sizeof(transfer_head) + 1] = 0;//extend length char 1
+            apdu_data[sizeof(transfer_head) + 1] = 0;//extend length char 1
             
-            apud_data[sizeof(transfer_head) + 2] = 0;//extend length char 2
+            apdu_data[sizeof(transfer_head) + 2] = 0;//extend length char 2
             
             /************************return data*************************/
             
-            memcpy(&apud_data[sizeof(transfer_head) + 3],audit_result_head,sizeof(audit_result_head));//+lc
+            memcpy(&apdu_data[sizeof(transfer_head) + 3],audit_result_head,sizeof(audit_result_head));//+lc
             
-            apud_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head)] = (unsigned char)((acl_len&0xFF00)>>8); 
-            apud_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head) + 1] = (unsigned char)(acl_len&0x00FF); 
+            apdu_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head)] = (unsigned char)((acl_len&0xFF00)>>8); 
+            apdu_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head) + 1] = (unsigned char)(acl_len&0x00FF); 
             
-            memcpy(&apud_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head) + 2],acl_data,acl_len);
+            memcpy(&apdu_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head) + 2],acl_data,acl_len);
             
             audit_len = sizeof(audit_result_head) + 2 + acl_len;
             
-            apud_data[sizeof(transfer_head) + 1] = (unsigned char)((audit_len&0xFF00)>>8);
-            apud_data[sizeof(transfer_head) + 2] = (unsigned char)(audit_len&0x00FF);//extend length char 2
+            apdu_data[sizeof(transfer_head) + 1] = (unsigned char)((audit_len&0xFF00)>>8);
+            apdu_data[sizeof(transfer_head) + 2] = (unsigned char)(audit_len&0x00FF);//extend length char 2
             
-            print_send(apud_data,sizeof(transfer_head) + 3 + audit_len);
+            print_send(apdu_data,sizeof(transfer_head) + 3 + audit_len);
             
-            ret = usb_transmit(context,apud_data,sizeof(transfer_head) + 3 + audit_len,output,sizeof(output),p_usb_ccid);
+            ret = usb_transmit(context,apdu_data,sizeof(transfer_head) + 3 + audit_len,output,sizeof(output),p_usb_ccid);
             print_rec(output,ret);
             
             break;
@@ -2551,31 +2686,31 @@ if(tail_check == 1){
         case CARDPOLLEVENT_GET_LOGNUM:
             
             /***********************transfer cmd**************************/
-            memcpy(apud_data,transfer_head,sizeof(transfer_head));
+            memcpy(apdu_data,transfer_head,sizeof(transfer_head));
             
-            apud_data[sizeof(transfer_head)] = 0;//extend length
+            apdu_data[sizeof(transfer_head)] = 0;//extend length
             
-            apud_data[sizeof(transfer_head) + 1] = 0;//extend length char 1
+            apdu_data[sizeof(transfer_head) + 1] = 0;//extend length char 1
             
-            apud_data[sizeof(transfer_head) + 2] = 0;//extend length char 2
+            apdu_data[sizeof(transfer_head) + 2] = 0;//extend length char 2
             
             /************************return data*************************/
             
-            memcpy(&apud_data[sizeof(transfer_head) + 3],audit_result_head,sizeof(audit_result_head));//+lc
+            memcpy(&apdu_data[sizeof(transfer_head) + 3],audit_result_head,sizeof(audit_result_head));//+lc
             
-            apud_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head)] = (unsigned char)((acl_len&0xFF00)>>8); 
-            apud_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head) + 1] = (unsigned char)(acl_len&0x00FF); 
+            apdu_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head)] = (unsigned char)((acl_len&0xFF00)>>8); 
+            apdu_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head) + 1] = (unsigned char)(acl_len&0x00FF); 
             
-            memcpy(&apud_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head) + 2],acl_data,acl_len);
+            memcpy(&apdu_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head) + 2],acl_data,acl_len);
             
             audit_len = sizeof(audit_result_head) + 2 + acl_len;
             
-            apud_data[sizeof(transfer_head) + 1] = (unsigned char)((audit_len&0xFF00)>>8);
-            apud_data[sizeof(transfer_head) + 2] = (unsigned char)(audit_len&0x00FF);//extend length char 2
+            apdu_data[sizeof(transfer_head) + 1] = (unsigned char)((audit_len&0xFF00)>>8);
+            apdu_data[sizeof(transfer_head) + 2] = (unsigned char)(audit_len&0x00FF);//extend length char 2
             
-            print_send(apud_data,sizeof(transfer_head) + 3 + audit_len);
+            print_send(apdu_data,sizeof(transfer_head) + 3 + audit_len);
             
-            ret = usb_transmit(context,apud_data,sizeof(transfer_head) + 3 + audit_len,output,sizeof(output),p_usb_ccid);
+            ret = usb_transmit(context,apdu_data,sizeof(transfer_head) + 3 + audit_len,output,sizeof(output),p_usb_ccid);
             print_rec(output,ret);
         
 
@@ -2584,31 +2719,31 @@ if(tail_check == 1){
 
         case CARDPOLLEVENT_GET_LOG:
             /***********************transfer cmd**************************/
-            memcpy(apud_data,transfer_head,sizeof(transfer_head));
+            memcpy(apdu_data,transfer_head,sizeof(transfer_head));
             
-            apud_data[sizeof(transfer_head)] = 0;//extend length
+            apdu_data[sizeof(transfer_head)] = 0;//extend length
             
-            apud_data[sizeof(transfer_head) + 1] = 0;//extend length char 1
+            apdu_data[sizeof(transfer_head) + 1] = 0;//extend length char 1
             
-            apud_data[sizeof(transfer_head) + 2] = 0;//extend length char 2
+            apdu_data[sizeof(transfer_head) + 2] = 0;//extend length char 2
             
             /************************return data*************************/
             
-            memcpy(&apud_data[sizeof(transfer_head) + 3],audit_result_head,sizeof(audit_result_head));//+lc
+            memcpy(&apdu_data[sizeof(transfer_head) + 3],audit_result_head,sizeof(audit_result_head));//+lc
             
-            apud_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head)] = (unsigned char)((acl_len&0xFF00)>>8); 
-            apud_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head) + 1] = (unsigned char)(acl_len&0x00FF); 
+            apdu_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head)] = (unsigned char)((acl_len&0xFF00)>>8); 
+            apdu_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head) + 1] = (unsigned char)(acl_len&0x00FF); 
             
-            memcpy(&apud_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head) + 2],acl_data,acl_len);
+            memcpy(&apdu_data[sizeof(transfer_head) + 3 + sizeof(audit_result_head) + 2],acl_data,acl_len);
             
             audit_len = sizeof(audit_result_head) + 2 + acl_len;
             
-            apud_data[sizeof(transfer_head) + 1] = (unsigned char)((audit_len&0xFF00)>>8);
-            apud_data[sizeof(transfer_head) + 2] = (unsigned char)(audit_len&0x00FF);//extend length char 2
+            apdu_data[sizeof(transfer_head) + 1] = (unsigned char)((audit_len&0xFF00)>>8);
+            apdu_data[sizeof(transfer_head) + 2] = (unsigned char)(audit_len&0x00FF);//extend length char 2
             
-            print_send(apud_data,sizeof(transfer_head) + 3 + audit_len);
+            print_send(apdu_data,sizeof(transfer_head) + 3 + audit_len);
             
-            ret = usb_transmit(context,apud_data,sizeof(transfer_head) + 3 + audit_len,output,sizeof(output),p_usb_ccid);
+            ret = usb_transmit(context,apdu_data,sizeof(transfer_head) + 3 + audit_len,output,sizeof(output),p_usb_ccid);
             print_rec(output,ret);
             break;
 
@@ -2646,10 +2781,10 @@ else if(tail_check == 2){
         OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "\nget 322 alarm,send rtc encrypt:\n");
 
 
-        memcpy(apud_data,alarm322_head,sizeof(alarm322_head));
-        memcpy(&apud_data[sizeof(alarm322_head)],rtc,sizeof(rtc));
-        print_send(apud_data,sizeof(alarm322_head) + sizeof(rtc));
-        ret = usb_transmit(context,apud_data,sizeof(alarm322_head) + sizeof(rtc),output,sizeof(output),p_usb_ccid);
+        memcpy(apdu_data,alarm322_head,sizeof(alarm322_head));
+        memcpy(&apdu_data[sizeof(alarm322_head)],rtc,sizeof(rtc));
+        print_send(apdu_data,sizeof(alarm322_head) + sizeof(rtc));
+        ret = usb_transmit(context,apdu_data,sizeof(alarm322_head) + sizeof(rtc),output,sizeof(output),p_usb_ccid);
 
 
         OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "\nget 322 alarm log:\n");
@@ -2811,7 +2946,7 @@ void timer_usb_callback(void* parameter)
             //p_usb_timer->usb_state = USB_COMM_STATE_PUSH;
             //printf("push index %d\n",p_usb_timer->ccid322_index);
             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_INFO_PUSH,0,p_usb_timer->ccid322_index - 1,NULL);
-
+			sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_RTC_PUSH,0,p_usb_timer->ccid322_index - 1,NULL);
 /*
                 get_rtc_data(rtc);
 
