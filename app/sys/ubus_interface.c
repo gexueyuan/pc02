@@ -220,12 +220,14 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
         if(len == 0)
             return -1;
 
-        printf("get ubus len is %d\n",len);
+		if(UBUS_SERVER_NETWORK_STATE  != if_tag){
+	        printf("get ubus len is %d\n",len);
 
-    for(i = 0; i < len;i++){
-        printf("%02X ",data[i]);
-    }
-    printf("\n");
+		    for(i = 0; i < len;i++){
+		        printf("%02X ",data[i]);
+		    }
+	    	printf("\n");
+		}
     }
     }
     if(tb[REQ_STR] != NULL) {
@@ -510,7 +512,7 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
                     if(1 == controll_eg.network_state){
 
 
-                        printf("\nnetwork offline\n");
+                        osal_printf("\nnetwork offline\n");
                         //sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_NET_STATE,0,controll_eg.network_state,NULL);
                     }
                 }
@@ -521,13 +523,13 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
                     if(0 == controll_eg.network_state){
                     
                     
-                        printf("\nnetwork dropped\n");
+                        osal_printf("\nnetwork online\n");
                         //sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_NET_STATE,0,controll_eg.network_state,NULL);
                     }
             }
             
             controll_eg.network_state = data[0];
-            //sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_NET_STATE,0,controll_eg.network_state,NULL);
+            sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_NET_STATE,0,controll_eg.network_state,NULL);
             break;
 	case UBUS_SERVER_RFU:
 
@@ -659,10 +661,10 @@ void* ubus_server_thread_entry(void * parameter)
     ubus_init();
     evloop = event_base_new();
     add_ubus_event();
+	
     //Ìí¼Óubus event
     //add_alarm_timer_event();
     event_base_dispatch(evloop);
-
     ubus_release();
 
 	return NULL;

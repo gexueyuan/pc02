@@ -435,6 +435,10 @@ int usb_transmit(void *context, const unsigned char * apdu,
     int error;
 
 	unsigned char output[64] = {0};
+	/**test**/
+	 struct timeval _start,_end;
+	 long time_in_us,time_in_ms;
+	/**test**/
 
     /* Take the semaphore. */
     if(osal_sem_take(usb_322->sem_322, OSAL_WAITING_FOREVER) != OSAL_EOK)
@@ -444,10 +448,19 @@ int usb_transmit(void *context, const unsigned char * apdu,
     }
 
     //print_array(usb_322->usb_port, apdu, apdu_len);
-    ret = luareader_transmit(context, apdu, apdu_len, resp, max_resp_size,3000);
+	
+	gettimeofday( &_start, NULL );
+    ret = luareader_transmit(context, apdu, apdu_len, resp, max_resp_size,5000);
     //if(ret > 0)
     	//print_array(usb_322->usb_port, resp, ret);
-	
+	gettimeofday( &_end, NULL );
+	time_in_us = (_end.tv_sec - _start.tv_sec) * 1000000 + _end.tv_usec - _start.tv_usec;	
+	time_in_ms = time_in_us/1000;
+	if(time_in_ms > 1000){
+		osal_printf("F[%s] L[%d],usb overtime ,%ldms\n",__func__, __LINE__,time_in_ms);
+		log_message("usb",3,"F[%s] L[%d],usb overtime ,%ldms\n",__func__, __LINE__,time_in_ms);
+	}
+
     if(ret < 0){
     
         printf("transmit return is %d\n",ret);
@@ -909,10 +922,6 @@ int parse_data(unsigned char* rd_data,int buffer_len,unsigned char* wl_data,int 
     uint8_t info_statistic[39] = {0};
 
     int audit_len = 1024;
-    /**test**/
-    
-    struct timeval _start,_end;
-    /**test**/
 
     memset(card_id,0,sizeof(card_id));
 
@@ -955,17 +964,9 @@ int parse_data(unsigned char* rd_data,int buffer_len,unsigned char* wl_data,int 
 				OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_INFO, "\ncard's battery is %d\n",read_buffer[6]);
 				//print_rec(read_buffer, 6);
 				
-				gettimeofday( &_start, NULL );
-				printf("start : %d.%d\n", _start.tv_sec, _start.tv_usec);
-				
-                ubus_net_process(UBUS_CLIENT_SEND_BAT,NULL,&read_buffer[2],5);
-				
-				gettimeofday( &_end, NULL );
-				printf("end   : %d.%d\n",_end.tv_sec,_end.tv_usec);
+                ubus_net_process(UBUS_CLIENT_SEND_BAT,NULL,&read_buffer[2],5);				
 
-				
 				//print_rec(read_buffer, 6);
-
 
             }
 
@@ -1883,8 +1884,9 @@ JUMP:
             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_SEND_CE,0,0,NULL);
             //sleep(1);
             //sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_SEND_CTRLINFO,0,0,NULL);
-            osal_sem_release(p_usb_ccid->sem_state);
             osal_timer_start(p_usb_ccid->timer_322);//begin to poll,init finished  
+            
+            osal_sem_release(p_usb_ccid->sem_state);
             //sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_UPDATE_BASECFG,0,0,NULL);
             //p_usb_ccid->usb_state = USB_COMM_STATE_P2P;//USB_COMM_STATE_CFG;//USB_COMM_STATE_P2P;//USB_COMM_STATE_CFG;//USB_COMM_STATE_P2P;
             break;
@@ -2030,9 +2032,10 @@ JUMP:
 	                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "322 usb transmit error\n");
 		#endif
 			p_usb_ccid->usb_state = USB_COMM_STATE_DEFAULT;
-            osal_sem_release(p_usb_ccid->sem_state);
 			
 			osal_sem_release(p_usb_ccid->sem_zmq);
+
+            osal_sem_release(p_usb_ccid->sem_state);
             break;
             
         case  USB_COMM_ID_DOOR_SERVER:
@@ -2124,10 +2127,9 @@ JUMP:
             ubus_net_process(UBUS_CLIENT_RETURN,NULL,remote_open_rt_data,12);
 
 
-                
+            osal_sem_release(controll_eg.sem_remote);
             osal_sem_release(p_usb_ccid->sem_state);
             
-            osal_sem_release(controll_eg.sem_remote);
             break;
         case USB_FACE_REMOTE_OPEN:
             
@@ -2195,10 +2197,9 @@ JUMP:
             ubus_net_process(UBUS_CLIENT_RETURN,NULL,remote_open_rt_data,12);
 
 
-                
+            osal_sem_release(controll_eg.sem_remote);
             osal_sem_release(p_usb_ccid->sem_state);
             
-            osal_sem_release(controll_eg.sem_remote);
             break;
 
 
@@ -2286,10 +2287,12 @@ JUMP:
 
         }
 
+/*
         OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "send net_state to pr11\n");
         print_send(net_state,sizeof(net_state));
         ret = usb_transmit(context,net_state,sizeof(net_state),output,sizeof(output),p_usb_ccid);
         print_rec(output,ret);
+*/
         
         if((controll_eg.network_state)&&(controll_eg.network_state_pre != controll_eg.network_state))
             zmq_socket_send(p_usb_ccid->zmq_client,id_reader_deal_OK,sizeof(id_reader_deal_OK));
@@ -2754,7 +2757,7 @@ else if(tail_check == -4 ){
             printf("switch value is %d\n",p_usb_ccid->toggle_state);
         }
 }
-        osal_sleep(10);
+        osal_sleep(30);
 #else
 sleep(2);
 #endif

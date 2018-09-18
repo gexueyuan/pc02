@@ -65,11 +65,11 @@ void *eg_zmq_thread_entry(void *parameter)
 	unsigned char recv_buf[MAX_BUF_LEN];
 	int  recv_len = 0;
     
-    char *zmq_cli_addr;
+    char *zmq_cli_addr = NULL;
     
-    char *zmq_server_addr;
+    char *zmq_server_addr = NULL;
     
-    char *zmq_answer_addr;
+    char *zmq_answer_addr = NULL;
     
 
     /* Create an empty ?MQ message */
@@ -120,19 +120,20 @@ void *eg_zmq_thread_entry(void *parameter)
     while(1){
 
 		     /* Take the semaphore. */
-		if(osal_sem_take(p_zmq_322->sem_zmq, 3000) != OSAL_EOK){
+		if(osal_sem_take(p_zmq_322->sem_zmq, 1000) != OSAL_EOK){
 		 
 			printf("p_zmq_322->sem_zmq  return failed. \n");
 
-			osal_sem_release(p_zmq_322->sem_zmq);
+			//osal_sem_release(p_zmq_322->sem_zmq);
 			//osal_sem_release(p_usb_ccid->sem_state);
-			//break;
+			continue;
 		}
 		memset(p_zmq_322->zmq_magicnum,0,5);
         rc = zmq_poll(pollitems, 1, timeout);
         
         if(rc <= 0) {
             timeout = -1;
+			printf("poll failed %s %d\n",__func__, __LINE__);
             continue;
         }
 
@@ -152,14 +153,6 @@ void *eg_zmq_thread_entry(void *parameter)
         	//ret = msg_parse_packet(recv_buf, recv_len, send_buf, &send_len);
             printf("\n------------------------------\n");
             printf("usb zmq recive:\n");
-			/*
-            for(i = 0;i < recv_len;i++){
-
-                printf("%02X ",recv_buf[i]);
-                
-
-            }
-			*/
 			print_array("zmq recieve", recv_buf, recv_len);
             printf("\n------------------------------\n");
 		#ifdef ZMQ_NUM

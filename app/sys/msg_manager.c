@@ -220,19 +220,31 @@ void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int st
 	uint32_t id;
 
     unsigned char* str_buffer = NULL;
+	 /**test**/
+    struct timeval _start,_end;
+	long time_in_us,time_in_ms;
+    /**test**/
 
+	gettimeofday( &_start, NULL );
     /* Take the semaphore. */
-    if(osal_sem_take(sem_321_process, 3000) != OSAL_EOK){
+    if(osal_sem_take(sem_321_process, 3500) != OSAL_EOK){
      
-     printf("Semaphore return failed. \n");
-     
-     osal_sem_release(sem_321_process);
-     //osal_sem_release(p_usb_ccid->sem_state);
-     //break;
-    }
-    
+	     printf("Semaphore return failed. \n");
+	     
+	     //osal_sem_release(sem_321_process);
 
-     id = id_322;
+		return;
+
+    }
+	gettimeofday( &_end, NULL );
+    time_in_us = (_end.tv_sec - _start.tv_sec) * 1000000 + _end.tv_usec - _start.tv_usec;	
+	time_in_ms = time_in_us/1000;
+	if(time_in_ms > 1000){
+		osal_printf("F[%s] L[%d],get sem overtime ,%ldms\n",__func__, __LINE__,time_in_ms);
+		log_message("sem",3,"F[%s] L[%d] T[0X%X],get sem overtime ,%ldms\n",__func__, __LINE__,tag,time_in_ms);
+	}
+	
+    id = id_322;
 
     if(id == 0){
 
@@ -290,8 +302,18 @@ void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int st
    
 	//char *a = "\x11\x22\x33\x44\x55\x66\x77\x88\x11\x22\x33\x44\x55\x66\x77\x88\x99\xAA";
 	blobmsg_add_field(&b, BLOBMSG_TYPE_UNSPEC, "strhex", str_buffer, strlen);
+
 	
-	ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 3000);
+	gettimeofday( &_start, NULL );
+	ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 4000);
+	gettimeofday( &_end, NULL );
+
+    time_in_us = (_end.tv_sec - _start.tv_sec) * 1000000 + _end.tv_usec - _start.tv_usec;	
+	time_in_ms = time_in_us/1000;
+	if(time_in_ms > 1000){
+		osal_printf("F[%s] L[%d],ubus overtime ,%ldms\n",__func__, __LINE__,time_in_ms);
+		log_message("ubus",3,"F[%s] L[%d] T[0X%X],ubus overtime ,%ldms\n",__func__, __LINE__,tag,time_in_ms);
+	}
 
     if(str_buffer != NULL)
         free(str_buffer);
@@ -305,6 +327,8 @@ void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strle
 
 	uint32_t id;
 
+	int ret;
+
     unsigned char* str_buffer = NULL;
 
 	if(controll_eg.network_state == 0){
@@ -314,16 +338,33 @@ void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strle
 		return;
 	}
 
+	  /**test**/
+	 struct timeval _start,_end;
+	 long time_in_us,time_in_ms;
+	 /**test**/
+	 
+	 gettimeofday( &_start, NULL );
+
      /* Take the semaphore. */
-     if(osal_sem_take(sem_net_process, 3000) != OSAL_EOK){
+     if(osal_sem_take(sem_net_process, 1000) != OSAL_EOK){
          
          printf("Semaphore return failed. \n");
          
-         osal_sem_release(sem_net_process);
+         //osal_sem_release(sem_net_process);
          //osal_sem_release(p_usb_ccid->sem_state);
          //break;
+         return;
      }
+	 gettimeofday( &_end, NULL );
+	 time_in_us = (_end.tv_sec - _start.tv_sec) * 1000000 + _end.tv_usec - _start.tv_usec;	 
+	 time_in_ms = time_in_us/1000;
+	 if(time_in_ms > 1000){
+		 osal_printf("F[%s] L[%d],get sem overtime ,%ldms\n",__func__, __LINE__,time_in_ms);
+	 	 log_message("sem",3,"F[%s] L[%d] T[0X%X],get sem overtime ,%ldms\n",__func__, __LINE__,tag,time_in_ms);
+	 }
 
+
+	 
      id = id_net;
 
     if(id == 0){
@@ -399,8 +440,17 @@ void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strle
 	//char *a = "\x11\x22\x33\x44\x55\x66\x77\x88\x11\x22\x33\x44\x55\x66\x77\x88\x99\xAA";
 	blobmsg_add_field(&b, BLOBMSG_TYPE_UNSPEC, "strhex", str_buffer, strlen);
 	
-	ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 3000);
+	gettimeofday( &_start, NULL );
+	ret = ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 4000);
+	gettimeofday( &_end, NULL );
 
+    time_in_us = (_end.tv_sec - _start.tv_sec) * 1000000 + _end.tv_usec - _start.tv_usec;	
+	time_in_ms = time_in_us/1000;
+	if(time_in_ms > 1000){
+		osal_printf("F[%s] L[%d],ubus overtime ,%ldms\n",__func__, __LINE__,time_in_ms);
+		log_message("ubus",3,"F[%s] L[%d] T[0X%X],ubus overtime ,%ldms,return is %d\n",__func__, __LINE__,tag,time_in_ms,ret);
+	}
+	
     if(str_buffer != NULL)
         free(str_buffer);
 
@@ -539,7 +589,15 @@ void get_wl_4(uint8_t *p_id,uint8_t *data_wl,int *wlen)
     gettimeofday( &_start, NULL );
     printf("ubus look start : %d.%d\n", _start.tv_sec, _start.tv_usec);
 */
-    
+	 /* Take the semaphore. */
+	 if(osal_sem_take(sem_321_process, 3500) != OSAL_EOK){
+	  
+		  printf("Semaphore return failed. \n");
+		  
+		  //osal_sem_release(sem_321_process);
+		  return;
+	 
+	 }
      id = id_322;
 
     if(id == 0){
@@ -601,6 +659,7 @@ void get_wl_4(uint8_t *p_id,uint8_t *data_wl,int *wlen)
     }
 	//printf("%d\n", i);
 	//return ;
+	osal_sem_release(sem_321_process);
 
 }
 
@@ -662,12 +721,15 @@ int get_audit_data(unsigned int tag,unsigned char* strhex,int strlen,uint8_t *da
 
     memset(&wl_buffer,0,sizeof(wl_buffer));
     
-/*
-	if (ubus_lookup_id(ctx, "ubus321", &id)) {
-		fprintf(stderr, "Failed to look up ubus321 object\n");
-		return -1;
+	if(osal_sem_take(sem_321_process, 3500) != OSAL_EOK){
+	 
+		 printf("Semaphore return failed. \n");
+		 
+		 //osal_sem_release(sem_321_process);
+		 return -1;
+
 	}
-*/
+
      id = id_322;
 
     if(id == 0){
@@ -713,7 +775,7 @@ int get_audit_data(unsigned int tag,unsigned char* strhex,int strlen,uint8_t *da
         printf("F[%s] L[%d] wl len too long!!!\n", __FILE__, __LINE__);
         return -1;
     }
-	//printf("%d\n", i);
+	osal_sem_release(sem_321_process);
 	return 0 ;
 }
 
@@ -778,7 +840,14 @@ int get_rtc_data(uint8_t *data_rtc)
 {
 	uint32_t id;
 
-    
+	if(osal_sem_take(sem_321_process, 3500) != OSAL_EOK){
+	 
+		 printf("Semaphore return failed. \n");
+		 
+		 //osal_sem_release(sem_321_process);
+		 return -1;
+
+	}
     id = id_322;
 
     if(id == 0){
@@ -804,7 +873,7 @@ int get_rtc_data(uint8_t *data_rtc)
 	//blobmsg_add_field(&b, BLOBMSG_TYPE_UNSPEC, "strhex", NULL, 0);
     
 	ubus_invoke(ctx, id, "pushdata", b.head, get_rtc_cb, (void*)data_rtc, 3000);
-    
+	osal_sem_release(sem_321_process);
 	return 0 ;
 }
 void ubus_clien_init(void)
