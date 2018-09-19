@@ -804,9 +804,29 @@ uint8_t   get_sys_time(unsigned char *time_ptr)//len must be more than 19
     return 0;
 }
 #endif
+void process_door_state(usb_ccid_322_t *usb_322,uint8_t door_state)
+{
 
+	
+	usb_322->now_door_state[1] = door_state;//door state=2
+	
+	if(usb_322->now_door_state[1] != usb_322->pre_door_state[1]){
+	
+		 if(usb_322->pre_door_state[1] == 0x02){
+			usb_322->door_action = 0xAA;
+			OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_INFO, "\ndoor opened\n");
+			}
+		 else if(usb_322->pre_door_state[1] == 0x01){
+			usb_322->door_action = 0x55;
+			OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_INFO, "\ndoor closed\n");
+		 }
+		 usb_322->pre_door_state[1] = usb_322->now_door_state[1];
+	
+		 sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_SEND_DRSTATE,2,0,usb_322->now_door_state);
 
-int check_card(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_len)
+}
+
+int check_card(usb_ccid_322_t *usb_322,unsigned char* rd_data,int buffer_len)
 {
     uint8_t resp_code[] = {0x90,0x00};
     uint8_t resp_code_2[] = {0x90,0x01};
@@ -965,10 +985,11 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
     }
     
 	tlv_box_t *parsedBoxes =
-	  tlv_box_parse (rd_data, buffer_len);
+	  tlv_box_parse (rd_data, buffer_len - 2);
 	
 	LOG ("parsedBoxes parse success, %d bytes \n", tlv_box_get_size (parsedBoxes));
 	
+/*
 	tlv_box_t *parsedBox_reader;
 	if (tlv_box_get_object (parsedBoxes, reader_tag, &parsedBox_reader) != 0)
 	  {
@@ -977,6 +998,22 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 	  }
 	
 	LOG ("parsedBox_reader parse success, %d bytes \n", tlv_box_get_size (parsedBox_reader));
+*/
+    unsigned char value[32];
+    short length = 32;
+    if (tlv_box_get_bytes (parsedBoxes, reader_tag, value, &length) != 0)
+      {
+		LOG ("parsedBox_reader tlv_box_get_bytes failed !\n");
+		return -1;
+      }
+
+    LOG ("parsedBox_reader tlv_box_get_bytes success:  ");
+	int i = 0;
+    for (i = 0; i < length; i++)
+      {
+	LOG ("%d-", value[i]);
+      }
+    LOG ("\n");
 
 	tlv_box_t *parsedBox_322;
 	if (tlv_box_get_object (parsedBoxes, _322_tag, &parsedBox_322) != 0)
@@ -988,33 +1025,63 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 	LOG ("parsedBox_322 parse success, %d bytes \n", tlv_box_get_size (parsedBox_322));
 
 
-	tlv_box_t *parsedBox_door;
-	if (tlv_box_get_object (parsedBox_322, door_tag, &parsedBox_door) != 0)
-	  {
-		LOG ("tlv_box_get_object  parsedBox_door failed !\n");
-		return -1;
-	  }
-	
-	LOG ("parsedBox_door parse success, %d bytes \n", tlv_box_get_size (parsedBox_door));
-	
-	tlv_box_t *parsedBox_wg;
-	if (tlv_box_get_object (parsedBox_322, wg_tag, &parsedBox_wg) != 0)
-	  {
-		LOG ("tlv_box_get_object  parsedBox_wg failed !\n");
-		return -1;
-	  }
-	
-	LOG ("parsedBox_wg parse success, %d bytes \n", tlv_box_get_size (parsedBox_wg));
-	
-	tlv_box_t *parsedBox_9531;
-	if (tlv_box_get_object (parsedBox_322, n531_tag, &parsedBox_9531) != 0)
-	  {
-		LOG ("tlv_box_get_object  parsedBox_9531 failed !\n");
-		return -1;
-	  }
-	
-	LOG ("parsedBox_9531 parse success, %d bytes \n", tlv_box_get_size (parsedBox_9531));
 
+{
+    char door_state;
+    if (tlv_box_get_char (parsedBox_322, door_tag, &door_state) != 0)
+      {
+		LOG ("no door state !\n");
+		return -1;
+      }
+    LOG ("get door state success %c \n", door_state);
+}
+	
+
+ {
+    unsigned char value[20];
+    short length = 20;
+    if (tlv_box_get_bytes (parsedBox_322, wg_tag, value, &length) != 0){
+		LOG ("get wg info  failed !\n");
+		//return -1;
+    }
+	else{
+		
+	    LOG ("get wg info success:  ");
+	    int i = 0;
+	    for (i = 0; i < length; i++)
+	      {
+		LOG ("%d-", value[i]);
+	      }
+	    LOG ("\n");
+/*
+        StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,wgp_host_num,value);
+        StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,wgp_slave_num,&value[4]);
+        StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,wgp_num,&value[8]);          
+        StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,wgp_cnt,&value[12]);
+        StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,wgp_time,&value[16]);
+*/
+	}
+ }	
+	
+ {
+	unsigned char value[4];
+	short length = 4;
+	if (tlv_box_get_bytes (parsedBox_322, n531_tag, value, &length) != 0){
+		LOG ("get 9531 info  failed !\n");
+		//return -1;
+	}
+	else{
+		
+		LOG ("get 9531 info success:	");
+		int i = 0;
+		for (i = 0; i < length; i++)
+		  {
+		LOG ("%d-", value[i]);
+		  }
+		LOG ("\n");
+
+	}
+ }
 	
 	
 	tlv_box_t *parsedBox_alarm;
@@ -1025,11 +1092,27 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 	  }
 	
 	LOG ("parsedBox_alarm parse success, %d bytes \n", tlv_box_get_size (parsedBox_alarm));
-	
+{
+   unsigned char value[88];
+   short length = 100;
+   if (tlv_box_get_bytes (parsedBox_322, n531_tag, value, &length) != 0){
+	   LOG ("get alarm  failed !\n");
+	   //return -1;
+   }
+   else{
+	   
+	   LOG ("get alarm success:    ");
+	   int i = 0;
+	   for (i = 0; i < length; i++)
+		 {
+	   LOG ("%d-", value[i]);
+		 }
+	   LOG ("\n");
+
+   }
+}
 	tlv_box_destroy (parsedBoxes);
-	tlv_box_destroy (parsedBox_reader);
 	tlv_box_destroy (parsedBox_322);
-	tlv_box_destroy (parsedBoxes);
 
 }
 
@@ -2464,12 +2547,12 @@ if(p_usb_ccid->pr11_exist == 1){
             ret = usb_transmit(context,car_detect,sizeof(car_detect),output,sizeof(output),p_usb_ccid);
 
           
-          	tail_check = check_card(p_usb_ccid,output,ret);
-
+          	//tail_check = check_card(p_usb_ccid,output,ret);
+          	tail_check = check_card_tlv(p_usb_ccid,output,ret);
 			
 			//OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "check card! \n");
-			//print_rec(output,ret);//打印寻卡结果
-			
+			print_rec(output,ret);//打印寻卡结果
+#if 1			
 if(tail_check == 1){
 
     parse_tag = parse_data(output,ret,acl_data,&acl_len,p_usb_ccid);
@@ -2864,6 +2947,7 @@ else if(tail_check == -4 ){
 
 
 }
+#endif
 }
 
           /***************POLL  END***************/
