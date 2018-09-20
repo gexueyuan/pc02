@@ -825,7 +825,7 @@ void process_door_state(usb_ccid_322_t *usb_322,uint8_t door_state)
 		 sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_SEND_DRSTATE,2,0,usb_322->now_door_state);
 
 }
-
+}
 int check_card(usb_ccid_322_t *usb_322,unsigned char* rd_data,int buffer_len)
 {
     uint8_t resp_code[] = {0x90,0x00};
@@ -937,7 +937,7 @@ int check_card(usb_ccid_322_t *usb_322,unsigned char* rd_data,int buffer_len)
 
 }
 
-int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_len)
+int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_len,unsigned char* out,int *out_len)
 {
 
 	#define  reader_tag   0x0A01	
@@ -958,6 +958,8 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 
 	
     uint8_t reader_offline[]={0x90,0x0A};
+
+	int ret = 0;
 
     if(buffer_len == 2){
         
@@ -1008,10 +1010,16 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
       }
 
     LOG ("parsedBox_reader tlv_box_get_bytes success:  ");
+	if(length > 2){
+		memcpy(out,value,length);
+		*out_len = length;
+		ret = 1;
+
+	}
 	int i = 0;
     for (i = 0; i < length; i++)
       {
-	LOG ("%d-", value[i]);
+	LOG ("0x%x-", value[i]);
       }
     LOG ("\n");
 
@@ -1113,7 +1121,7 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 }
 	tlv_box_destroy (parsedBoxes);
 	tlv_box_destroy (parsedBox_322);
-
+	return ret;
 }
 
 
@@ -1507,6 +1515,8 @@ void *eg_usb_thread_entry(void *parameter)
     unsigned char acl_data[2048] = {0};
 	unsigned char output[2048] = {0};
     int acl_len = 1024;
+	unsigned char pr11_rec[32] = {0};
+	int pr11_rec_len;
     unsigned char send_data[1024] = {0};
 
     unsigned char apdu_data[1024] = {0};
@@ -2548,14 +2558,14 @@ if(p_usb_ccid->pr11_exist == 1){
 
           
           	//tail_check = check_card(p_usb_ccid,output,ret);
-          	tail_check = check_card_tlv(p_usb_ccid,output,ret);
+          	tail_check = check_card_tlv(p_usb_ccid,output,ret,pr11_rec,&pr11_rec_len);
 			
 			//OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "check card! \n");
 			print_rec(output,ret);//´òÓ¡Ñ°¿¨½á¹û
 #if 1			
 if(tail_check == 1){
 
-    parse_tag = parse_data(output,ret,acl_data,&acl_len,p_usb_ccid);
+    parse_tag = parse_data(pr11_rec,pr11_rec_len,acl_data,&acl_len,p_usb_ccid);
 
     switch(parse_tag){
 
