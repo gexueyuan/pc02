@@ -1001,6 +1001,7 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 	
 	LOG ("parsedBox_reader parse success, %d bytes \n", tlv_box_get_size (parsedBox_reader));
 */
+{
     unsigned char value[32];
     short length = 32;
     if (tlv_box_get_bytes (parsedBoxes, reader_tag, value, &length) != 0)
@@ -1014,7 +1015,6 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 		memcpy(out,value,length);
 		*out_len = length;
 		ret = 1;
-
 	}
 	int i = 0;
     for (i = 0; i < length; i++)
@@ -1022,6 +1022,7 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 	LOG ("0x%x-", value[i]);
       }
     LOG ("\n");
+}
 
 	tlv_box_t *parsedBox_322;
 	if (tlv_box_get_object (parsedBoxes, _322_tag, &parsedBox_322) != 0)
@@ -1054,7 +1055,7 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
     }
 	else{
 		
-	    LOG ("get wg info success:  ");
+	    LOG ("get wg info success(len=%d):  ",length);
 	    int i = 0;
 	    for (i = 0; i < length; i++)
 	      {
@@ -1090,16 +1091,7 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 
 	}
  }
-	
-	
-	tlv_box_t *parsedBox_alarm;
-	if (tlv_box_get_object (parsedBox_322, alarm_tag, &parsedBox_alarm) != 0)
-	  {
-		LOG ("tlv_box_get_object  parsedBox_alarm failed !\n");
-		return -1;
-	  }
-	
-	LOG ("parsedBox_alarm parse success, %d bytes \n", tlv_box_get_size (parsedBox_alarm));
+		
 {
    unsigned char value[88];
    short length = 100;
@@ -1109,7 +1101,7 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
    }
    else{
 	   
-	   LOG ("get alarm success:    ");
+	   LOG ("get alarm success(%d):    ",length);
 	   int i = 0;
 	   for (i = 0; i < length; i++)
 		 {

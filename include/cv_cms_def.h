@@ -499,6 +499,9 @@ typedef struct _msg_manager {
     osal_task_t   *task_msg;
     osal_queue_t *queue_msg;
 
+    osal_task_t   *task_send_ubus;
+    osal_queue_t *queue_send_ubus;
+
     osal_timer_t *timer_msg;
 
     osal_sem_t *sem_msg;

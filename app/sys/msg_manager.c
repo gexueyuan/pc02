@@ -1399,6 +1399,52 @@ void * msg_thread_entry(void *parameter)
 
 
 
+void ubus_send_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
+{
+
+    int i;
+    unsigned char door_state[2];
+    //msg_manager_t *p_sys = &p_controll_eg->msg_manager;
+    uint8_t index_cnt = 0;
+    
+    switch(p_msg->id){
+
+
+    }
+}
+
+
+
+
+
+void * msg_ubus_send_thread_entry(void *parameter)
+{
+    int err;
+    sys_msg_t *p_msg;
+    msg_manager_t *p_sys = (msg_manager_t *)parameter;
+
+    uint32_t len = 0;
+    uint8_t buf[SYS_MQ_MSG_SIZE];
+    p_msg = (sys_msg_t *)buf;
+
+    while(1){
+        
+        memset(buf, 0, SYS_MQ_MSG_SIZE);        
+        err = osal_queue_recv(p_sys->queue_send_ubus, buf, &len, OSAL_WAITING_FOREVER);
+        if (err == OSAL_STATUS_SUCCESS){
+            ubus_send_proc(p_sys, p_msg);
+            //osal_free(p_msg);
+        }
+        else{
+            OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_ERROR, "%s: osal_queue_recv error [%d]\n", __FUNCTION__, err);
+        }
+        
+    }
+
+
+
+}
+
 void msg_manager_init(void)
 {
 
@@ -1420,6 +1466,14 @@ void msg_manager_init(void)
                            msg_thread_entry, p_msg,
                            PC02_MSG_THREAD_STACK_SIZE, PC02_MSG_THREAD_PRIORITY);
     osal_assert(p_msg->task_msg != NULL); 
+
+    p_msg->queue_send_ubus = osal_queue_create("s-msg", SYS_QUEUE_SIZE, SYS_MQ_MSG_SIZE);
+    osal_assert(p_msg->queue_send_ubus != NULL);
+
+    p_msg->task_send_ubus = osal_task_create("task-send-ubus",
+                           msg_thread_entry, p_msg,
+                           PC02_MSG_THREAD_STACK_SIZE, PC02_MSG_THREAD_PRIORITY);
+    osal_assert(p_msg->task_send_ubus != NULL);
 
 
 }
