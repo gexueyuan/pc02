@@ -2012,6 +2012,7 @@ JUMP:
                 print_rec(output,ret);
 				memcpy(zmq_output,p_usb_ccid->zmq_magicnum,5);
 				memcpy(&zmq_output[5],output,ret);
+				print_array("zmq send: ", zmq_output, ret + 5);
                 zmq_socket_send(p_usb_ccid->zmq_server,zmq_output,ret + 5);
 				
             }else {       
