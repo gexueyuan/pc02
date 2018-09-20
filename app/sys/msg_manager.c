@@ -914,8 +914,8 @@ osal_status_t sys_add_event_queue(msg_manager_t *p_sys,
     if (err != OSAL_STATUS_SUCCESS) {
         OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_WARN, "%s: failed=[%d], msg=%04x,tg=%d\n",\
                            __FUNCTION__, err, msg_id,msg_argc);
-        osal_free(p_msg);                   
     }
+    osal_free(p_msg);                   
 
     return err;
 }
