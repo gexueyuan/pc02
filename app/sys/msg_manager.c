@@ -1373,13 +1373,13 @@ void * msg_thread_entry(void *parameter)
     sys_msg_t *p_msg;
     msg_manager_t *p_sys = (msg_manager_t *)parameter;
 
-    uint32_t len = 0;
+    uint32_t len = SYS_MQ_MSG_SIZE;
     uint8_t buf[SYS_MQ_MSG_SIZE];
     p_msg = (sys_msg_t *)buf;
 
     while(1){
         
-        memset(buf, 0, SYS_MQ_MSG_SIZE);        
+        memset(buf, 0, sizeof(buf));        
         err = osal_queue_recv(p_sys->queue_msg, buf, &len, OSAL_WAITING_FOREVER);
         if (err == OSAL_STATUS_SUCCESS){
             sys_manage_proc(p_sys, p_msg);
