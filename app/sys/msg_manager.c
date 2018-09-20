@@ -38,6 +38,7 @@ unsigned char return_buffer[128] = {0};
 
 osal_sem_t *sem_net_process;
 osal_sem_t *sem_321_process;
+osal_sem_t *sem_ubus_send;
 
 unsigned char log_test[] = { 0x01,0x01,0xD9,0x02,0x00,0x00,0x00,0x00,0x00,0x46,0x03,0x72,0xB5,0x04,0x58,\
 					   0x4A,0x71,0x3E,0x66,0x9A,0x70,0x8F,0x1D,0xCD,0xBA,0xB1,0xD6,0x0F,0x02,0x96,\
@@ -457,6 +458,216 @@ void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strle
     osal_sem_release(sem_net_process);
 }
 
+void ubus_send(enum UBUS_DIRECTION direct,unsigned int tag,char* str,unsigned char* strhex,int strlen)
+{
+
+	uint32_t id;
+	int ret;
+
+    unsigned char* str_buffer = NULL;
+	 /**test**/
+    struct timeval _start,_end;
+	long time_in_us,time_in_ms;
+    /**test**/
+
+	gettimeofday( &_start, NULL );
+    /* Take the semaphore. */
+    if(osal_sem_take(sem_ubus_send, 3500) != OSAL_EOK){
+     
+	     printf("Semaphore return failed. \n");
+	     
+	     //osal_sem_release(sem_321_process);
+
+		return;
+
+    }
+	gettimeofday( &_end, NULL );
+    time_in_us = (_end.tv_sec - _start.tv_sec) * 1000000 + _end.tv_usec - _start.tv_usec;	
+	time_in_ms = time_in_us/1000;
+	if(time_in_ms > 1000){
+		osal_printf("F[%s] L[%d],get sem overtime ,%ldms\n",__func__, __LINE__,time_in_ms);
+		log_message("sem",3,"F[%s] L[%d] T[0X%X],get sem overtime ,%ldms\n",__func__, __LINE__,tag,time_in_ms);
+	}
+if(direct == UBUS_321){	
+    id = id_322;
+
+    if(id == 0){
+
+        
+    	if (ubus_lookup_id(ctx, "ubus321", &id)) {
+    		fprintf(stderr, "Failed to look up 321 object\n");
+            
+            osal_sem_release(sem_ubus_send);
+    		return;
+    	}
+
+        id_322 = id;
+
+        printf("\n===========321id is %X,ubus client=============\n",id);
+        
+    }
+
+    
+	blob_buf_init(&b, 0);
+	
+	blobmsg_add_u32(&b, "tag", tag);
+
+    switch(tag)
+    {
+        case UBUS_CLIENT_GETWL:
+            break;
+
+        case UBUS_CLIENT_GETWLCFG:
+            break;
+
+        case UBUS_CLIENT_GETP2P:
+            break;
+            
+        case UBUS_CLIENT_GETMAC:
+            break;
+            
+
+        case UBUS_CLIENT_SENDVERSION:
+            str_buffer = (unsigned char*)malloc(strlen);
+            memcpy(str_buffer,strhex,strlen);
+            break;
+
+        case UBUS_CLIENT_LOG:
+            str_buffer = (unsigned char*)malloc(strlen);
+            memcpy(str_buffer,strhex,strlen);
+            break;
+
+        default:
+            break;
+        
+
+
+
+    }
+   
+	//char *a = "\x11\x22\x33\x44\x55\x66\x77\x88\x11\x22\x33\x44\x55\x66\x77\x88\x99\xAA";
+	blobmsg_add_field(&b, BLOBMSG_TYPE_UNSPEC, "strhex", str_buffer, strlen);
+
+	
+	gettimeofday( &_start, NULL );
+	ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 4000);
+	gettimeofday( &_end, NULL );
+
+    time_in_us = (_end.tv_sec - _start.tv_sec) * 1000000 + _end.tv_usec - _start.tv_usec;	
+	time_in_ms = time_in_us/1000;
+	if(time_in_ms > 1000){
+		osal_printf("F[%s] L[%d],ubus overtime ,%ldms\n",__func__, __LINE__,time_in_ms);
+		log_message("ubus",3,"F[%s] L[%d] T[0X%X],ubus overtime ,%ldms\n",__func__, __LINE__,tag,time_in_ms);
+	}
+
+    if(str_buffer != NULL)
+        free(str_buffer);
+}
+else if(direct == UBUS_NBID){
+    
+	if(controll_eg.network_state == 0){
+
+		printf("\noffline  push  failed!\n");
+
+		return;
+	}
+
+	 
+     id = id_net;
+
+    if(id == 0){
+
+        
+    	if (ubus_lookup_id(ctx, "pc02nbi", &id)) {
+    		fprintf(stderr, "Failed to look up pc02nbi object\n");
+            
+            osal_sem_release(sem_net_process);
+    		return;
+    	}
+
+        id_net = id;
+
+        printf("\n===========pc02nbi id is %X,ubus client=============\n",id);
+        
+    }
+
+
+	blob_buf_init(&b, 0);
+	
+	blobmsg_add_u32(&b, "tag", tag);
+
+    switch(tag)
+    {
+        case UBUS_CLIENT_GETWL:
+            break;
+
+        case UBUS_CLIENT_GETWLCFG:
+            break;
+
+        case UBUS_CLIENT_SEND_ALARM:
+            str_buffer = (unsigned char*)malloc(strlen);
+            memcpy(str_buffer,strhex,strlen);
+            break;
+
+        case UBUS_CLIENT_LOG:
+            str_buffer = (unsigned char*)malloc(strlen);
+            memcpy(str_buffer,strhex,strlen);
+            break;
+
+        case UBUS_CLIENT_SEND_DOOR_INFO:
+            str_buffer = (unsigned char*)malloc(strlen);
+            memcpy(str_buffer,strhex,strlen);
+            break;
+
+        case UBUS_CLIENT_SEND_ID_INFO:
+            str_buffer = (unsigned char*)malloc(strlen);
+            memcpy(str_buffer,strhex,strlen);
+            break;
+
+        case UBUS_CLIENT_RETURN:
+            str_buffer = (unsigned char*)malloc(strlen);
+            memcpy(str_buffer,strhex,strlen);
+            break;
+            
+        case UBUS_CLIENT_SEND_BAT:
+            str_buffer = (unsigned char*)malloc(strlen);
+            memcpy(str_buffer,strhex,strlen);
+            break;
+            
+
+        default:
+            str_buffer = (unsigned char*)malloc(strlen);
+            memcpy(str_buffer,strhex,strlen);
+            break;
+        
+
+
+
+    }
+   
+	//char *a = "\x11\x22\x33\x44\x55\x66\x77\x88\x11\x22\x33\x44\x55\x66\x77\x88\x99\xAA";
+	blobmsg_add_field(&b, BLOBMSG_TYPE_UNSPEC, "strhex", str_buffer, strlen);
+	
+	gettimeofday( &_start, NULL );
+	ret = ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 4000);
+	gettimeofday( &_end, NULL );
+
+    time_in_us = (_end.tv_sec - _start.tv_sec) * 1000000 + _end.tv_usec - _start.tv_usec;	
+	time_in_ms = time_in_us/1000;
+	if(time_in_ms > 1000){
+		osal_printf("F[%s] L[%d],ubus overtime ,%ldms\n",__func__, __LINE__,time_in_ms);
+		log_message("ubus",3,"F[%s] L[%d] T[0X%X],ubus overtime ,%ldms,return is %d\n",__func__, __LINE__,tag,time_in_ms,ret);
+	}
+	
+    if(str_buffer != NULL)
+        free(str_buffer);
+
+
+
+}
+    osal_sem_release(sem_ubus_send);
+    
+}
 static void get_wl_data_cb(struct ubus_request *req,
 				    int type, struct blob_attr *msg)
 {
@@ -1373,7 +1584,7 @@ void * msg_thread_entry(void *parameter)
     sys_msg_t *p_msg;
     msg_manager_t *p_sys = (msg_manager_t *)parameter;
 
-    uint32_t len = SYS_MQ_MSG_SIZE;
+    uint32_t len = 0;
     uint8_t buf[SYS_MQ_MSG_SIZE];
     p_msg = (sys_msg_t *)buf;
 
@@ -1396,7 +1607,32 @@ void * msg_thread_entry(void *parameter)
 }
 
 
+osal_status_t ubus_send_queue(msg_manager_t *p_sys, 
+                             uint16_t msg_id, 
+                             uint16_t msg_len, 
+                             uint32_t msg_argc,
+                             void    *msg_argv)
+{
+    int err = OSAL_STATUS_NOMEM;
+    sys_msg_t *p_msg;
+    uint32_t len = sizeof(ubus_msg_t);
+    p_msg = (ubus_msg_t *)osal_malloc(len + msg_len);
+    if (p_msg) {
+        p_msg->id = msg_id;
+        p_msg->len = msg_len;
+        p_msg->argc = msg_argc;
+        memcpy(p_msg->argv,msg_argv,msg_len);
+        err = osal_queue_send(p_sys->queue_send_ubus, p_msg, len + msg_len, 0, 3000);
+    }
 
+    if (err != OSAL_STATUS_SUCCESS) {
+        OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_WARN, "%s: failed=[%d], msg=%04x,tg=%d\n",\
+                           __FUNCTION__, err, msg_id,msg_argc);
+    }
+    osal_free(p_msg);                   
+
+    return err;
+}
 
 
 void ubus_send_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
@@ -1409,7 +1645,14 @@ void ubus_send_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
     
     switch(p_msg->id){
 
-
+        
+        case UBUS_321:
+            break;
+        
+        case UBUS_NBID:
+            break;
+        default:
+            break;
     }
 }
 
@@ -1420,12 +1663,12 @@ void ubus_send_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
 void * msg_ubus_send_thread_entry(void *parameter)
 {
     int err;
-    sys_msg_t *p_msg;
+    ubus_msg_t *p_msg;
     msg_manager_t *p_sys = (msg_manager_t *)parameter;
 
     uint32_t len = 0;
     uint8_t buf[SYS_MQ_MSG_SIZE];
-    p_msg = (sys_msg_t *)buf;
+    p_msg = (ubus_msg_t *)buf;
 
     while(1){
         
@@ -1457,6 +1700,9 @@ void msg_manager_init(void)
     sem_net_process= osal_sem_create("sem_net_process", 1);
     osal_assert(sem_net_process != NULL);
     
+    sem_ubus_send = osal_sem_create("sem_ubus_send", 1);
+    osal_assert(sem_ubus_send != NULL);
+    
     ubus_clien_init();
     /* object for sys */
     p_msg->queue_msg = osal_queue_create("q-msg", SYS_QUEUE_SIZE, SYS_MQ_MSG_SIZE);
@@ -1467,7 +1713,7 @@ void msg_manager_init(void)
                            PC02_MSG_THREAD_STACK_SIZE, PC02_MSG_THREAD_PRIORITY);
     osal_assert(p_msg->task_msg != NULL); 
 
-    p_msg->queue_send_ubus = osal_queue_create("s-msg", SYS_QUEUE_SIZE, SYS_MQ_MSG_SIZE);
+    p_msg->queue_send_ubus = osal_queue_create("s-msg", UBUS_QUEUE_SIZE, UBUS_MQ_MSG_SIZE);
     osal_assert(p_msg->queue_send_ubus != NULL);
 
     p_msg->task_send_ubus = osal_task_create("task-send-ubus",

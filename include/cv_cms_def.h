@@ -50,9 +50,17 @@
     size of all the queue in system 
 */
 #define SYS_QUEUE_SIZE 64
+#define UBUS_QUEUE_SIZE 512
 
 /* per message len */
 #define SYS_MQ_MSG_SIZE 2048
+#define UBUS_MQ_MSG_SIZE 2048
+
+enum  UBUS_DIRECTION{
+    UBUS_321 = 0,
+    UBUS_NBID,
+
+};
 
 
 /*return interface*/
@@ -127,6 +135,12 @@ typedef struct _sys_msg{
     uint32_t argc; 
     void    *argv;
 }sys_msg_t;
+typedef struct _ubus_msg{
+    uint16_t id;
+    uint16_t len;
+    uint32_t argc; 
+    uint8_t argv[0];
+}ubus_msg_t;
 
 typedef enum _DOOR_CFG_INDEX {
     BASE_CFG_BASE = 0x200,
