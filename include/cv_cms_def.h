@@ -50,7 +50,7 @@
     size of all the queue in system 
 */
 #define SYS_QUEUE_SIZE 64
-#define UBUS_QUEUE_SIZE 512
+#define UBUS_QUEUE_SIZE 128
 
 /* per message len */
 #define SYS_MQ_MSG_SIZE 2048

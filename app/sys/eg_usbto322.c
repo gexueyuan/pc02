@@ -219,6 +219,7 @@ char *id4 = "返cardID给9531的时间";
 char *id5 = "绿灯开始时间";
 char *id6 = "开门成功结束时间";
 char *whitelist_resume = "白名单续传失败";
+char *period_9531 = "9531指令周期间隔";
 /* 统计信息 GBK*/
 
 
@@ -429,7 +430,7 @@ void StatisticsInfo_push(uint8_t src_dev,uint8_t *pid_dev,const char *gbk_str,ui
     //info_statistic[37] = (value&0xFF00)>>8;
     //info_statistic[38] = value&0x00FF;
     if(value != NULL)
-        memcpy(&info_statistic[37],value,4);
+        memcpy(&info_statistic[37],value,4);//value == null,clear 0
     print_array(gbk_str,info_statistic,sizeof(info_statistic));
     ubus_net_process(UBUS_CLIENT_SEND_StatisticsInfo,NULL,info_statistic,sizeof(info_statistic));
 
@@ -587,11 +588,12 @@ int whitelist_transmit(void *context, const unsigned char * apdu,
             OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "disconnect failed\n");
         }
         
-        msleep(200);
+        msleep(300);
         do{
             gettimeofday( &_re, NULL );
             connect_ret = luareader_connect(usb_322->usb_context,usb_322->usb_port);
-
+            
+            msleep(300);
             if(connect_ret < 0){
 
                 usb_322->usb_reconnect_cnt++;
@@ -626,7 +628,11 @@ int whitelist_transmit(void *context, const unsigned char * apdu,
            	time_in_us = (_re.tv_sec - _end.tv_sec) * 1000000 + _re.tv_usec - _end.tv_usec;	
 	        time_in_ms = time_in_us/1000; 
         }while((!usb_322->usb_reconnect_cnt)&&(time_in_ms <= 2000));
- 
+        if(usb_322->usb_reconnect_cnt){
+
+            StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,whitelist_resume,NULL);
+            
+        }
     }
     else{
 
@@ -1114,7 +1120,16 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
       {
 		//LOG ("parsedBox_reader tlv_box_get_bytes failed !\n");
       }
-
+    
+/*
+        int i = 0;
+        for (i = 0; i < length; i++)
+          {
+        LOG ("0x%x-", value[i]);
+          }
+        LOG ("\n");
+*/
+    
     //LOG ("parsedBox_reader tlv_box_get_bytes success:  ");
 	if(length > 2){
 		memcpy(out,value,length);
@@ -1167,13 +1182,11 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 		LOG ("0x%X-", value[i]);
 	      }
 	    LOG ("\n");
-/*
         StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,wgp_host_num,value);
         StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,wgp_slave_num,&value[4]);
         StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,wgp_num,&value[8]);          
         StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,wgp_cnt,&value[12]);
         StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,wgp_time,&value[16]);
-*/
 	}
  }	
 	
@@ -1192,12 +1205,13 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 		LOG ("0x%X-", value[i]);
 		  }
 		LOG ("\n");
+        StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,period_9531,value);
 
 	}
  }
 		
 {
-   unsigned char value[88];
+   unsigned char value[100];
    short length = 100;
    if (tlv_box_get_bytes (parsedBox_322, alarm_tag, value, &length) != 0){
 	   //LOG ("get alarm  failed !\n");
@@ -1211,7 +1225,8 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 	   LOG ("%d-", value[i]);
 		 }
 	   LOG ("\n");
-
+    
+       ubus_client_process(UBUS_CLIENT_LOG,NULL,value,length);
    }
 }
 	tlv_box_destroy (parsedBoxes);
@@ -1276,7 +1291,7 @@ int parse_data(unsigned char* rd_data,int buffer_len,unsigned char* wl_data,int 
 
                 //printf("\ncard's battery is %d\n",read_buffer[6]);
 				OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_INFO, "\ncard's battery is %d\n",read_buffer[6]);
-				//print_rec(read_buffer, 6);
+				//print_rec(read_buffer, buffer_len);
 				
                 ubus_net_process(UBUS_CLIENT_SEND_BAT,NULL,&read_buffer[2],5);				
 
@@ -2709,8 +2724,12 @@ if(tail_check == 1){
                 
                 //print_send(test_o,195);
                 //ret = usb_transmit(context,test_o,195,output,sizeof(output),p_usb_ccid);
-                ret = usb_transmit(context,apdu_data,sizeof(result_head) + 3 + 17 + 1 + acl_data[271] + 232,output,sizeof(output),p_usb_ccid);
-
+                //ret = usb_transmit(context,apdu_data,sizeof(result_head) + 3 + 17 + 1 + acl_data[271] + 232,output,sizeof(output),p_usb_ccid);
+                
+                osal_printf("start sleep 2s\n");
+                sleep(2);
+                osal_printf("sleep over\n");
+                ret = whitelist_transmit(context,apdu_data,sizeof(result_head) + 3 + 17 + 1 + acl_data[271] + 232,output,sizeof(output),p_usb_ccid);
             }           
 			else{
 				
@@ -2742,54 +2761,31 @@ if(tail_check == 1){
 	                ubus_client_process(UBUS_CLIENT_LOG,NULL,log_data,log_len);
 
 
-	                if((output[106] == 0x01)||(output[106] == 0x02)||(output[106] == 0x03)||(output[106] == 0x04))//open success
-	                {					
 
-					     for(i = 0;i < MAX_322_NUM;i++ ){
-            				if(controll_eg.usb_ccid_322[i].ccid322_exist){
-								
-								OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "i=%d\n",i);
-                				if(memcmp(controll_eg.usb_ccid_322[i].pid_322,p_usb_ccid->pid_322,4)){
-									
-								OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "id pass\n",i);
-								if(controll_eg.usb_ccid_322[i].door_action == 0xAA){
-									
-									OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "action AA\n");
-									p_usb_ccid->door_action = 0;
-									alarm_add(bytesToIntBig(controll_eg.usb_ccid_322[i].pid_322,0), ALARM_322_force);
-									alarm_add(bytesToIntBig(controll_eg.usb_ccid_322[i].pid_322,0), ALARM_322_abnormal);
-								}
-							}
-            			}
-            
-        
-        				}
-						if(output[106] == 0x04){
+    				if(output[106] == 0x04){
 
-							OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get slow log\n");
-							memset(output,0,sizeof(output));
-							ret = usb_transmit(context,get_slow_log,sizeof(get_slow_log),output,sizeof(output),p_usb_ccid);
-							if(ret == 30){
+    					OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get slow log\n");
+    					memset(output,0,sizeof(output));
+    					ret = usb_transmit(context,get_slow_log,sizeof(get_slow_log),output,sizeof(output),p_usb_ccid);
+    					if(ret == 30){
 
-								StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id0,&output[0]);
-								StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id1,&output[4]);							
-								StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id2,&output[8]);
-								StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id3,&output[12]);
-								StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id4,&output[16]);
-								StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id5,&output[20]);
-								StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id6,&output[24]);
-							}
-							else{
-								if(ret > 0)
-									print_rec(output,ret);
-								OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get slow log error\n");
-								
-							}
+    						StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id0,&output[0]);
+    						StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id1,&output[4]);							
+    						StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id2,&output[8]);
+    						StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id3,&output[12]);
+    						StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id4,&output[16]);
+    						StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id5,&output[20]);
+    						StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id6,&output[24]);
+    					}
+    					else{
+    						if(ret > 0)
+    							print_rec(output,ret);
+    						OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get slow log error\n");
+    						
+    					}
 								
 
-						} 
-
-	                }
+					} 
 	                
 	            }
             }
@@ -2996,22 +2992,6 @@ else if(tail_check == 2){
 			}
 		}
 			
-/*
-            if(controll_eg.alarm_flag == 0xAA){
-				
-                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "open door,drop alarm!\n");              
-            }
-            else{
-                
-                if(controll_eg.alarm_flag == 0){
-                    
-                    OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "send alarm to 321!\n");
-					ubus_client_process(UBUS_CLIENT_LOG,NULL,output,ret - 2);
-                    
-                }
-            }
-*/
-
         
         }
     }
@@ -3043,14 +3023,6 @@ else if(tail_check == -4 ){
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "WG ERROR FLAG UP!\n");
         }
 
-/*
-        print_send(wgp_info_clear,sizeof(wgp_info_clear));
-        ret = usb_transmit(context,wgp_info_clear,sizeof(wgp_info_clear),output,sizeof(output),p_usb_ccid);
-        printf("wgp clear:\n");
-        print_rec(output,ret);
-*/
-
-
 }
 #endif
 }
@@ -3081,7 +3053,7 @@ else if(tail_check == -4 ){
             printf("switch value is %d\n",p_usb_ccid->toggle_state);
         }
 }
-        osal_sleep(30);
+        osal_sleep(20);
 #else
 sleep(2);
 #endif
