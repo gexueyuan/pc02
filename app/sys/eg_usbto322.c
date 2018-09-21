@@ -2730,7 +2730,8 @@ if(tail_check == 1){
                 sleep(2);
                 osal_printf("sleep over\n");
                 ret = whitelist_transmit(context,apdu_data,sizeof(result_head) + 3 + 17 + 1 + acl_data[271] + 232,output,sizeof(output),p_usb_ccid);
-            }           
+
+			}           
 			else{
 				
 				OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "321 give wl error!get ubus len is %d\n",acl_len);
