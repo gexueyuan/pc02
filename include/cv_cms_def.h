@@ -136,9 +136,9 @@ typedef struct _sys_msg{
     void    *argv;
 }sys_msg_t;
 typedef struct _ubus_msg{
-    unsigned int id;
-    int len;
-    uint32_t argc; 
+    uint32_t direct;
+    uint32_t tag; 
+    uint32_t len;
     uint8_t argv[0];
 }ubus_msg_t;
 

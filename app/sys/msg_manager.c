@@ -214,7 +214,7 @@ void send_log(unsigned char* log_buffer,int len)
 {
 
 }
-
+#if 0
 void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int strlen)
 {
 
@@ -457,7 +457,7 @@ void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strle
 
     osal_sem_release(sem_net_process);
 }
-
+#endif
 void ubus_send(enum UBUS_DIRECTION direct,unsigned int tag,char* str,unsigned char* strhex,int strlen)
 {
 
@@ -668,6 +668,7 @@ else if(direct == UBUS_NBID){
     osal_sem_release(sem_ubus_send);
     
 }
+
 static void get_wl_data_cb(struct ubus_request *req,
 				    int type, struct blob_attr *msg)
 {
@@ -1608,7 +1609,7 @@ void * msg_thread_entry(void *parameter)
 
 
 osal_status_t ubus_send_queue(msg_manager_t *p_sys, 
-                             unsigned int diret, 
+                             unsigned int direct, 
                              int msg_len, 
                              uint32_t tag,
                              void    *msg_argv)
@@ -1618,22 +1619,43 @@ osal_status_t ubus_send_queue(msg_manager_t *p_sys,
     uint32_t len = sizeof(ubus_msg_t);
     p_msg = (ubus_msg_t *)osal_malloc(len + msg_len);
     if (p_msg) {
-        p_msg->id = tag;
+        p_msg->tag = tag;
         p_msg->len = msg_len;
-        p_msg->argc = tag;
+        p_msg->direct = direct;
         memcpy(p_msg->argv,msg_argv,msg_len);
         err = osal_queue_send(p_sys->queue_send_ubus, p_msg, len + msg_len, 0, 3000);
+		
+		osal_printf("ubus queue send len is %d\n",p_msg->len);
     }
 
     if (err != OSAL_STATUS_SUCCESS) {
         OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_WARN, "%s: failed=[%d], msg=%04x,tg=%d\n",\
-                           __FUNCTION__, err, diret,tag);
+                           __FUNCTION__, err, direct,tag);
     }
     osal_free(p_msg);                   
 
     return err;
 }
 
+void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int strlen)
+{
+
+
+	//ubus_send(UBUS_321,tag, str, strhex,strlen);
+
+	ubus_send_queue(&controll_eg.msg_manager, UBUS_321, strlen, tag, strhex);
+
+
+}
+
+void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strlen)
+{
+
+
+	//ubus_send(UBUS_NBID, tag, str,strhex, strlen);
+	ubus_send_queue(&controll_eg.msg_manager, UBUS_NBID, strlen, tag, strhex);
+
+}
 
 void ubus_send_proc(msg_manager_t *p_sys, ubus_msg_t *p_msg)
 {
@@ -1642,8 +1664,7 @@ void ubus_send_proc(msg_manager_t *p_sys, ubus_msg_t *p_msg)
     unsigned char door_state[2];
     //msg_manager_t *p_sys = &p_controll_eg->msg_manager;
     uint8_t index_cnt = 0;
-
-    ubus_send(p_msg->id, p_msg->argc, NULL, p_msg->argv, p_msg->len);
+    ubus_send(p_msg->direct, p_msg->tag, NULL, p_msg->argv, p_msg->len);
     
 }
 
@@ -1667,7 +1688,7 @@ void * msg_ubus_send_thread_entry(void *parameter)
         err = osal_queue_recv(p_sys->queue_send_ubus, buf, &len, OSAL_WAITING_FOREVER);
         if (err == OSAL_STATUS_SUCCESS){
             ubus_send_proc(p_sys, p_msg);
-            //osal_free(p_msg);
+            osal_printf("ubus queue rec len is %d\n",p_msg->len);
         }
         else{
             OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_ERROR, "%s: osal_queue_recv error [%d]\n", __FUNCTION__, err);
@@ -1708,7 +1729,7 @@ void msg_manager_init(void)
     osal_assert(p_msg->queue_send_ubus != NULL);
 
     p_msg->task_send_ubus = osal_task_create("task-send-ubus",
-                           msg_thread_entry, p_msg,
+                           msg_ubus_send_thread_entry, p_msg,
                            PC02_MSG_THREAD_STACK_SIZE, PC02_MSG_THREAD_PRIORITY);
     osal_assert(p_msg->task_send_ubus != NULL);
 

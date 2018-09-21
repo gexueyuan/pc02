@@ -2240,9 +2240,9 @@ JUMP:
 			memcpy(&apdu_data[sizeof(push_rtc)],rtc,sizeof(rtc));
 			
  		    OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_TRACE, "push RTC:\n");
-			print_send(apdu_data,sizeof(push_rtc)+sizeof(rtc));
+			//print_send(apdu_data,sizeof(push_rtc)+sizeof(rtc));
  		    ret = usb_transmit(context,apdu_data,sizeof(push_rtc)+sizeof(rtc),output,sizeof(output),p_usb_ccid); 			
-			print_rec(output,ret);
+			//print_rec(output,ret);
  		    osal_sem_release(p_usb_ccid->sem_state);
  		    break;
            
