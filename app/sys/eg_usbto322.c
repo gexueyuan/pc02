@@ -218,7 +218,7 @@ char *id3 = "beep开始时间";
 char *id4 = "返cardID给9531的时间";
 char *id5 = "绿灯开始时间";
 char *id6 = "开门成功结束时间";
-
+char *whitelist_resume = "白名单续传失败";
 /* 统计信息 GBK*/
 
 
@@ -543,9 +543,10 @@ int whitelist_transmit(void *context, const unsigned char * apdu,
 
     int error;
 
+    int re_flag = 0;
 	unsigned char output[64] = {0};
 	/**test**/
-	 struct timeval _start,_end;
+	 struct timeval _start,_end,_re;
 	 long time_in_us,time_in_ms;
 	/**test**/
 
@@ -586,38 +587,45 @@ int whitelist_transmit(void *context, const unsigned char * apdu,
             OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "disconnect failed\n");
         }
         
-        msleep(300);
+        msleep(200);
+        do{
+            gettimeofday( &_re, NULL );
+            connect_ret = luareader_connect(usb_322->usb_context,usb_322->usb_port);
 
-        
-        connect_ret = luareader_connect(usb_322->usb_context,usb_322->usb_port);
+            if(connect_ret < 0){
 
-        if(connect_ret < 0){
-
-            usb_322->usb_reconnect_cnt++;
-            
-            OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "connect failed\n");
-			
-			StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,usb_disconnect,0);
-            if(usb_322->usb_reconnect_cnt >= 10){
-                OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "connect failed 10 times,reboot!!!\n");
-                system("reboot");
+                usb_322->usb_reconnect_cnt++;
+                
+                OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "connect failed\n");
+    			
+    			StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,usb_disconnect,0);
+                if(usb_322->usb_reconnect_cnt >= 10){
+                    OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "connect failed 10 times,reboot!!!\n");
+                }
             }
-        }
-        else{
+            else{
 
-            //msleep(200);
-            OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "reconnect succeed!\n");
-            
-            usb_322->usb_reconnect_cnt = 0; 
-            
-            //ret = usb_transmit(context,controll_eg.p2pkey.data,controll_eg.p2pkey.len,output,sizeof(output),p_usb_ccid);
-            ret = luareader_transmit(context, controll_eg.p2pkey.data, controll_eg.p2pkey.len, output, sizeof(output),3000);
-            OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "resend p2pkey\n");			
-			print_array(usb_322->usb_port, controll_eg.p2pkey.data, controll_eg.p2pkey.len);
-            ret = luareader_transmit(context, controll_eg.mackey.data, controll_eg.mackey.len, output, sizeof(output),3000);
-            OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "resend mackey\n");
-			print_array(usb_322->usb_port, controll_eg.mackey.data, controll_eg.mackey.len);
-        }
+                //msleep(200);
+                OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "reconnect succeed!\n");
+                
+                usb_322->usb_reconnect_cnt = 0; 
+                
+                //ret = usb_transmit(context,controll_eg.p2pkey.data,controll_eg.p2pkey.len,output,sizeof(output),p_usb_ccid);
+                ret = luareader_transmit(context, controll_eg.p2pkey.data, controll_eg.p2pkey.len, output, sizeof(output),3000);
+                OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "resend p2pkey\n");			
+    			print_array(usb_322->usb_port, controll_eg.p2pkey.data, controll_eg.p2pkey.len);
+                ret = luareader_transmit(context, controll_eg.mackey.data, controll_eg.mackey.len, output, sizeof(output),3000);
+                OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "resend mackey\n");
+    			print_array(usb_322->usb_port, controll_eg.mackey.data, controll_eg.mackey.len);
+
+                ret = luareader_transmit(context, apdu, apdu_len, resp, max_resp_size,2000);
+                OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "resend whitelist\n");
+    			print_array(usb_322->usb_port, apdu, apdu_len);
+               
+            }
+           	time_in_us = (_re.tv_sec - _end.tv_sec) * 1000000 + _re.tv_usec - _end.tv_usec;	
+	        time_in_ms = time_in_us/1000; 
+        }while((!usb_322->usb_reconnect_cnt)&&(time_in_ms <= 2000));
  
     }
     else{
@@ -625,6 +633,8 @@ int whitelist_transmit(void *context, const unsigned char * apdu,
        usb_322->usb_reconnect_cnt = 0; 
 
     }
+    //}
+    
     osal_sem_release(usb_322->sem_322);
     return ret;
 

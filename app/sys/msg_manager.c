@@ -801,7 +801,7 @@ void get_wl_4(uint8_t *p_id,uint8_t *data_wl,int *wlen)
     printf("ubus look start : %d.%d\n", _start.tv_sec, _start.tv_usec);
 */
 	 /* Take the semaphore. */
-	 if(osal_sem_take(sem_321_process, 3500) != OSAL_EOK){
+	 if(osal_sem_take(sem_ubus_send, 3500) != OSAL_EOK){
 	  
 		  printf("Semaphore return failed. \n");
 		  
@@ -870,7 +870,7 @@ void get_wl_4(uint8_t *p_id,uint8_t *data_wl,int *wlen)
     }
 	//printf("%d\n", i);
 	//return ;
-	osal_sem_release(sem_321_process);
+	osal_sem_release(sem_ubus_send);
 
 }
 
@@ -932,7 +932,7 @@ int get_audit_data(unsigned int tag,unsigned char* strhex,int strlen,uint8_t *da
 
     memset(&wl_buffer,0,sizeof(wl_buffer));
     
-	if(osal_sem_take(sem_321_process, 3500) != OSAL_EOK){
+	if(osal_sem_take(sem_ubus_send, 3500) != OSAL_EOK){
 	 
 		 printf("Semaphore return failed. \n");
 		 
@@ -986,7 +986,7 @@ int get_audit_data(unsigned int tag,unsigned char* strhex,int strlen,uint8_t *da
         printf("F[%s] L[%d] wl len too long!!!\n", __FILE__, __LINE__);
         return -1;
     }
-	osal_sem_release(sem_321_process);
+	osal_sem_release(sem_ubus_send);
 	return 0 ;
 }
 
@@ -1051,7 +1051,7 @@ int get_rtc_data(uint8_t *data_rtc)
 {
 	uint32_t id;
 
-	if(osal_sem_take(sem_321_process, 3500) != OSAL_EOK){
+	if(osal_sem_take(sem_ubus_send, 3500) != OSAL_EOK){
 	 
 		 printf("Semaphore return failed. \n");
 		 
@@ -1084,7 +1084,7 @@ int get_rtc_data(uint8_t *data_rtc)
 	//blobmsg_add_field(&b, BLOBMSG_TYPE_UNSPEC, "strhex", NULL, 0);
     
 	ubus_invoke(ctx, id, "pushdata", b.head, get_rtc_cb, (void*)data_rtc, 3000);
-	osal_sem_release(sem_321_process);
+	osal_sem_release(sem_ubus_send);
 	return 0 ;
 }
 void ubus_clien_init(void)
@@ -1608,26 +1608,26 @@ void * msg_thread_entry(void *parameter)
 
 
 osal_status_t ubus_send_queue(msg_manager_t *p_sys, 
-                             uint16_t msg_id, 
-                             uint16_t msg_len, 
-                             uint32_t msg_argc,
+                             unsigned int diret, 
+                             int msg_len, 
+                             uint32_t tag,
                              void    *msg_argv)
 {
     int err = OSAL_STATUS_NOMEM;
-    sys_msg_t *p_msg;
+    ubus_msg_t *p_msg;
     uint32_t len = sizeof(ubus_msg_t);
     p_msg = (ubus_msg_t *)osal_malloc(len + msg_len);
     if (p_msg) {
-        p_msg->id = msg_id;
+        p_msg->id = tag;
         p_msg->len = msg_len;
-        p_msg->argc = msg_argc;
+        p_msg->argc = tag;
         memcpy(p_msg->argv,msg_argv,msg_len);
         err = osal_queue_send(p_sys->queue_send_ubus, p_msg, len + msg_len, 0, 3000);
     }
 
     if (err != OSAL_STATUS_SUCCESS) {
         OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_WARN, "%s: failed=[%d], msg=%04x,tg=%d\n",\
-                           __FUNCTION__, err, msg_id,msg_argc);
+                           __FUNCTION__, err, diret,tag);
     }
     osal_free(p_msg);                   
 
@@ -1635,25 +1635,16 @@ osal_status_t ubus_send_queue(msg_manager_t *p_sys,
 }
 
 
-void ubus_send_proc(msg_manager_t *p_sys, sys_msg_t *p_msg)
+void ubus_send_proc(msg_manager_t *p_sys, ubus_msg_t *p_msg)
 {
 
     int i;
     unsigned char door_state[2];
     //msg_manager_t *p_sys = &p_controll_eg->msg_manager;
     uint8_t index_cnt = 0;
-    
-    switch(p_msg->id){
 
-        
-        case UBUS_321:
-            break;
-        
-        case UBUS_NBID:
-            break;
-        default:
-            break;
-    }
+    ubus_send(p_msg->id, p_msg->argc, NULL, p_msg->argv, p_msg->len);
+    
 }
 
 
