@@ -489,9 +489,10 @@ int usb_transmit(void *context, const unsigned char * apdu,
             OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "disconnect failed\n");
         }
         
-        msleep(300);
+        luareader_term(usb_322->usb_context);
+        //msleep(300);
 
-        
+        usb_322->usb_context = luareader_new(0, NULL, NULL);
         connect_ret = luareader_connect(usb_322->usb_context,usb_322->usb_port);
 
         if(connect_ret < 0){
@@ -514,10 +515,10 @@ int usb_transmit(void *context, const unsigned char * apdu,
             usb_322->usb_reconnect_cnt = 0; 
             
             //ret = usb_transmit(context,controll_eg.p2pkey.data,controll_eg.p2pkey.len,output,sizeof(output),p_usb_ccid);
-            ret = luareader_transmit(context, controll_eg.p2pkey.data, controll_eg.p2pkey.len, output, sizeof(output),3000);
+            ret = luareader_transmit(usb_322->usb_context, controll_eg.p2pkey.data, controll_eg.p2pkey.len, output, sizeof(output),3000);
             OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "resend p2pkey\n");			
 			print_array(usb_322->usb_port, controll_eg.p2pkey.data, controll_eg.p2pkey.len);
-            ret = luareader_transmit(context, controll_eg.mackey.data, controll_eg.mackey.len, output, sizeof(output),3000);
+            ret = luareader_transmit(usb_322->usb_context, controll_eg.mackey.data, controll_eg.mackey.len, output, sizeof(output),3000);
             OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "resend mackey\n");
 			print_array(usb_322->usb_port, controll_eg.mackey.data, controll_eg.mackey.len);
         }
@@ -580,7 +581,8 @@ int whitelist_transmit(void *context, const unsigned char * apdu,
         printf("%s-luareader_pop_value(%p)=%d(%s)\n",usb_322->usb_port,context, error, output);
 
         printf("reconnect\n");
-
+        msleep(300);
+        do{
         connect_ret = luareader_disconnect(usb_322->usb_context);
         
         if(connect_ret < 0){
@@ -588,8 +590,7 @@ int whitelist_transmit(void *context, const unsigned char * apdu,
             OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_WARN, "disconnect failed\n");
         }
         
-        msleep(300);
-        do{
+
             gettimeofday( &_re, NULL );
             connect_ret = luareader_connect(usb_322->usb_context,usb_322->usb_port);
             
@@ -1699,6 +1700,7 @@ while(1){
     log_len = 2048;
     remote_len = 0;
     //printf("state is %d\n",p_usb_ccid->usb_state);
+    context = p_usb_ccid->usb_context;
     if(p_usb_ccid->toggle_state == 0xAA){
     
         p_usb_ccid->toggle_state = 0;
