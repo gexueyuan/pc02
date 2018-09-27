@@ -1435,6 +1435,7 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
  {
 	unsigned char value[4];
 	short length = 4;
+	uint32_t  get_9531cost = 0;
 	if (tlv_box_get_bytes (parsedBox_322, n531_tag, value, &length) != 0){
 		//LOG ("get 9531 info  failed !\n");
 	}
@@ -1447,6 +1448,9 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 		LOG ("0x%X-", value[i]);
 		  }
 		LOG ("\n");
+		get_9531cost = bytesToIntBig(value, 0);
+		if(get_9531cost > 2048)
+			log_message("9531 info",3,"F[%s] L[%d],9531 overtime ,%X,%X,%X,%X\n",__func__, __LINE__,value[0],value[1],value[2],value[3]);
         StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,period_9531,value);
 
 	}

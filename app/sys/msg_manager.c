@@ -1752,7 +1752,7 @@ void msg_manager_init(void)
 
     p_msg->task_send_ubus = osal_task_create("task-send-ubus",
                            msg_ubus_send_thread_entry, p_msg,
-                           PC02_MSG_THREAD_STACK_SIZE, PC02_MSG_THREAD_PRIORITY);
+                           PC02_MSG_THREAD_STACK_SIZE, PC02_UBUS_THREAD_PRIORITY);
     osal_assert(p_msg->task_send_ubus != NULL);
 
 
