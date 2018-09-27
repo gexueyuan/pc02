@@ -2948,7 +2948,7 @@ JUMP:
         default:
             break;
         }
-        continue;
+        //continue;
         }
     /***************POLL***************/
             

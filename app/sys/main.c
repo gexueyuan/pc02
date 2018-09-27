@@ -22,7 +22,7 @@
 
 #define RELEASE
 
-#define FIRMWARE_VERSION "V1.2.3" 
+#define FIRMWARE_VERSION "V1.2.4" 
 
 #ifdef RELEASE
 #define FIRMWARE_IDEN "rel" 
