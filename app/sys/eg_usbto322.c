@@ -204,7 +204,7 @@ char *antenna_broken = "PR11天线损坏";//{0x50,0x52,0x31,0x31,0xBE,0xFC,0xC3,0xDC
 char *IC_broken = "PR11军密芯片损坏";//{0xBE,0xFC,0xC3,0xDC,0xD0,0xBE,0xC6,0xAC,0xCB,0xF0,0xBB,0xB5};
 char *usb_disconnect = "PC02-322USB通讯中断";
 char *log_failed = "开门失败无日志";
-char *wgp_alarm = "WGP复位警报";
+char *wgp_alarm = "WG+统计信息";
 char *wgp_host_num = "WGP通讯控制器重发计数";
 char *wgp_slave_num = "WGP通讯读卡器重发计数";
 char *wgp_num = "WGP通讯控制器复位计数";
@@ -458,7 +458,7 @@ void StatisticsInfo_push_n(uint8_t src_dev,uint8_t *pid_dev,const char *gbk_str,
 
 
 }
-
+#if 0
 int usb_transmit(void *context, const unsigned char * apdu,
             int apdu_len, unsigned char * resp, int max_resp_size,usb_ccid_322_t *usb_322)
 {
@@ -557,6 +557,7 @@ int usb_transmit(void *context, const unsigned char * apdu,
 
 
 }
+			#endif
 int usb_transmit_fix(void **context, const unsigned char * apdu,
             int apdu_len, unsigned char * resp, int max_resp_size,usb_ccid_322_t **usb_322)
 {
@@ -801,7 +802,7 @@ int whitelist_transmit_fix(void **context, const unsigned char * apdu,
     //print_array(usb_322->usb_port, apdu, apdu_len);
 	
 	gettimeofday( &_start, NULL );
-    ret = luareader_transmit(context_local, apdu, apdu_len, resp, max_resp_size,2000);
+    ret = luareader_transmit(context_local, apdu, apdu_len, resp, max_resp_size,200);
     //if(ret > 0)
     	//print_array(usb_322->usb_port, resp, ret);
 	gettimeofday( &_end, NULL );
@@ -829,7 +830,7 @@ int whitelist_transmit_fix(void **context, const unsigned char * apdu,
         }
         
         luareader_term(context_local);
-        msleep(300);
+        msleep(200);
 		gettimeofday( &_re, NULL );
         context_local = luareader_new(0, NULL, NULL);
 		(*usb_322)->usb_context = &context_local;
@@ -843,7 +844,7 @@ int whitelist_transmit_fix(void **context, const unsigned char * apdu,
             OSAL_MODULE_DBGPRT(usb_322_local->usb_port, OSAL_DEBUG_WARN, "connect failed\n");
 			
 			StatisticsInfo_push(MAINT_SRC_322,usb_322_local->pid_322,usb_disconnect,0);
-            if(usb_322_local->usb_reconnect_cnt >= 10){
+            if(usb_322_local->usb_reconnect_cnt >= 20){
                 OSAL_MODULE_DBGPRT(usb_322_local->usb_port, OSAL_DEBUG_WARN, "connect failed 10 times,reboot!!!\n");
                 system("reboot");
             }
@@ -1426,11 +1427,8 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 		LOG ("0x%X-", value[i]);
 	      }
 	    LOG ("\n");
-        StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,wgp_host_num,value);
-        StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,wgp_slave_num,&value[4]);
-        StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,wgp_num,&value[8]);          
-        StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,wgp_cnt,&value[12]);
-        StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,wgp_time,&value[16]);
+		
+		StatisticsInfo_push_n(MAINT_SRC_322,usb_322->pid_322,wgp_alarm,value,length);
 	}
  }	
 	
@@ -1839,58 +1837,6 @@ int parse_data(unsigned char* rd_data,int buffer_len,unsigned char* wl_data,int 
 
 }
 
-/*
-int get_data(void * context,usb_ccid_322_t *p_usb_ccid,const unsigned char  *apdu,int apdu_len)
-{
-	unsigned char output[2048] = {0};
-
-    int ret = 0;
-
-    ret = usb_transmit(context,apdu,apdu_len,output,sizeof(output),p_usb_ccid);
-    
-    if(ret <= 0){
-    
-        
-        memset(output, 0, sizeof(output));
-        ret = luareader_pop_value(context, (char *)output, sizeof(output));
-        printf("luareader_pop_value(%p)=%d(%s)\n", context, ret, output);
-            
-    }else{
-    
-        if(memcmp(&output[ret - 2],confirm,sizeof(confirm)) == 0){
-            
-                print_rec(output,ret);
-    
-                p_usb_ccid->door_index = output[8];////door no get
-                p_usb_ccid->pre_door_state[0] = p_usb_ccid->door_index;
-                p_usb_ccid->now_door_state[0] = p_usb_ccid->door_index;
-            }
-        else{
-            
-            print_rec(output,ret);
-            
-        }
-    }
-    
-
-}
-*/
-//void get_info_from_cos(uint8_t * apdu,uint16_t apdu_len,)
-//{
-
-
-
-
-
-
-
-
-
-
-
-
-//}
-
 unsigned char lu_test[] = {0x00,0x84,0x00,0x00,0x08};
 volatile  int cnt = 0;
 volatile  uint8_t sw_version = 0;
@@ -2228,7 +2174,7 @@ while(1){
                 /**********************************pr11 or pr02 version***********************************************/
                 memset(output,0,sizeof(output));
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get pr11 version:");
-				#ifdef USB_322_TEST
+				#ifdef  USB_TEST
                 ret = usb_transmit_fix(&context,v_pr11,sizeof(v_pr11),&output[1],sizeof(output) - 1,&p_usb_ccid);
 				#else
                 ret = usb_transmit(context,v_pr11,sizeof(v_pr11),&output[1],sizeof(output) - 1,p_usb_ccid);
@@ -2641,7 +2587,7 @@ JUMP:
             
             print_send(apdu_data,sizeof(remote_op_head) + 1 + 2 + remote_len);
 			#ifdef USB_TEST
-            ret = usb_transmit(&context,apdu_data,sizeof(remote_op_head) + 1 + 2 + remote_len,output,sizeof(output),&p_usb_ccid);
+            ret = usb_transmit_fix(&context,apdu_data,sizeof(remote_op_head) + 1 + 2 + remote_len,output,sizeof(output),&p_usb_ccid);
 			#else
             ret = usb_transmit(context,apdu_data,sizeof(remote_op_head) + 1 + 2 + remote_len,output,sizeof(output),p_usb_ccid);
 			#endif
@@ -3065,9 +3011,11 @@ if(tail_check == 1){
                 memcpy(&apdu_data[sizeof(result_head) + 1],acl_data,acl_len);
 
                 //print_send(apdu_data,sizeof(result_head) + 1 + 17);
+/*
                 osal_printf("start sleep 2s\n");
                 sleep(2);
                 osal_printf("sleep over\n");
+*/
                 #ifdef  USB_TEST
                 ret = whitelist_transmit_fix(&context,apdu_data,sizeof(result_head) + 1 + 17,output,sizeof(output),&p_usb_ccid);
 				#else
@@ -3104,9 +3052,11 @@ if(tail_check == 1){
                 //ret = usb_transmit(context,test_o,195,output,sizeof(output),p_usb_ccid);
                 //ret = usb_transmit(context,apdu_data,sizeof(result_head) + 3 + 17 + 1 + acl_data[271] + 232,output,sizeof(output),p_usb_ccid);
                 
+/*
                 osal_printf("start sleep 2s\n");
                 sleep(2);
                 osal_printf("sleep over\n");
+*/
 				#ifdef USB_TEST
                 ret = whitelist_transmit_fix(&context,apdu_data,sizeof(result_head) + 3 + 17 + 1 + acl_data[271] + 232,output,sizeof(output),&p_usb_ccid);
 				#else
@@ -3155,13 +3105,7 @@ if(tail_check == 1){
 					#endif
     					if(ret == 30){
 
-    						StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id0,&output[0]);
-    						StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id1,&output[4]);							
-    						StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id2,&output[8]);
-    						StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id3,&output[12]);
-    						StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id4,&output[16]);
-    						StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id5,&output[20]);
-    						StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,id6,&output[24]);
+							StatisticsInfo_push_n(MAINT_SRC_322,p_usb_ccid->pid_322,time_consuming,output,ret -2);
     					}
     					else{
     						if(ret > 0)
@@ -3321,7 +3265,7 @@ if(tail_check == 1){
             apdu_data[sizeof(transfer_head) + 2] = (unsigned char)(audit_len&0x00FF);//extend length char 2
             
             print_send(apdu_data,sizeof(transfer_head) + 3 + audit_len);
-            #ifdef USB_TEST		
+            #ifdef  USB_TEST		
             ret = usb_transmit_fix(&context,apdu_data,sizeof(transfer_head) + 3 + audit_len,output,sizeof(output),&p_usb_ccid);
 		    #else
             ret = usb_transmit(context,apdu_data,sizeof(transfer_head) + 3 + audit_len,output,sizeof(output),p_usb_ccid);
@@ -3367,7 +3311,7 @@ else if(tail_check == 2){
         memcpy(&apdu_data[sizeof(alarm322_head)],rtc,sizeof(rtc));
         print_send(apdu_data,sizeof(alarm322_head) + sizeof(rtc));
 
-		#ifdef USB_TEST
+		#ifdef  USB_TEST
         ret = usb_transmit_fix(&context,apdu_data,sizeof(alarm322_head) + sizeof(rtc),output,sizeof(output),&p_usb_ccid);
 		#else
         ret = usb_transmit(context,apdu_data,sizeof(alarm322_head) + sizeof(rtc),output,sizeof(output),p_usb_ccid);
@@ -3402,7 +3346,7 @@ else if(tail_check == -4 ){
 
 
         print_send(wgp_info_get,sizeof(wgp_info_get));
-		#ifdef USB_TEST
+		#ifdef  USB_TEST
         ret = usb_transmit_fix(&context,wgp_info_get,sizeof(wgp_info_get),output,sizeof(output),&p_usb_ccid);
 		#else
         ret = usb_transmit(context,wgp_info_get,sizeof(wgp_info_get),output,sizeof(output),p_usb_ccid);
@@ -3413,13 +3357,7 @@ else if(tail_check == -4 ){
             
             if((controll_eg.push_flag & 0x01) == false){
                 
-                StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,wgp_alarm,NULL);
-                StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,wgp_host_num,output);
-                StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,wgp_slave_num,&output[4]);
-                StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,wgp_num,&output[8]);          
-                StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,wgp_cnt,&output[12]);
-                StatisticsInfo_push(MAINT_SRC_322,p_usb_ccid->pid_322,wgp_time,&output[16]);
-
+                StatisticsInfo_push_n(MAINT_SRC_322,p_usb_ccid->pid_322,wgp_alarm,output,ret - 2);
                 
                 controll_eg.push_flag |= 0x01;
             }

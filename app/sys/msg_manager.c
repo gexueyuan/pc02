@@ -507,8 +507,8 @@ void ubus_send(enum UBUS_DIRECTION direct,unsigned int tag,char* str,unsigned ch
     time_in_us = (_end.tv_sec - _start.tv_sec) * 1000000 + _end.tv_usec - _start.tv_usec;	
 	time_in_ms = time_in_us/1000;
 	if(time_in_ms > 1000){
-		osal_printf("F[%s] L[%d],get sem overtime ,%ldms\n",__func__, __LINE__,time_in_ms);
-		log_message("sem",3,"F[%s] L[%d] T[0X%X],get sem overtime ,%ldms\n",__func__, __LINE__,tag,time_in_ms);
+		osal_printf("F[%s] L[%d],get sem costtime ,%ldms\n",__func__, __LINE__,time_in_ms);
+		log_message("sem",3,"F[%s] L[%d] T[0X%X],get sem costtime ,%ldms\n",__func__, __LINE__,tag,time_in_ms);
 	}
 if(direct == UBUS_321){	
     id = id_322;
