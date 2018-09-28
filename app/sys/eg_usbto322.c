@@ -458,7 +458,76 @@ void StatisticsInfo_push_n(uint8_t src_dev,uint8_t *pid_dev,const char *gbk_str,
 
 
 }
-#if 0
+
+int usb_transmit_detect(void **context, const unsigned char * apdu,
+            int apdu_len, unsigned char * resp, int max_resp_size,usb_ccid_322_t **usb_322)
+{
+
+    int ret = 0;
+    int connect_ret = 0;
+
+    int error;
+
+	unsigned char output[64] = {0};
+
+	void * context_local = *context;
+	usb_ccid_322_t *usb_322_local = *usb_322;
+    /* Take the semaphore. */
+    if(osal_sem_take(usb_322_local->sem_322, OSAL_WAITING_FOREVER) != OSAL_EOK)
+    {
+       printf("\n%s Semaphore return failed. \n",usb_322_local->usb_port);
+       return 0;
+    }
+
+    ret = luareader_transmit(context_local, apdu, apdu_len, resp, max_resp_size,1000);
+
+
+    if(ret < 0){
+    
+        printf("transmit return is %d\n",ret);
+        memset(output, 0, sizeof(output));
+        error = luareader_pop_value(context_local, (char *)output, sizeof(output));
+        printf("%s-luareader_pop_value(%p)=%d(%s)\n",usb_322_local->usb_port,context_local, error, output);
+
+        printf("reconnect\n");
+		
+        connect_ret = luareader_disconnect(context_local);
+        
+        if(connect_ret < 0){
+            
+            OSAL_MODULE_DBGPRT(usb_322_local->usb_port, OSAL_DEBUG_WARN, "disconnect failed\n");
+
+			return ret;
+        }
+        
+        luareader_term(context_local);
+        msleep(200);
+        context_local = luareader_new(0, NULL, NULL);
+		(*usb_322)->usb_context = &context_local;
+		*context = context_local;
+        connect_ret = luareader_connect(context_local,usb_322_local->usb_port);
+
+        if(connect_ret < 0){
+
+            
+            OSAL_MODULE_DBGPRT(usb_322_local->usb_port, OSAL_DEBUG_WARN, "connect failed\n");
+			
+        }
+        else{
+
+            OSAL_MODULE_DBGPRT(usb_322_local->usb_port, OSAL_DEBUG_WARN, "reconnect succeed!\n");
+			
+			ret = luareader_transmit(context_local, apdu, apdu_len, resp, max_resp_size,1000);
+            
+        }
+
+    	}
+    osal_sem_release(usb_322_local->sem_322);
+    return ret;
+}
+
+
+
 int usb_transmit(void *context, const unsigned char * apdu,
             int apdu_len, unsigned char * resp, int max_resp_size,usb_ccid_322_t *usb_322)
 {
@@ -557,7 +626,6 @@ int usb_transmit(void *context, const unsigned char * apdu,
 
 
 }
-			#endif
 int usb_transmit_fix(void **context, const unsigned char * apdu,
             int apdu_len, unsigned char * resp, int max_resp_size,usb_ccid_322_t **usb_322)
 {
