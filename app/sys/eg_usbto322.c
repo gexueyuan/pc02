@@ -802,7 +802,7 @@ int whitelist_transmit_fix(void **context, const unsigned char * apdu,
     //print_array(usb_322->usb_port, apdu, apdu_len);
 	
 	gettimeofday( &_start, NULL );
-    ret = luareader_transmit(context_local, apdu, apdu_len, resp, max_resp_size,200);
+    ret = luareader_transmit(context_local, apdu, apdu_len, resp, max_resp_size,2000);
     //if(ret > 0)
     	//print_array(usb_322->usb_port, resp, ret);
 	gettimeofday( &_end, NULL );
@@ -3107,7 +3107,7 @@ if(tail_check == 1){
 					#else
     					ret = usb_transmit(context,get_slow_log,sizeof(get_slow_log),output,sizeof(output),p_usb_ccid);
 					#endif
-    					if(ret == 30){
+    					if(ret == 34){
 
 							StatisticsInfo_push_n(MAINT_SRC_322,p_usb_ccid->pid_322,time_consuming,output,ret -2);
     					}
@@ -3599,6 +3599,8 @@ void eg_usbto322_init(void)
         //printf("ret is %d\n",ret);
         if(ret == -1)//321-"1-1.1"
             continue;
+        //if(ret == 1)
+            //continue;
         controll_eg.cnt_322++;
         p_usb_ccid = &(controll_eg.usb_ccid_322[ret]);
         p_usb_ccid->usb_state = USB_COMM_STATE_DEFAULT;//USB_COMM_STATE_INIT;//USB_COMM_STATE_INIT_END;//USB_COMM_STATE_INIT;
