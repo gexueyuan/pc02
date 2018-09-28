@@ -830,7 +830,7 @@ int whitelist_transmit_fix(void **context, const unsigned char * apdu,
         }
         
         luareader_term(context_local);
-        msleep(200);
+        msleep(30);
 		gettimeofday( &_re, NULL );
         context_local = luareader_new(0, NULL, NULL);
 		(*usb_322)->usb_context = &context_local;
@@ -844,7 +844,7 @@ int whitelist_transmit_fix(void **context, const unsigned char * apdu,
             OSAL_MODULE_DBGPRT(usb_322_local->usb_port, OSAL_DEBUG_WARN, "connect failed\n");
 			
 			StatisticsInfo_push(MAINT_SRC_322,usb_322_local->pid_322,usb_disconnect,0);
-            if(usb_322_local->usb_reconnect_cnt >= 20){
+            if(usb_322_local->usb_reconnect_cnt >= 200){
                 OSAL_MODULE_DBGPRT(usb_322_local->usb_port, OSAL_DEBUG_WARN, "connect failed 10 times,reboot!!!\n");
                 system("reboot");
             }
