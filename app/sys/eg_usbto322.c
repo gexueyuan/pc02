@@ -2463,7 +2463,7 @@ while(1){
         OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "reading pr11 sn\n");
         memset(output, 0, sizeof(output));
 		#ifdef USB_TEST
-        ret = usb_transmit_fix(&context,sn_pr11,sizeof(sn_pr11),output,sizeof(output),&p_usb_ccid);
+        ret = usb_transmit_detect(&context,sn_pr11,sizeof(sn_pr11),output,sizeof(output),&p_usb_ccid);
 		#else
         ret = usb_transmit(context,sn_pr11,sizeof(sn_pr11),output,sizeof(output),p_usb_ccid);
         #endif
@@ -2504,7 +2504,7 @@ while(1){
         
         memset(output, 0, sizeof(output));
 		#ifdef USB_TEST
-        ret = usb_transmit_fix(&context,pid_pr11,sizeof(pid_pr11),output,sizeof(output),&p_usb_ccid);
+        ret = usb_transmit_detect(&context,pid_pr11,sizeof(pid_pr11),output,sizeof(output),&p_usb_ccid);
 		#else
         ret = usb_transmit(context,pid_pr11,sizeof(pid_pr11),output,sizeof(output),p_usb_ccid);
         #endif
