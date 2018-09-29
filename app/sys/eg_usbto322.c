@@ -2571,7 +2571,9 @@ JUMP:
             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_SEND_CE,0,0,NULL);
             //sleep(1);
             //sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_SEND_CTRLINFO,0,0,NULL);
-            osal_timer_start(p_usb_ccid->timer_322);//begin to poll,init finished  
+            osal_timer_stop(p_usb_ccid->timer_322);//begin to poll,init finished  
+
+			osal_timer_delete(p_usb_ccid->timer_322);	
             
             osal_sem_release(p_usb_ccid->sem_state);
             //sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_UPDATE_BASECFG,0,0,NULL);
