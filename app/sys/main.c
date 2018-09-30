@@ -36,7 +36,7 @@ extern void eg_usbto322_init(void);
 extern void ubus_interface_init(void);
 extern void msg_manager_init(void);
 extern void eg_zmq_test(void);
-
+extern void eg_monitor_init(void);
 
 eg_global_var_t eg_envar,*p_eg_envar;
 
@@ -90,6 +90,9 @@ int main(int argc, char *argv[])
     msg_manager_init();
     //sleep(1);
     eg_usbto322_init();
+
+	
+	eg_monitor_init();
     //eg_zmq_test();
     //eg_net_init();
     //acl_local_init();

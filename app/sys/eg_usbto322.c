@@ -696,9 +696,10 @@ int usb_transmit_fix(void **context, const unsigned char * apdu,
             OSAL_MODULE_DBGPRT(usb_322_local->usb_port, OSAL_DEBUG_WARN, "connect failed\n");
 			
 			StatisticsInfo_push(MAINT_SRC_322,usb_322_local->pid_322,usb_disconnect,0);
-            if(usb_322_local->usb_reconnect_cnt >= 10){
-                OSAL_MODULE_DBGPRT(usb_322_local->usb_port, OSAL_DEBUG_WARN, "connect failed 10 times,reboot!!!\n");
-                system("reboot");
+            if(usb_322_local->usb_reconnect_cnt >= 100){
+                OSAL_MODULE_DBGPRT(usb_322_local->usb_port, OSAL_DEBUG_WARN, "connect failed 100 times,reboot!!!\n");
+                //system("reboot");
+                usb_322_local->usb_reconnect_cnt = 0;
             }
         }
         else{
@@ -913,8 +914,8 @@ int whitelist_transmit_fix(void **context, const unsigned char * apdu,
 			
 			StatisticsInfo_push(MAINT_SRC_322,usb_322_local->pid_322,usb_disconnect,0);
             if(usb_322_local->usb_reconnect_cnt >= 200){
-                OSAL_MODULE_DBGPRT(usb_322_local->usb_port, OSAL_DEBUG_WARN, "connect failed 10 times,reboot!!!\n");
-                system("reboot");
+                OSAL_MODULE_DBGPRT(usb_322_local->usb_port, OSAL_DEBUG_WARN, "connect failed 200 times,reboot!!!\n");
+                //system("reboot");
             }
         }
         else{
@@ -3177,7 +3178,7 @@ if(tail_check == 1){
 					#else
     					ret = usb_transmit(context,get_slow_log,sizeof(get_slow_log),output,sizeof(output),p_usb_ccid);
 					#endif
-    					if(ret == 34){
+    					if(ret > 2){
 
 							StatisticsInfo_push_n(MAINT_SRC_322,p_usb_ccid->pid_322,time_consuming,output,ret -2);
     					}
