@@ -1096,7 +1096,7 @@ uint8_t alarm_fileter(unsigned char* log,int len,usb_ccid_322_t  *usb_322)//alar
 	OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_INFO, "\n alarm_fileter 322id = 0x%X,type = 0X%X\n",get_log->ctrl_322_id,get_log->alarm_type);
 	if((get_log->alarm_type == ALARM_322_force)||\
 		(get_log->alarm_type == ALARM_322_abnormal))
-		ret = alarm_mask(get_log->ctrl_322_id,get_log->alarm_type);
+		ret = 0;//alarm_mask(get_log->ctrl_322_id,get_log->alarm_type);
 	
 	//free(get_log);
 
@@ -1322,7 +1322,7 @@ int check_card(usb_ccid_322_t *usb_322,unsigned char* rd_data,int buffer_len)
         if(memcmp(rd_data,wg_error,sizeof(wg_error)) == 0){
             
             OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_INFO, "wg error 9301,sleep 1 sec\n");
-            sleep(3);
+            msleep(500);
             //free(read_buffer);
             return -3;
         }
@@ -3508,7 +3508,7 @@ out:
         OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "thread exit!\n");
 
         printf("322 thread num is %d\n",controll_eg.cnt_322);
-		sleep(1);
+		msleep(100);
 
 		return NULL;
 }

@@ -275,7 +275,7 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
             memcpy(controll_eg.p2pkey.data,data,len);
             //printf("controll_eg.p2pkey.len is %d\n",controll_eg.p2pkey.len);
             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_UPDATE_P2PKEY,0,0,NULL);
-            sleep(1);
+            //msleep(100);
             break;
         
 
@@ -304,7 +304,7 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
 */
             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_UPDATE_MACKEY,0,0,NULL);
             
-            sleep(1);
+            //msleep(100);
             break;
 
         case UBUS_SERVER_TMSYNC:
