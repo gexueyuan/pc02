@@ -72,7 +72,7 @@
 
 /**/
 #define ZMQ_NUM
-//#define MULTIVERSION
+#define MULTIVERSION
 
 enum SYSTEM_MSG_TYPE{
     SYS_MSG_BASE = 0x0000,

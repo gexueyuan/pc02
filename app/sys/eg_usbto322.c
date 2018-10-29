@@ -651,12 +651,12 @@ int usb_transmit_fix(void **context, const unsigned char * apdu,
        return 0;
     }
 
-    //print_array(usb_322->usb_port, apdu, apdu_len);
+    //print_array(usb_322_local->usb_port, apdu, apdu_len);
 	
 	gettimeofday( &_start, NULL );
     ret = luareader_transmit(context_local, apdu, apdu_len, resp, max_resp_size,2000);
     //if(ret > 0)
-    	//print_array(usb_322->usb_port, resp, ret);
+    	//print_array(usb_322_local->usb_port, resp, ret);
 	gettimeofday( &_end, NULL );
 	time_in_us = (_end.tv_sec - _start.tv_sec) * 1000000 + _end.tv_usec - _start.tv_usec;	
 	time_in_ms = time_in_us/1000;
@@ -1630,8 +1630,9 @@ int parse_data(unsigned char* rd_data,int buffer_len,unsigned char* wl_data,int 
             //card type
             if(read_buffer[1] == 0x02){
 
-                printf("find Id card\n");
-
+                //printf("find Id card\n");
+				
+				print_array("find Id card:", &read_buffer[2], 4);
                 if(controll_eg.network_state){
                     
                     printf("\nbegin online gfread\n");
@@ -3367,6 +3368,7 @@ if(tail_check == 1){
             break;
 
        case CARDPOLLEVENT_ID:
+	   		print_array("send to zmq", id_reader, sizeof(id_reader));
             zmq_socket_send(p_usb_ccid->zmq_client,id_reader,sizeof(id_reader));
             break;
             
