@@ -1661,7 +1661,7 @@ osal_status_t ubus_send_queue(msg_manager_t *p_sys,
     return err;
 }
 
-void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int strlen)
+inline void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int strlen)
 {
 
 
@@ -1671,7 +1671,7 @@ void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int st
 
 }
 
-void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strlen)
+inline void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strlen)
 {
 
 
@@ -1679,13 +1679,9 @@ void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strle
 
 }
 
-void ubus_send_proc(msg_manager_t *p_sys, ubus_msg_t *p_msg)
+inline void ubus_send_proc(msg_manager_t *p_sys, ubus_msg_t *p_msg)
 {
 
-    int i;
-    unsigned char door_state[2];
-    //msg_manager_t *p_sys = &p_controll_eg->msg_manager;
-    uint8_t index_cnt = 0;
     ubus_send(p_msg->direct, p_msg->tag, NULL, p_msg->argv, p_msg->len);
     
 }

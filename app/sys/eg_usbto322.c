@@ -50,9 +50,6 @@ extern   void get_wl(uint8_t *id_lv,uint8_t *data_wl,int *wlen);
 extern   void get_wl_4(uint8_t *id_lv,uint8_t *data_wl,int *wlen);
 extern   int get_audit_data(unsigned int tag,unsigned char* strhex,int strlen,uint8_t *data_wl,int *wlen);
 
-extern   void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int strlen);
-extern   void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strlen);
-
 extern     void update_ce(void);
 
 extern    void send_log(unsigned char* log_buffer,int len);
@@ -181,7 +178,7 @@ const uint8_t open_door[] = {0x80,0xDD,0x33,0x00,0x03,0x01,0x00,0x02};
                                      /*0*/  /*1*/  /*2*/  /*3*/ 
 const char* usb_port_def[MAX_322_NUM] = {"1-1.2","1-1.3","1-1.4","1-1.5"};
 
-const uint8_t id_reader[] = {0x00,0x01,0x00,0x02,0x01,0x01};
+ uint8_t id_reader[] = {0x00,0x01,0x00,0x02,0x01,0x01};
 
 const uint8_t id_reader_deal_OK[] = {0x00,0x01,0x00,0x02,0x01,0x03};
 
@@ -225,7 +222,7 @@ char *overtime_322 = "322未取的刷卡事件时间";
 char *overtime_reader = "读卡器未取的刷卡事件时间";
 
 /* 统计信息 GBK*/
-
+const char*  zmq_send_str = "send to zmq";
 
 
 /*
@@ -311,7 +308,7 @@ int net_state_read(void)
 
 }
 
-void print_array(const  char* tag,unsigned char* send,int len)
+void print_array(const  char* tag,const unsigned char* send,int len)
 {
 
 #ifdef USE_TIMESTAMP
@@ -744,7 +741,6 @@ int whitelist_transmit(void *context, const unsigned char * apdu,
 
     int error;
 
-    int re_flag = 0;
 	unsigned char output[64] = {0};
 	/**test**/
 	 struct timeval _start,_end,_re;
@@ -1375,12 +1371,7 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 	#define  alarm_tag	  0x0B04
 	#define  pr11_event   0x0B05
 	#define  _322_event   0x0B06
-	
-    uint8_t resp_code[] = {0x90,0x00};
-    uint8_t resp_code_2[] = {0x90,0x01};
     
-    
-    uint8_t alarm_code[] = {0x90,0x0A};
     uint8_t wg_error[] = {0x93,0x01};
 
     uint8_t wgp_info[]={0x6F,0xFF};
@@ -1927,7 +1918,6 @@ volatile  uint8_t sw_version = 0;
 void *eg_usb_thread_entry(void *parameter)
 {
     int ret = 0;
-	int i =0;
     unsigned char parse_tag = 0;
     unsigned char acl_data[2048] = {0};
 	unsigned char output[2048] = {0};
@@ -1968,6 +1958,13 @@ void *eg_usb_thread_entry(void *parameter)
 	unsigned char zmq_output[2048] = {0};
 
 	unsigned char face_req[3] = {0x01,0x90,0x00};
+
+	face_remote_log_t  face_remote_log;
+	ID_log_t  ID_log;
+	remote_log_t  remote_log;
+	double_element_log_t double_element_log;
+	unsigned char log_result = 0;
+
 
     p_usb_ccid = (usb_ccid_322_t*)parameter;
 
@@ -2679,20 +2676,37 @@ JUMP:
 			memcpy(remote_open_rt_data,&controll_eg.remote_buffer[2],8);
 			
             if(ret > 2){
-                
+				
                 log_len = ret - 2;
                 memcpy(log_data,output,log_len);
                 ubus_client_process(UBUS_CLIENT_LOG,NULL,log_data,log_len);
 
                 
                 memcpy(remote_open_rt_data,&controll_eg.remote_buffer[2],8);
-                if(output[197] == 0x01){//197 = result
+
+				if(log_len == sizeof(remote_log_t)){
+
+					
+					memcpy(&remote_log,output,log_len);
+					log_result = remote_log.result;
+					osal_printf("远程开门\n");
+				
+				}
+				else if(log_len == sizeof(double_element_log_t)){
+					
+					memcpy(&double_element_log,output,log_len);
+					log_result = double_element_log.result;
+					
+					osal_printf("双因子开门\n");
+				}
+				
+                if(log_result == 0x01){//197 = result
                         remote_open_rt_data[8] = 0x90;
                         remote_open_rt_data[9] = 0x00;
                     }
                 else{
                         remote_open_rt_data[8] = 0x00;
-                        remote_open_rt_data[9] = output[197];
+                        remote_open_rt_data[9] = log_result;
                     }
                     
                 
@@ -2807,20 +2821,38 @@ JUMP:
             memset(remote_open_rt_data,0,sizeof(remote_open_rt_data));
 			memcpy(remote_open_rt_data,&controll_eg.remote_buffer[2],8);
             if(ret > 2){
-                
+				
                 log_len = ret - 2;
                 memcpy(log_data,output,log_len);
                 ubus_client_process(UBUS_CLIENT_LOG,NULL,log_data,log_len);
 
                 
                 memcpy(remote_open_rt_data,&controll_eg.remote_buffer[2],8);
-                if(output[124] == 0x01){//124 = result
+				
+				if(log_len == sizeof(ID_log_t)){
+
+					
+					memcpy(&ID_log,output,log_len);
+					log_result = ID_log.result;
+					osal_printf("身份证远程开门\n");
+				
+				}
+				else if(log_len == sizeof(double_element_log_t)){
+					
+					memcpy(&double_element_log,output,log_len);
+					log_result = double_element_log.result;
+					
+					osal_printf("双因子开门\n");
+				}
+				
+                if(log_result == 0x01){//124 = result
+                //if(output[124] == 0x01){//124 = result
                         remote_open_rt_data[8] = 0x90;
                         remote_open_rt_data[9] = 0x00;
                     }
                 else{
                         remote_open_rt_data[8] = 0x00;
-                        remote_open_rt_data[9] = output[124];
+                        remote_open_rt_data[9] = log_result;
                     }
                     
                 
@@ -2871,20 +2903,34 @@ JUMP:
 			
 			memcpy(remote_open_rt_data,&controll_eg.remote_buffer[2],8);
             if(ret > 2){
-                
+			
                 log_len = ret - 2;
                 memcpy(log_data,output,log_len);
                 ubus_client_process(UBUS_CLIENT_LOG,NULL,log_data,log_len);
 
-                
-                memcpy(remote_open_rt_data,&controll_eg.remote_buffer[2],8);
-                if(output[96] == 0x01){//96 = result
+				if(log_len == sizeof(face_remote_log_t)){
+
+					
+					memcpy(&face_remote_log,output,log_len);
+					log_result = face_remote_log.result;
+					osal_printf("人脸开门\n");
+				
+				}
+				else if(log_len == sizeof(double_element_log_t)){
+					
+					memcpy(&double_element_log,output,log_len);
+					log_result = double_element_log.result;
+					
+					osal_printf("双因子开门\n");
+				}
+				
+                if(log_result == 0x01){//96 = result
                         remote_open_rt_data[8] = 0x90;
                         remote_open_rt_data[9] = 0x00;
                     }
                 else{
                         remote_open_rt_data[8] = 0x00;
-                        remote_open_rt_data[9] = output[96];
+                        remote_open_rt_data[9] = log_result;
                     }
                     
                 
@@ -3108,41 +3154,54 @@ if(tail_check == 1){
                 memcpy(apdu_data,result_head,sizeof(result_head));
                 
                 apdu_data[sizeof(result_head)] = 0;//extend len
+                if(308 == acl_len){
+					//acl_len = 1+ rtc(16) + whitelist(232) + whitelistconfig(59) = 308
+	                wl_len =  acl_len;//
 
-                wl_len =  17 + 1 + acl_data[271] + 232;//1+rtc(16)+name(l+v = 1+acl_data[271])+232
+	                apdu_data[sizeof(result_head) + 1] = (0xFF00&wl_len)>>8;//extend len
+	                apdu_data[sizeof(result_head) + 2] = (0x00FF&wl_len);//extend len
 
-                apdu_data[sizeof(result_head) + 1] = (0xFF00&wl_len)>>8;//extend len
-                apdu_data[sizeof(result_head) + 2] = (0x00FF&wl_len);//extend len
+	                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "data len is %d\n",wl_len);
 
-                //printf("data len is %d\n",apdu_data[sizeof(result_head)]);
-                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "data len is %d\n",wl_len);
+	                memcpy(&apdu_data[sizeof(result_head) + 3],acl_data,17);//result:1 + RTC:16
 
-                memcpy(&apdu_data[sizeof(result_head) + 3],acl_data,17);//result:1 + RTC:16
+	                memcpy(&apdu_data[sizeof(result_head) + 3 + 17],&acl_data[249],59);//config
+	                
+	                memcpy(&apdu_data[sizeof(result_head) + 3 + 17 + 59],&acl_data[17],232);//white list
 
-                memcpy(&apdu_data[sizeof(result_head) + 3 + 17],&acl_data[271],1);//name-L:1
-                
-                memcpy(&apdu_data[sizeof(result_head) + 3 + 17 + 1],&acl_data[272],acl_data[271]);//name-V:v
+	                print_send(apdu_data,sizeof(result_head) + 3 + 17 + 59 + 232);
+	                
+					#ifdef USB_TEST
+	                ret = whitelist_transmit_fix(&context,apdu_data,sizeof(result_head) + 3 + 17 + 59 + 232,output,sizeof(output),&p_usb_ccid);
+					#else
+	                ret = whitelist_transmit(context,apdu_data,sizeof(result_head) + 3 + 17 + 59 + 232,output,sizeof(output),p_usb_ccid);
+					#endif
+                }
+				else if(301 == acl_len){
+					//acl_len = 1+ rtc(16) + whitelist(232) + whitelistconfig(52) = 301
+	                wl_len =  17 + 1 + acl_data[271] + 232;//1+rtc(16)+name(l+v = 1+acl_data[271])+232
 
-                memcpy(&apdu_data[sizeof(result_head) + 3 + 17 + 1 + acl_data[271]],&acl_data[17],232);
+	                apdu_data[sizeof(result_head) + 1] = (0xFF00&wl_len)>>8;//extend len
+	                apdu_data[sizeof(result_head) + 2] = (0x00FF&wl_len);//extend len
 
-                print_send(apdu_data,sizeof(result_head) + 3 + 17 + 1 + acl_data[271] + 232);
-                
-                //ret = usb_transmit(context,open_door,sizeof(open_door),output,sizeof(output),p_usb_ccid);
-                
-                //print_send(test_o,195);
-                //ret = usb_transmit(context,test_o,195,output,sizeof(output),p_usb_ccid);
-                //ret = usb_transmit(context,apdu_data,sizeof(result_head) + 3 + 17 + 1 + acl_data[271] + 232,output,sizeof(output),p_usb_ccid);
-                
-/*
-                osal_printf("start sleep 2s\n");
-                sleep(2);
-                osal_printf("sleep over\n");
-*/
-				#ifdef USB_TEST
-                ret = whitelist_transmit_fix(&context,apdu_data,sizeof(result_head) + 3 + 17 + 1 + acl_data[271] + 232,output,sizeof(output),&p_usb_ccid);
-				#else
-                ret = whitelist_transmit(context,apdu_data,sizeof(result_head) + 3 + 17 + 1 + acl_data[271] + 232,output,sizeof(output),p_usb_ccid);
-				#endif
+	                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "data len is %d\n",wl_len);
+
+	                memcpy(&apdu_data[sizeof(result_head) + 3],acl_data,17);//result:1 + RTC:16
+
+	                memcpy(&apdu_data[sizeof(result_head) + 3 + 17],&acl_data[271],1);//name-L:1
+	                
+	                memcpy(&apdu_data[sizeof(result_head) + 3 + 17 + 1],&acl_data[272],acl_data[271]);//name-V:v
+
+	                memcpy(&apdu_data[sizeof(result_head) + 3 + 17 + 1 + acl_data[271]],&acl_data[17],232);
+
+	                print_send(apdu_data,sizeof(result_head) + 3 + 17 + 1 + acl_data[271] + 232);
+	                
+					#ifdef USB_TEST
+	                ret = whitelist_transmit_fix(&context,apdu_data,sizeof(result_head) + 3 + 17 + 1 + acl_data[271] + 232,output,sizeof(output),&p_usb_ccid);
+					#else
+	                ret = whitelist_transmit(context,apdu_data,sizeof(result_head) + 3 + 17 + 1 + acl_data[271] + 232,output,sizeof(output),p_usb_ccid);
+					#endif
+				}
 			}           
 			else{
 				
@@ -3200,6 +3259,21 @@ if(tail_check == 1){
 	                
 	            }
             }
+			else if(2 == ret){
+				uint8_t req[2] = {0x90,0x00};
+				if(memcmp(output,req,ret) == 0){
+					
+					osal_printf("F[%s] L[%d],double element ,no log\n",__func__, __LINE__);
+					
+				}
+				else{
+					osal_printf("F[%s] L[%d],undefine return  of log\n",__func__, __LINE__);
+					log_message("log return",3,"F[%s] L[%d],undefine return  of log\n",__func__, __LINE__);
+
+				}
+
+
+			}
 			else{
 
 				OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "\nopen door failed and no-log\n");

@@ -22,7 +22,7 @@
 
 #define RELEASE
 
-#define FIRMWARE_VERSION "V1.2.7" 
+#define FIRMWARE_VERSION "V1.2.8" 
 
 #ifdef RELEASE
 #define FIRMWARE_IDEN "rel" 
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
     if (argc > 1 && !strcmp(argv[1], "-v")){
         
         //printf("\n%s\n",_version);
-        
+        //osal_printf("%d,%d,%d,%d,%d,%d",sizeof(card_log_t),sizeof(remote_log_t),sizeof(alarm_log_t),sizeof(face_remote_log_t),sizeof(double_element_log_t),sizeof(ID_log_t));	
         get_version();
         return 0;
         

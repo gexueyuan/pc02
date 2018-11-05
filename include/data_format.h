@@ -54,7 +54,7 @@ typedef enum _ALARM_LIST {
     ALARM_322_offline= 0xAF,
 } E_ALARM_LIST;
 
-typedef struct _card_log {
+typedef struct _card_log {//172
     uint16_t version;
 /*card record*/	
 	uint8_t card_id[4];

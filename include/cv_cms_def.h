@@ -807,6 +807,8 @@ osal_status_t sys_add_event_queue(msg_manager_t *p_sys,
 
 void log_message (char *name, int priority, const char *format, ...);
 
+void ubus_client_process(unsigned int tag,char* str,unsigned char* strhex,int strlen);
+void ubus_net_process(unsigned int tag,char* str,unsigned char* strhex,int strlen);
 
 #endif /* __CV_CMS_DEF_H__ */
 
