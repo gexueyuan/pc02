@@ -56,6 +56,8 @@ typedef void (*ubus_fd_handler_t)(struct ubus_request *req, int fd);
 typedef void (*ubus_complete_handler_t)(struct ubus_request *req, int ret);
 typedef void (*ubus_notify_complete_handler_t)(struct ubus_notify_request *req,
 					       int idx, int ret);
+typedef void (*ubus_notify_data_handler_t)(struct ubus_notify_request *req,
+					   int type, struct blob_attr *msg);
 typedef void (*ubus_connect_handler_t)(struct ubus_context *ctx);
 
 #define UBUS_OBJECT_TYPE(_name, _methods)		\
@@ -155,9 +157,11 @@ struct ubus_context {
 
 	uint32_t local_id;
 	uint16_t request_seq;
+	bool cancel_poll;
 	int stack_depth;
 
 	void (*connection_lost)(struct ubus_context *ctx);
+	void (*monitor_cb)(struct ubus_context *ctx, uint32_t seq, struct blob_attr *data);
 
 	struct ubus_msghdr_buf msgbuf;
 	uint32_t msgbuf_data_len;
@@ -187,6 +191,7 @@ struct ubus_request_data {
 	/* internal use */
 	bool deferred;
 	int fd;
+	int req_fd; /* fd received from the initial request */
 };
 
 struct ubus_request {
@@ -207,6 +212,8 @@ struct ubus_request {
 	ubus_fd_handler_t fd_cb;
 	ubus_complete_handler_t complete_cb;
 
+	int fd;
+
 	struct ubus_context *ctx;
 	void *priv;
 };
@@ -216,6 +223,7 @@ struct ubus_notify_request {
 
 	ubus_notify_complete_handler_t status_cb;
 	ubus_notify_complete_handler_t complete_cb;
+	ubus_notify_data_handler_t data_cb;
 
 	uint32_t pending;
 	uint32_t id[UBUS_MAX_NOTIFY_PEERS + 1];
@@ -238,6 +246,12 @@ void ubus_free(struct ubus_context *ctx);
 
 /* call this only for struct ubus_context pointers initialised by ubus_connect_ctx() */
 void ubus_shutdown(struct ubus_context *ctx);
+
+static inline void ubus_auto_shutdown(struct ubus_auto_conn *conn)
+{
+	uloop_timeout_cancel(&conn->timer);
+	ubus_shutdown(&conn->ctx);
+}
 
 const char *ubus_strerror(int error);
 
@@ -290,6 +304,18 @@ ubus_unregister_subscriber(struct ubus_context *ctx, struct ubus_subscriber *obj
 int ubus_subscribe(struct ubus_context *ctx, struct ubus_subscriber *obj, uint32_t id);
 int ubus_unsubscribe(struct ubus_context *ctx, struct ubus_subscriber *obj, uint32_t id);
 
+int __ubus_monitor(struct ubus_context *ctx, const char *type);
+
+static inline int ubus_monitor_start(struct ubus_context *ctx)
+{
+	return __ubus_monitor(ctx, "add");
+}
+
+static inline int ubus_monitor_stop(struct ubus_context *ctx)
+{
+	return __ubus_monitor(ctx, "remove");
+}
+
 
 /* ----------- acl ----------- */
 
@@ -309,13 +335,26 @@ int ubus_register_acl(struct ubus_context *ctx);
 /* ----------- rpc ----------- */
 
 /* invoke a method on a specific object */
-int ubus_invoke(struct ubus_context *ctx, uint32_t obj, const char *method,
+int ubus_invoke_fd(struct ubus_context *ctx, uint32_t obj, const char *method,
 		struct blob_attr *msg, ubus_data_handler_t cb, void *priv,
-		int timeout);
+		int timeout, int fd);
+static inline int
+ubus_invoke(struct ubus_context *ctx, uint32_t obj, const char *method,
+	    struct blob_attr *msg, ubus_data_handler_t cb, void *priv,
+	    int timeout)
+{
+	return ubus_invoke_fd(ctx, obj, method, msg, cb, priv, timeout, -1);
+}
 
 /* asynchronous version of ubus_invoke() */
-int ubus_invoke_async(struct ubus_context *ctx, uint32_t obj, const char *method,
-		      struct blob_attr *msg, struct ubus_request *req);
+int ubus_invoke_async_fd(struct ubus_context *ctx, uint32_t obj, const char *method,
+		      struct blob_attr *msg, struct ubus_request *req, int fd);
+static inline int
+ubus_invoke_async(struct ubus_context *ctx, uint32_t obj, const char *method,
+		  struct blob_attr *msg, struct ubus_request *req)
+{
+	return ubus_invoke_async_fd(ctx, obj, method, msg, req, -1);
+}
 
 /* send a reply to an incoming object method call */
 int ubus_send_reply(struct ubus_context *ctx, struct ubus_request_data *req,
@@ -325,6 +364,7 @@ static inline void ubus_defer_request(struct ubus_context *ctx,
 				      struct ubus_request_data *req,
 				      struct ubus_request_data *new_req)
 {
+    (void) ctx;
     memcpy(new_req, req, sizeof(*req));
     req->deferred = true;
 }
@@ -332,7 +372,16 @@ static inline void ubus_defer_request(struct ubus_context *ctx,
 static inline void ubus_request_set_fd(struct ubus_context *ctx,
 				       struct ubus_request_data *req, int fd)
 {
+    (void) ctx;
     req->fd = fd;
+}
+
+static inline int ubus_request_get_caller_fd(struct ubus_request_data *req)
+{
+    int fd = req->req_fd;
+    req->req_fd = -1;
+    
+    return fd;
 }
 
 void ubus_complete_deferred_request(struct ubus_context *ctx,
