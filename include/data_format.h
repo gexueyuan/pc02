@@ -155,7 +155,8 @@ typedef struct _face_remote_log {//162
 
 typedef struct _double_element_log {//162
     uint16_t version;
-/*face record*/	
+/*face record*/
+	uint16_t facerec;
 	uint32_t reader_id;
 	uint8_t opera_time[6];
 	uint32_t face_id;//desktop reader
