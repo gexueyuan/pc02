@@ -195,6 +195,8 @@ const uint8_t get_slow_log[] = {0xF0,0xF3,0x00,0x00,0x00};
 
 uint8_t net_state[] = {0xFC,0xA0,0x00,0x00,0x09,0x80,0x34,0x00,0x00,0x04,0x09,0x00,0x01,0x80};
 
+uint8_t led_on[] = {0xFC,0x50,0xd6,0x03,0x0A,0x00,0x00,0x00,0x12,0xFC,0x80,0xd9,0x03,0x01,0x02};
+uint8_t led_off[] = {0xFC,0x50,0xd6,0x03,0x0A,0x00,0x00,0x00,0x12,0xFC,0x80,0xd9,0x02,0x01,0x02};
 
 /* 统计信息 GBK*/
 char *antenna_broken = "PR11天线损坏";//{0x50,0x52,0x31,0x31,0xBE,0xFC,0xC3,0xDC,0xD0,0xBE,0xC6,0xAC,0xCB,0xF0,0xBB,0xB5};
@@ -973,8 +975,15 @@ int alloc_322_index(char * port_name)
         }
 
     }
-	osal_printf("\nnode 1-1.1 is 321,so drop it\n");
-    return -1;
+	if(strcmp("1-1.1",port_name) == 0){
+		osal_printf("\nnode 1-1.1 is 321,so drop it\n");
+    	return -1;
+	}
+	else{
+		
+		osal_printf("\nnode s.th else,so drop it\n");
+    	return -2;
+	}
 }
 
 /*****************************************************************************
@@ -3509,7 +3518,7 @@ else if(tail_check == -4 ){
 		#endif
         printf("wgp info:\n");
         print_rec(output,ret);
-        if(ret == 22){
+        if(ret > 2){
             
             if((controll_eg.push_flag & 0x01) == false){
                 
@@ -3660,7 +3669,48 @@ void timer_push_callback(void* parameter)
 
 }
 
+static void *led_context;
 
+void *eg_usb_led_init(void){
+	
+	int ret = 0;
+
+
+	led_context = luareader_new(0, NULL, NULL);
+    
+    OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "context is %p\n",led_context);
+
+    //strcpy(usb_port,(const char*)parameter);
+    ret = luareader_connect(led_context, "1-1.7");
+    if(ret < 0){
+        OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "connect to  %s failed\n","1-1.7");
+    }
+    OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "connect to  %s succeed\n","1-1.7");
+	
+
+}
+void eg_led_trigger(uint8_t state)
+{
+	int ret = 0;
+	
+	unsigned char output[32] = {0};
+	
+	if(state == '1'){
+		
+		osal_printf("led on\n");
+    	ret = luareader_transmit(led_context, led_on, sizeof(led_on), output, sizeof(output),2000);
+		}
+	else if(state == '0'){
+		osal_printf("led off\n");
+    	ret = luareader_transmit(led_context, led_on, sizeof(led_off), output, sizeof(output),2000);
+		}
+
+	
+	osal_printf("led return:\n");
+	print_rec(output,ret);
+	
+
+}
 void eg_usbto322_init(void)
 {
 
@@ -3678,7 +3728,8 @@ void eg_usbto322_init(void)
 
 
     ret = luareader_get_list(context, (char *)output, sizeof(output));
-
+	
+	//printf("luareader_get_list(%s)=%d(%s)\n", context, ret, output);
     //OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "there are %d 322 on pc02\n",ret);
 
     
@@ -3753,8 +3804,8 @@ void eg_usbto322_init(void)
         //printf("ret is %d\n",ret);
         if(ret == -1)//321-"1-1.1"
             continue;
-        //if(ret == 1)
-            //continue;
+        if(ret == -2)
+            continue;
         controll_eg.cnt_322++;
         p_usb_ccid = &(controll_eg.usb_ccid_322[ret]);
         p_usb_ccid->usb_state = USB_COMM_STATE_DEFAULT;//USB_COMM_STATE_INIT;//USB_COMM_STATE_INIT_END;//USB_COMM_STATE_INIT;
@@ -3802,5 +3853,5 @@ void eg_usbto322_init(void)
     printf("322 num:%d\n",controll_eg.cnt_322);
     
     //OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_INFO, "module initial finished\n");
-
+	eg_usb_led_init();
 }

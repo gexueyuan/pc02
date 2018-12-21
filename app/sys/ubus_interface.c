@@ -40,6 +40,7 @@ unsigned char ctrl_cfg_buffer[128] = {0};
 //unsigned char ctrl_cfg_rt[128] = {0};
 extern void ubus_321_find(void);
 
+extern void eg_led_trigger(uint8_t state);
 
 static long get_file_len(FILE *file)
 {
@@ -537,6 +538,13 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
 			printf("\nubus get log\n");
             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_RFU,0,0,NULL);
 			break;
+			
+	case UBUS_SERVER_LED_TRIGGER:
+
+		
+		printf("\nled state changed\n");
+		eg_led_trigger(data[0]);
+		break;		
             
         default:
             break;
