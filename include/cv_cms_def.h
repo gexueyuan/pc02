@@ -311,6 +311,8 @@ typedef enum _UBUS_CLIENT {
     UBUS_CLIENT_GETWLCFG = 0x3002,
 
     UBUS_CLIENT_RETURN = 0x3005,
+	
+    UBUS_CLIENT_CLEAR_RETURN = 0x3006,
 
     UBUS_CLIENT_GETP2P = 0x4003,
     UBUS_CLIENT_GETMAC = 0x4004,
@@ -546,13 +548,14 @@ typedef struct _Controller {
     uint8_t rtc_encrypt[16];
     uint8_t alarm_buffer[64];
     uint8_t remote_buffer[1200];
-    uint8_t alarm_clear[48];
+    uint8_t alarm_clear[64];
     uint8_t alarm_opendoor;
     uint8_t alarm_flag;
     uint8_t push_flag;
     uint8_t network_state;//0-offline  1-online   
 	uint8_t network_state_pre;//0-offline  1-online
 	list_head_t alarm_mask_list;
+	int alarm_clear_len;
 /*alarm*/
 /*cfg*/
     key_buffer_t basecfg;   

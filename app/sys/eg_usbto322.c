@@ -218,8 +218,12 @@ char *id5 = "绿灯开始时间";
 char *id6 = "开门成功结束时间";
 char *whitelist_resume = "白名单续传失败";
 char *period_9531 = "9531指令周期间隔";
-char *overtime_322 = "322未取的刷卡事件时间";
-char *overtime_reader = "读卡器未取的刷卡事件时间";
+char *card_event_clear = "卡事件清除事件";
+char *card_info = "M卡电压电量";
+char *pr11_v = "Pr11电压超载异常";
+char *pr11_c = "Pr11电流超载异常";
+char *pr11_tp = "Pr11温度超载异常";
+
 
 /* 统计信息 GBK*/
 const char*  zmq_send_str = "send to zmq";
@@ -1371,7 +1375,10 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 	#define  alarm_tag	  0x0B04
 	#define  pr11_event   0x0B05
 	#define  _322_event   0x0B06
-    
+	#define  pr11_voltage    0x0B07
+	#define  pr11_current    0x0B08
+	#define  pr11_temper     0x0B09
+
     uint8_t wg_error[] = {0x93,0x01};
 
     uint8_t wgp_info[]={0x6F,0xFF};
@@ -1540,8 +1547,8 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 }
 
   {
-	unsigned char value[6];
-	short length = 6;
+	unsigned char value[16];
+	short length = 16;
 	if (tlv_box_get_bytes (parsedBox_322, pr11_event, value, &length) != 0){
 		//LOG ("get 9531 info  failed !\n");
 	}
@@ -1554,13 +1561,13 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 		LOG ("0x%X-", value[i]);
 		  }
 		LOG ("\n");
-        StatisticsInfo_push_n(MAINT_SRC_PR11,usb_322->pid_pr11,overtime_reader,value,length);
+        StatisticsInfo_push_n(MAINT_SRC_322,usb_322->pid_322,card_event_clear,value,length);
 
 	}
  }
  {
-   unsigned char value[6];
-   short length = 6;
+   unsigned char value[16];
+   short length = 16;
    if (tlv_box_get_bytes (parsedBox_322, _322_event, value, &length) != 0){
 	   //LOG ("get 9531 info  failed !\n");
    }
@@ -1573,10 +1580,68 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 	   LOG ("0x%X-", value[i]);
 		 }
 	   LOG ("\n");
-	   StatisticsInfo_push_n(MAINT_SRC_322,usb_322->pid_322,overtime_322,value,length);
+	   StatisticsInfo_push_n(MAINT_SRC_322,usb_322->pid_322,card_info,value,length);
 
    }
 }
+ {
+   unsigned char value[16];
+   short length = 16;
+   if (tlv_box_get_bytes (parsedBox_322, pr11_voltage, value, &length) != 0){
+	   //LOG ("get 9531 info  failed !\n");
+   }
+   else{
+	   
+	   LOG ("get 322 event  info success(%d): ",length);
+	   int i = 0;
+	   for (i = 0; i < length; i++)
+		 {
+	   LOG ("0x%X-", value[i]);
+		 }
+	   LOG ("\n");
+	   StatisticsInfo_push_n(MAINT_SRC_322,usb_322->pid_322,pr11_v,value,length);
+
+   }
+}
+{
+   unsigned char value[16];
+   short length = 16;
+   if (tlv_box_get_bytes (parsedBox_322, pr11_current, value, &length) != 0){
+	   //LOG ("get 9531 info  failed !\n");
+   }
+   else{
+	   
+	   LOG ("get 322 event	info success(%d): ",length);
+	   int i = 0;
+	   for (i = 0; i < length; i++)
+		 {
+	   LOG ("0x%X-", value[i]);
+		 }
+	   LOG ("\n");
+	   StatisticsInfo_push_n(MAINT_SRC_322,usb_322->pid_322,pr11_c,value,length);
+
+   }
+}
+{
+   unsigned char value[16];
+   short length = 16;
+   if (tlv_box_get_bytes (parsedBox_322, pr11_temper, value, &length) != 0){
+	   //LOG ("get 9531 info  failed !\n");
+   }
+   else{
+	   
+	   LOG ("get 322 event	info success(%d): ",length);
+	   int i = 0;
+	   for (i = 0; i < length; i++)
+		 {
+	   LOG ("0x%X-", value[i]);
+		 }
+	   LOG ("\n");
+	   StatisticsInfo_push_n(MAINT_SRC_322,usb_322->pid_322,pr11_tp,value,length);
+
+   }
+}
+
 
 	tlv_box_destroy (parsedBoxes);
 	tlv_box_destroy (parsedBox_322);
@@ -1946,7 +2011,7 @@ void *eg_usb_thread_entry(void *parameter)
     
     uint32_t return_req = 0;
 
-    uint8_t alarm_clear_rt_data[16] = {0};//8+2+index(1)+all 322 index(max 4 + 1(321))
+    uint8_t alarm_clear_rt_data[64] = {0};//8+2+index(1)+all 322 index(max 4 + 1(321))
     uint8_t remote_open_rt_data[16] = {0};//8+2++index+all322 index(max 4)
 
     uint8_t info_statistic[39] = {0};
@@ -2990,20 +3055,9 @@ JUMP:
             memcpy(alarm_clear_rt_data,&controll_eg.alarm_clear,8);
             alarm_clear_rt_data[8] = output[ret - 2];
             alarm_clear_rt_data[9] = output[ret - 1];
+#if 0
             alarm_clear_rt_data[10] = p_usb_ccid->ccid322_index;
             
-/*
-            for(i = 0;i < MAX_322_NUM;i++ ){
-            
-                if(controll_eg.usb_ccid_322[i].ccid322_exist){
-                    
-                    alarm_clear_rt_data[11 + index] = controll_eg.usb_ccid_322[i].ccid322_index
-                    index++;
-                }
-                
-            
-            }
-*/
             if(controll_eg.alarm_clear[8] == 0x01){
                 
                 memcpy(&alarm_clear_rt_data[11],&controll_eg.index_322,controll_eg.cnt_322);
@@ -3021,6 +3075,39 @@ JUMP:
                 print_send(alarm_clear_rt_data,12 + controll_eg.cnt_322);
                 ubus_net_process(UBUS_CLIENT_RETURN,NULL,alarm_clear_rt_data,12 + controll_eg.cnt_322);
             }
+#else
+            //alarm_clear_rt_data[10] = p_usb_ccid->ccid322_index;
+            
+            if(controll_eg.alarm_clear[8] == 0x01){
+
+				
+				alarm_clear_rt_data[10] = controll_eg.cnt_322;
+                                	
+                memcpy(&alarm_clear_rt_data[11],&controll_eg.index_322,controll_eg.cnt_322);
+				alarm_clear_rt_data[11+controll_eg.cnt_322] = p_usb_ccid->ccid322_index;
+				alarm_clear_rt_data[11+controll_eg.cnt_322 + 1] = ret -2;
+				memcpy(&alarm_clear_rt_data[11+controll_eg.cnt_322 + 2],output,ret -2);
+                printf("\nsend alarm clear return,only 322\n");
+                print_send(alarm_clear_rt_data,11 + controll_eg.cnt_322 + ret );
+                ubus_net_process(UBUS_CLIENT_CLEAR_RETURN,NULL,alarm_clear_rt_data,11 + controll_eg.cnt_322 + ret);
+
+
+            }
+            else if(controll_eg.alarm_clear[8] == 0x02){
+
+			
+				alarm_clear_rt_data[10] = controll_eg.cnt_322 + 1;
+                                	
+                alarm_clear_rt_data[11] = 0xFF;
+                memcpy(&alarm_clear_rt_data[12],&controll_eg.index_322,controll_eg.cnt_322);
+				alarm_clear_rt_data[12+controll_eg.cnt_322] = p_usb_ccid->ccid322_index;
+				alarm_clear_rt_data[12+controll_eg.cnt_322 + 1] = ret -2;
+				memcpy(&alarm_clear_rt_data[12+controll_eg.cnt_322 + 2],output,ret -2);
+                printf("\nsend alarm clear return,both 322 & 321\n");
+                print_send(alarm_clear_rt_data,12 + controll_eg.cnt_322 + ret );
+                ubus_net_process(UBUS_CLIENT_CLEAR_RETURN,NULL,alarm_clear_rt_data,12 + controll_eg.cnt_322 + ret );
+            }
+#endif
             osal_sem_release(p_usb_ccid->sem_state);
             
             break;
@@ -3509,7 +3596,7 @@ else if(tail_check == -4 ){
 		#endif
         printf("wgp info:\n");
         print_rec(output,ret);
-        if(ret == 22){
+        if(ret > 2){
             
             if((controll_eg.push_flag & 0x01) == false){
                 

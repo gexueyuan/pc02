@@ -116,6 +116,24 @@ typedef struct _alarm_log {//88 byte
 	uint8_t ctrl_sign[64];
 }__COMPILE_PACK__ alarm_log_t;
 
+typedef struct _alarm_log_v2 {//116 byte
+    uint16_t version;
+/*322 record*/
+	uint32_t ctrl_322_id;
+	uint32_t ctrl_322_cnt;
+	uint8_t ctrl_time[6];
+	uint8_t alarm_322[8];
+	uint8_t alarm_321[8];
+	uint8_t alarm_pr11[8];
+	uint8_t door_num;
+	uint8_t in_out;
+	uint8_t result;
+	uint8_t RFU[3];
+	uint8_t poweroff_321[6];
+	uint8_t ctrl_sign[64];
+}__COMPILE_PACK__ alarm_log__v2_t;
+
+
 typedef struct _ID_log {//192
     uint16_t version;
 /*card record*/	

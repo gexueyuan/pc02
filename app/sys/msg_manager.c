@@ -88,7 +88,7 @@ uint8_t  get_log_time(unsigned char *time_ptr)//6 bytes time in log
 
 void ubus_321_find(void)
 {
-
+#if 1
     /* Take the semaphore. */
     if(osal_sem_take(sem_ubus_send, 3500) != OSAL_EOK){
      
@@ -108,7 +108,7 @@ void ubus_321_find(void)
     osal_sem_release(sem_ubus_send);
     printf("321 ubus id update,0x%X\n",id_322);
 
-    
+#endif    
 }
 
 
