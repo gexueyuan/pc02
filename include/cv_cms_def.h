@@ -476,6 +476,7 @@ typedef struct _usb_ccid_322 {
     uint8_t toggle_alarm;
     uint8_t rtc_sync;
     uint8_t alarm_period;
+	uint8_t wg_toggle;
     /**/
 
     /*zmq start*/

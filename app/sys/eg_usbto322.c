@@ -1499,8 +1499,10 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 		LOG ("0x%X-", value[i]);
 	      }
 	    LOG ("\n");
-		
-		StatisticsInfo_push_n(MAINT_SRC_322,usb_322->pid_322,wgp_alarm,value,length);
+		if(usb_322->wg_toggle >= 10){
+			StatisticsInfo_push_n(MAINT_SRC_322,usb_322->pid_322,wgp_alarm,value,length);
+			usb_322->wg_toggle = 0;
+		}
 	}
  }	
 	
@@ -3158,6 +3160,8 @@ if(tail_check == 1){
 
 					
 					ubus_net_process(UBUS_CLIENT_SEND_CAM322ID,NULL,p_usb_ccid->pid_322,4);
+					
+					//osal_printf("F[%s] L[%d]\n",__func__, __LINE__);
 
 				}
 				else{
@@ -3363,7 +3367,9 @@ if(tail_check == 1){
             break;
 
        case CARDPOLLEVENT_FACE:
-			ubus_net_process(UBUS_CLIENT_SEND_CAM322ID,NULL,p_usb_ccid->pid_322,4);
+	   		
+			//osal_printf("F[%s] L[%d]\n",__func__, __LINE__);
+			//ubus_net_process(UBUS_CLIENT_SEND_CAM322ID,NULL,p_usb_ccid->pid_322,4);
             break;
 
        case CARDPOLLEVENT_ID:
@@ -3533,6 +3539,7 @@ void timer_usb_callback(void* parameter)
             //printf("push index %d\n",p_usb_timer->ccid322_index);
             sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_INFO_PUSH,0,p_usb_timer->ccid322_index - 1,NULL);
 			sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_RTC_PUSH,0,p_usb_timer->ccid322_index - 1,NULL);
+
 /*
                 get_rtc_data(rtc);
 
@@ -3546,11 +3553,8 @@ void timer_usb_callback(void* parameter)
             p_usb_timer->alarm_period = 0xAA;
 
         }
-   // }
-//test usb interrupt
-   //sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_322_USBTEST,0,p_usb_timer->ccid322_index,NULL);
-   
-	//printf("timer 322 come out\n"); 
+		if(p_usb_timer->wg_toggle < 0xFE)
+			p_usb_timer->wg_toggle++;
 }
 
 
@@ -3719,7 +3723,7 @@ void eg_usbto322_init(void)
         ret = osal_timer_start(p_usb_ccid->timer_322);
         OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_WARN, "create timer %s,start status is %d\n",device_str[i],ret);
 
-        eg_zmq_init(p_usb_ccid);
+        //eg_zmq_init(p_usb_ccid);
 
     }  
         
