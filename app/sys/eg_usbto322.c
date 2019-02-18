@@ -198,6 +198,9 @@ const uint8_t get_slow_log[] = {0xF0,0xF3,0x00,0x00,0x00};
 
 uint8_t net_state[] = {0xFC,0xA0,0x00,0x00,0x09,0x80,0x34,0x00,0x00,0x04,0x09,0x00,0x01,0x80};
 
+uint8_t wl_0[] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+uint8_t wl_F[] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+
 
 /* 统计信息 GBK*/
 char *antenna_broken = "PR11天线损坏";//{0x50,0x52,0x31,0x31,0xBE,0xFC,0xC3,0xDC,0xD0,0xBE,0xC6,0xAC,0xCB,0xF0,0xBB,0xB5};
@@ -3081,7 +3084,18 @@ if(tail_check == 1){
 
         
         case CARDPOLLEVENT_NO_EVENT:
-        
+
+			//print_array("wl", unsigned char * send, int len)
+			if(memcmp(&acl_data[1],wl_0,16)&&memcmp(&acl_data[1],wl_F,16)){
+
+			}
+			else{
+				
+			osal_printf("rtc error\n");
+			break;
+
+
+			}
             if(acl_len == 17){
 
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_WARN, "not passed\n");
@@ -3092,12 +3106,6 @@ if(tail_check == 1){
 
                 memcpy(&apdu_data[sizeof(result_head) + 1],acl_data,acl_len);
 
-                //print_send(apdu_data,sizeof(result_head) + 1 + 17);
-/*
-                osal_printf("start sleep 2s\n");
-                sleep(2);
-                osal_printf("sleep over\n");
-*/
                 #ifdef  USB_TEST
                 ret = whitelist_transmit_fix(&context,apdu_data,sizeof(result_head) + 1 + 17,output,sizeof(output),&p_usb_ccid);
 				#else
@@ -3133,12 +3141,7 @@ if(tail_check == 1){
                 //print_send(test_o,195);
                 //ret = usb_transmit(context,test_o,195,output,sizeof(output),p_usb_ccid);
                 //ret = usb_transmit(context,apdu_data,sizeof(result_head) + 3 + 17 + 1 + acl_data[271] + 232,output,sizeof(output),p_usb_ccid);
-                
-/*
-                osal_printf("start sleep 2s\n");
-                sleep(2);
-                osal_printf("sleep over\n");
-*/
+
 				#ifdef USB_TEST
                 ret = whitelist_transmit_fix(&context,apdu_data,sizeof(result_head) + 3 + 17 + 1 + acl_data[271] + 232,output,sizeof(output),&p_usb_ccid);
 				#else
