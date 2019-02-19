@@ -40,7 +40,7 @@ unsigned char ctrl_cfg_buffer[128] = {0};
 //unsigned char ctrl_cfg_rt[128] = {0};
 extern void ubus_321_find(void);
 
-extern void eg_led_trigger(uint8_t state);
+extern void eg_led_trigger(uint8_t *order_acs,uint8_t length);
 
 static long get_file_len(FILE *file)
 {
@@ -543,7 +543,7 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
 
 		
 		printf("\nled state changed\n");
-		eg_led_trigger(data[0]);
+		eg_led_trigger(data,len);
 		break;		
             
         default:

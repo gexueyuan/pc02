@@ -3689,22 +3689,40 @@ void *eg_usb_led_init(void){
 	
 
 }
-void eg_led_trigger(uint8_t state)
+void eg_led_trigger(uint8_t *order_acs,uint8_t length)
 {
 	int ret = 0;
 	
 	unsigned char output[32] = {0};
 	
-	if(state == '1'){
-		
-		osal_printf("led on\n");
-    	ret = luareader_transmit(led_context, led_on, sizeof(led_on), output, sizeof(output),2000);
-		}
-	else if(state == '0'){
-		osal_printf("led off\n");
-    	ret = luareader_transmit(led_context, led_on, sizeof(led_off), output, sizeof(output),2000);
-		}
+	print_send(order_acs,length);
 
+	if(length < 10){
+		osal_printf("length error!\n");
+		return;
+
+	}
+	
+//	if(state == '1'){
+//		
+//		osal_printf("led on\n");
+//    	ret = luareader_transmit(led_context, led_on, sizeof(led_on), output, sizeof(output),2000);
+//		}
+//	else if(state == '0'){
+//		osal_printf("led off\n");
+//    	ret = luareader_transmit(led_context, led_off, sizeof(led_off), output, sizeof(output),2000);
+//		}
+//	led_on[5] = (((order_acs[0] - '0')&0x0F)<<4)|((order_acs[1] - '0')&0x0F);
+//	led_on[6] = (((order_acs[2] - '0')&0x0F)<<4)|((order_acs[3] - '0')&0x0F);	
+//	led_on[7] = (((order_acs[4] - '0')&0x0F)<<4)|((order_acs[5] - '0')&0x0F);	
+//	led_on[8] = (((order_acs[6] - '0')&0x0F)<<4)|((order_acs[7] - '0')&0x0F);
+//	
+//	led_on[12] = order_acs[8] - '0';
+
+	StrToHex(&led_on[5],order_acs,4);
+	led_on[12] = order_acs[8] - '0';
+	print_send(led_on, sizeof(led_on));
+	ret = luareader_transmit(led_context, led_on, sizeof(led_on), output, sizeof(output),2000);
 	
 	osal_printf("led return:\n");
 	print_rec(output,ret);
