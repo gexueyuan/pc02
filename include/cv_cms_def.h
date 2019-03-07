@@ -17,6 +17,7 @@
 #include "data_format.h"
 #include "list.h"
 
+
 /*****************************************************************************
  * declaration of variables and functions                 *
 *****************************************************************************/
@@ -477,6 +478,9 @@ typedef struct _usb_ccid_322 {
     uint8_t rtc_sync;
     uint8_t alarm_period;
 	uint8_t wg_toggle;
+	uint8_t alarm_toggle;
+	uint8_t ar79_toggle;
+	uint8_t period_info_toggle;
     /**/
 
     /*zmq start*/

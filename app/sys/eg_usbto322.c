@@ -30,6 +30,7 @@ OSAL_DEBUG_ENTRY_DEFINE(eg_usbto322);
 
 #include "libzmqtools.h"
 #include "tlv_box.h"
+//#include <linux/jiffies.h>
 
 
 #define USB_FAILED    0x6E00
@@ -63,6 +64,7 @@ extern void eg_zmq_init(usb_ccid_322_t* argv);
 
 const static int TIMEOUT=1000; /* timeout in ms */  
 
+//extern unsigned long volatile jiffies;
 
 
 typedef enum _USB_CMD {
@@ -459,7 +461,7 @@ void StatisticsInfo_push_n(uint8_t src_dev,uint8_t *pid_dev,const char *gbk_str,
     print_array(gbk_str,info_statistic,len);
     ubus_net_process(UBUS_CLIENT_SEND_StatisticsInfo,NULL,info_statistic,len);
 
-
+	osal_free(info_statistic);
 }
 
 int usb_transmit_detect(void **context, const unsigned char * apdu,
@@ -654,12 +656,12 @@ int usb_transmit_fix(void **context, const unsigned char * apdu,
        return 0;
     }
 
-    //print_array(usb_322->usb_port, apdu, apdu_len);
+    //print_array(usb_322_local->usb_port, apdu, apdu_len);
 	
 	gettimeofday( &_start, NULL );
     ret = luareader_transmit(context_local, apdu, apdu_len, resp, max_resp_size,2000);
     //if(ret > 0)
-    	//print_array(usb_322->usb_port, resp, ret);
+    	//print_array(usb_322_local->usb_port, resp, ret);
 	gettimeofday( &_end, NULL );
 	time_in_us = (_end.tv_sec - _start.tv_sec) * 1000000 + _end.tv_usec - _start.tv_usec;	
 	time_in_ms = time_in_us/1000;
@@ -1098,7 +1100,7 @@ uint8_t alarm_fileter(unsigned char* log,int len,usb_ccid_322_t  *usb_322)//alar
 	
 	OSAL_MODULE_DBGPRT(usb_322->usb_port, OSAL_DEBUG_INFO, "\n alarm_fileter 322id = 0x%X,type = 0X%X\n",get_log->ctrl_322_id,get_log->alarm_type);
 	if((get_log->alarm_type == ALARM_322_force)||\
-		(get_log->alarm_type == ALARM_322_abnormal))
+		(get_log->alarm_type == ALARM_322_abnormal)||(get_log->alarm_type == ALARM_322_overtime))
 		ret = 0;//alarm_mask(get_log->ctrl_322_id,get_log->alarm_type);
 	
 	//free(get_log);
@@ -1506,6 +1508,11 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 			StatisticsInfo_push_n(MAINT_SRC_322,usb_322->pid_322,wgp_alarm,value,length);
 			usb_322->wg_toggle = 0;
 		}
+		else{
+
+			osal_printf("drop this info\n");
+
+		}
 	}
  }	
 	
@@ -1513,6 +1520,7 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 	unsigned char value[4];
 	short length = 4;
 	uint32_t  get_9531cost = 0;
+	
 	if (tlv_box_get_bytes (parsedBox_322, n531_tag, value, &length) != 0){
 		//LOG ("get 9531 info  failed !\n");
 	}
@@ -1528,7 +1536,16 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 		get_9531cost = bytesToIntBig(value, 0);
 		if(get_9531cost > 2048)
 			log_message("9531 info",3,"F[%s] L[%d],9531 overtime ,%X,%X,%X,%X\n",__func__, __LINE__,value[0],value[1],value[2],value[3]);
-        StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,period_9531,value);
+		if(usb_322->ar79_toggle >= 10){
+			StatisticsInfo_push(MAINT_SRC_322,usb_322->pid_322,period_9531,value);			
+			usb_322->ar79_toggle = 0;
+		}
+		else{
+
+			osal_printf("drop this info\n");
+
+		}
+		//info_pre = jiffies + 60*HZ;
 
 	}
  }
@@ -1549,10 +1566,19 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 		 }
 	   LOG ("\n");
     
-       ubus_client_process(UBUS_CLIENT_LOG,NULL,value,length);
-   }
-}
+	   if(usb_322->alarm_toggle >= 10){
+	   	
+	       	ubus_client_process(UBUS_CLIENT_LOG,NULL,value,length);
+		   
+	   		usb_322->alarm_toggle = 0;
+   		}
+	   else{
 
+			osal_printf("drop this info\n");
+
+		}
+}
+ 	}
   {
 	unsigned char value[6];
 	short length = 6;
@@ -3191,9 +3217,17 @@ if(tail_check == 1){
     					ret = usb_transmit(context,get_slow_log,sizeof(get_slow_log),output,sizeof(output),p_usb_ccid);
 					#endif
     					if(ret > 2){
-
+							
+							if(p_usb_ccid->period_info_toggle >= 10){
 							StatisticsInfo_push_n(MAINT_SRC_322,p_usb_ccid->pid_322,time_consuming,output,ret -2);
-    					}
+								p_usb_ccid->period_info_toggle = 0;
+							}
+							else{
+
+								osal_printf("drop slow log\n");
+							}
+						}
+							
     					else{
     						if(ret > 0)
     							print_rec(output,ret);
@@ -3487,7 +3521,7 @@ else if(tail_check == -4 ){
             printf("switch value is %d\n",p_usb_ccid->toggle_state);
         }
 }
-        osal_sleep(20);
+        osal_sleep(50);
 #else
 sleep(2);
 #endif
@@ -3558,6 +3592,12 @@ void timer_usb_callback(void* parameter)
         }
 		if(p_usb_timer->wg_toggle < 0xFE)
 			p_usb_timer->wg_toggle++;
+		if(p_usb_timer->ar79_toggle < 0xFE)
+			p_usb_timer->ar79_toggle++;
+		if(p_usb_timer->alarm_toggle < 0xFE)
+			p_usb_timer->alarm_toggle++;
+		if(p_usb_timer->period_info_toggle < 0xFE)
+			p_usb_timer->period_info_toggle++;
 }
 
 
