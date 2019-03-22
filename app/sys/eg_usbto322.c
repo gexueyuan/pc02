@@ -655,7 +655,7 @@ int usb_transmit_fix(void **context, const unsigned char * apdu,
     //print_array(usb_322_local->usb_port, apdu, apdu_len);
 	
 	gettimeofday( &_start, NULL );
-    ret = luareader_transmit(context_local, apdu, apdu_len, resp, max_resp_size,2000);
+    ret = luareader_transmit(context_local, apdu, apdu_len, resp, max_resp_size,8000);
     //if(ret > 0)
     	//print_array(usb_322_local->usb_port, resp, ret);
 	gettimeofday( &_end, NULL );
@@ -1527,8 +1527,8 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
  }
 		
 {
-   unsigned char value[100];
-   short length = 100;
+   unsigned char value[256];
+   short length = 256;
    if (tlv_box_get_bytes (parsedBox_322, alarm_tag, value, &length) != 0){
 	   //LOG ("get alarm  failed !\n");
    }
