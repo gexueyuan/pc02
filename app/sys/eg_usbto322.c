@@ -223,7 +223,7 @@ char *card_info = "M卡电压电量";
 char *pr11_v = "Pr11电压超载异常";
 char *pr11_c = "Pr11电流超载异常";
 char *pr11_tp = "Pr11温度超载异常";
-
+char *info_322 = "322响应数据域";
 
 /* 统计信息 GBK*/
 const char*  zmq_send_str = "send to zmq";
@@ -456,7 +456,7 @@ void StatisticsInfo_push_n(uint8_t src_dev,uint8_t *pid_dev,const char *gbk_str,
         memcpy(&info_statistic[37],value,length);//value == null,clear 0
     print_array(gbk_str,info_statistic,len);
     ubus_net_process(UBUS_CLIENT_SEND_StatisticsInfo,NULL,info_statistic,len);
-
+	osal_free(info_statistic);
 
 }
 
@@ -1470,7 +1470,50 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 	
 	//LOG ("parsedBox_322 parse success, %d bytes \n", tlv_box_get_size (parsedBox_322));
 
+#if 1
+//int i = 0;
+//for (i = 0; i < parsedBox_322->m_serialized_bytes; i++)
+//  {
+//LOG ("0x%X-", parsedBox_322->m_serialized_buffer[i]);
+//  }
+//LOG ("\n");
 
+
+{
+   unsigned char value[256];
+   short length = 256;
+   if (tlv_box_get_bytes (parsedBox_322, alarm_tag, value, &length) != 0){
+	   //LOG ("get alarm  failed !\n");
+   }
+   else{
+	   
+	   LOG ("get alarm success(%d):    ",length);
+	   int i = 0;
+	   for (i = 0; i < length; i++)
+		 {
+	   LOG ("%X ", value[i]);
+		 }
+	   LOG ("\n");
+	   //LOG("alarm type is %X\n",(_alarm_log_v2*)value->);
+    
+       ubus_client_process(UBUS_CLIENT_LOG,NULL,value,length);
+   }
+}
+
+{
+	
+	unsigned char value[256];
+	short length = 256;
+	if ((tlv_box_get_bytes (parsedBox_322, wg_tag, value, &length) == 0)||(tlv_box_get_bytes (parsedBox_322, pr11_event, value, &length) == 0)\
+		||(tlv_box_get_bytes (parsedBox_322, _322_event, value, &length) == 0)||(tlv_box_get_bytes (parsedBox_322, pr11_voltage, value, &length) == 0)\
+		||(tlv_box_get_bytes (parsedBox_322, pr11_current, value, &length) == 0)||(tlv_box_get_bytes (parsedBox_322, pr11_temper, value, &length) == 0)){
+		
+		StatisticsInfo_push_n(MAINT_SRC_322,usb_322->pid_322,info_322,parsedBox_322->m_serialized_buffer,parsedBox_322->m_serialized_bytes);
+	}
+
+
+}
+#else 0
 
 {
     char door_state;
@@ -1641,7 +1684,7 @@ int check_card_tlv(usb_ccid_322_t  *usb_322,unsigned char* rd_data,int buffer_le
 
    }
 }
-
+#endif
 
 	tlv_box_destroy (parsedBoxes);
 	tlv_box_destroy (parsedBox_322);
