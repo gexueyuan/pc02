@@ -105,6 +105,7 @@ int os_current_thread(void);
 int os_queue_create(mqd_t *queue_id, const char *queue_name,
                         unsigned int queue_depth, unsigned int data_size, unsigned int flags);
 int os_queue_delete(mqd_t queue_id);
+int os_queue_getcurmsgs(mqd_t queue_id);
 int os_queue_recv(mqd_t queue_id, void *data, uint32_t size, uint32_t *size_copied);
 int os_queue_send(mqd_t queue_id, void *data, unsigned int size, uint32_t	priority);
 int os_mq_timedrecv(mqd_t id, void * buf, uint32_t msg_len, uint32_t timeout);

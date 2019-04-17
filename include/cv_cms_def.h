@@ -57,6 +57,8 @@
 #define SYS_MQ_MSG_SIZE 2048
 #define UBUS_MQ_MSG_SIZE 2048
 
+#define MQ_TIMEOUT  1000
+
 enum  UBUS_DIRECTION{
     UBUS_321 = 0,
     UBUS_NBID,

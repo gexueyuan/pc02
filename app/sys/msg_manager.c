@@ -103,6 +103,7 @@ void ubus_321_find(void)
     if (ubus_lookup_id(ctx, "ubus321", &id_322)) {
         
         fprintf(stderr, "Failed to look up ubus321 object\n");
+		osal_sem_release(sem_ubus_send);
         return;
     }
     osal_sem_release(sem_ubus_send);
@@ -129,6 +130,7 @@ void ubus_pc02nbi_find(void)
     if (ubus_lookup_id(ctx, "pc02nbi", &id_net)) {
         
         fprintf(stderr, "Failed to look up pc02nbi object\n");
+		osal_sem_release(sem_ubus_send);
         return;
     }
     osal_sem_release(sem_ubus_send);
@@ -572,7 +574,7 @@ if(direct == UBUS_321){
 
 	
 	gettimeofday( &_start, NULL );
-	ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 4000);
+	ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 2000);
 	gettimeofday( &_end, NULL );
 
     time_in_us = (_end.tv_sec - _start.tv_sec) * 1000000 + _end.tv_usec - _start.tv_usec;	
@@ -589,7 +591,7 @@ else if(direct == UBUS_NBID){
     
 	if(controll_eg.network_state == 0){
 
-		printf("\noffline  push  failed!\n");
+		printf("\noffline,do not push  !\n");
         osal_sem_release(sem_ubus_send);
 		return;
 	}
@@ -671,7 +673,7 @@ else if(direct == UBUS_NBID){
 	blobmsg_add_field(&b, BLOBMSG_TYPE_UNSPEC, "strhex", str_buffer, strlen);
 	
 	gettimeofday( &_start, NULL );
-	ret = ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 4000);
+	ret = ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 500);
 	gettimeofday( &_end, NULL );
 
     time_in_us = (_end.tv_sec - _start.tv_sec) * 1000000 + _end.tv_usec - _start.tv_usec;	
@@ -839,6 +841,7 @@ void get_wl_4(uint8_t *p_id,uint8_t *data_wl,int *wlen)
         
     	if (ubus_lookup_id(ctx, "ubus321", &id)) {
     		fprintf(stderr, "Failed to look up ubus321 object\n");
+			osal_sem_release(sem_ubus_send);
     		return;
     	}
 
@@ -959,7 +962,7 @@ int get_audit_data(unsigned int tag,unsigned char* strhex,int strlen,uint8_t *da
 	 
 		 printf("Semaphore return failed. \n");
 		 
-		 //osal_sem_release(sem_321_process);
+		 //osal_sem_release(sem_ubus_send);
 		 return -1;
 
 	}
@@ -971,6 +974,7 @@ int get_audit_data(unsigned int tag,unsigned char* strhex,int strlen,uint8_t *da
         
     	if (ubus_lookup_id(ctx, "ubus321", &id)) {
     		fprintf(stderr, "Failed to look up ubus321 object\n");
+			osal_sem_release(sem_ubus_send);
     		return -1;
     	}
 
@@ -1007,7 +1011,7 @@ int get_audit_data(unsigned int tag,unsigned char* strhex,int strlen,uint8_t *da
     else{
 
         printf("F[%s] L[%d] wl len too long!!!\n", __FILE__, __LINE__);
-        return -1;
+        //return -1;
     }
 	osal_sem_release(sem_ubus_send);
 	return 0 ;
@@ -1089,6 +1093,7 @@ int get_rtc_data(uint8_t *data_rtc)
         
     	if (ubus_lookup_id(ctx, "ubus321", &id)) {
     		fprintf(stderr, "Failed to look up ubus321 object\n");
+			osal_sem_release(sem_ubus_send);
     		return -1;
     	}
 
@@ -1630,7 +1635,8 @@ void * msg_thread_entry(void *parameter)
 
 }
 
-
+#define  QUEUE_MAX_LIMIT  200 
+int curmgs_max = 0;
 osal_status_t ubus_send_queue(msg_manager_t *p_sys, 
                              unsigned int direct, 
                              int msg_len, 
@@ -1640,24 +1646,38 @@ osal_status_t ubus_send_queue(msg_manager_t *p_sys,
     int err = OSAL_STATUS_NOMEM;
     ubus_msg_t *p_msg;
     uint32_t len = sizeof(ubus_msg_t);
-    p_msg = (ubus_msg_t *)osal_malloc(len + msg_len);
-    if (p_msg) {
-        p_msg->tag = tag;
-        p_msg->len = msg_len;
-        p_msg->direct = direct;
-        if(msg_argv != NULL)
-            memcpy(p_msg->argv,msg_argv,msg_len);
-        err = osal_queue_send(p_sys->queue_send_ubus, p_msg, len + msg_len, 0, 3000);
+	int curmgs = 0;
+
+	curmgs = osal_queue_getcurmsgs(p_sys->queue_send_ubus);
+
+	if(curmgs_max < curmgs){
+
+		curmgs_max = curmgs;
+		osal_printf("curmgs_max  update,%d\n",curmgs_max);
+
+	}
 		
-		osal_printf("ubus queue send tag is 0x%X,len is %d\n",p_msg->tag,p_msg->len);
-    }
 
-    if (err != OSAL_STATUS_SUCCESS) {
-        OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_WARN, "%s: failed=[%d], msg=%04x,tg=%d\n",\
-                           __FUNCTION__, err, direct,tag);
-    }
-    osal_free(p_msg);                   
+	if(curmgs <= QUEUE_MAX_LIMIT){
+	
+	    p_msg = (ubus_msg_t *)osal_malloc(len + msg_len);
+	    if (p_msg) {
+	        p_msg->tag = tag;
+	        p_msg->len = msg_len;
+	        p_msg->direct = direct;
+	        if(msg_argv != NULL)
+	            memcpy(p_msg->argv,msg_argv,msg_len);
+	        err = osal_queue_send(p_sys->queue_send_ubus, p_msg, len + msg_len, 0, 3000);
+			
+			osal_printf("ubus queue send tag is 0x%X,len is %d,curmgs is %ld,curmgs_max is %ld\n",p_msg->tag,p_msg->len,curmgs,curmgs_max);
+	    }
 
+	    if (err != OSAL_STATUS_SUCCESS) {
+	        OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_WARN, "%s: failed=[%d], msg=%04x,tg=%d\n",\
+	                           __FUNCTION__, err, direct,tag);
+	    }
+	    osal_free(p_msg);                   
+	}
     return err;
 }
 
