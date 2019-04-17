@@ -102,7 +102,8 @@ void ubus_321_find(void)
 
     if (ubus_lookup_id(ctx, "ubus321", &id_322)) {
         
-        fprintf(stderr, "Failed to look up ubus321 object\n");
+        fprintf(stderr, "Failed to look up ubus321 object\n");		
+		osal_sem_release(sem_ubus_send);
         return;
     }
     osal_sem_release(sem_ubus_send);
@@ -128,7 +129,8 @@ void ubus_pc02nbi_find(void)
 
     if (ubus_lookup_id(ctx, "pc02nbi", &id_net)) {
         
-        fprintf(stderr, "Failed to look up pc02nbi object\n");
+        fprintf(stderr, "Failed to look up pc02nbi object\n");		
+		osal_sem_release(sem_ubus_send);
         return;
     }
     osal_sem_release(sem_ubus_send);
@@ -572,7 +574,7 @@ if(direct == UBUS_321){
 
 	
 	gettimeofday( &_start, NULL );
-	ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 4000);
+	ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 2000);
 	gettimeofday( &_end, NULL );
 
     time_in_us = (_end.tv_sec - _start.tv_sec) * 1000000 + _end.tv_usec - _start.tv_usec;	
@@ -589,7 +591,7 @@ else if(direct == UBUS_NBID){
     
 	if(controll_eg.network_state == 0){
 
-		printf("\noffline  push  failed!\n");
+		printf("\noffline,do not push!\n");
         osal_sem_release(sem_ubus_send);
 		return;
 	}
@@ -603,7 +605,8 @@ else if(direct == UBUS_NBID){
     	if (ubus_lookup_id(ctx, "pc02nbi", &id)) {
     		fprintf(stderr, "Failed to look up pc02nbi object\n");
             
-            osal_sem_release(sem_net_process);
+			osal_sem_release(sem_ubus_send);
+            //osal_sem_release(sem_net_process);
     		return;
     	}
 
@@ -671,7 +674,7 @@ else if(direct == UBUS_NBID){
 	blobmsg_add_field(&b, BLOBMSG_TYPE_UNSPEC, "strhex", str_buffer, strlen);
 	
 	gettimeofday( &_start, NULL );
-	ret = ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 4000);
+	ret = ubus_invoke(ctx, id, "pushdata", b.head, NULL, NULL, 500);
 	gettimeofday( &_end, NULL );
 
     time_in_us = (_end.tv_sec - _start.tv_sec) * 1000000 + _end.tv_usec - _start.tv_usec;	
@@ -838,7 +841,8 @@ void get_wl_4(uint8_t *p_id,uint8_t *data_wl,int *wlen)
 
         
     	if (ubus_lookup_id(ctx, "ubus321", &id)) {
-    		fprintf(stderr, "Failed to look up ubus321 object\n");
+    		fprintf(stderr, "Failed to look up ubus321 object\n");			
+			osal_sem_release(sem_ubus_send);
     		return;
     	}
 
@@ -891,8 +895,7 @@ void get_wl_4(uint8_t *p_id,uint8_t *data_wl,int *wlen)
 
         printf("F[%s] L[%d] wl len too long!!!\n", __FILE__, __LINE__);
     }
-	//printf("%d\n", i);
-	//return ;
+
 	osal_sem_release(sem_ubus_send);
 
 }
@@ -971,6 +974,7 @@ int get_audit_data(unsigned int tag,unsigned char* strhex,int strlen,uint8_t *da
         
     	if (ubus_lookup_id(ctx, "ubus321", &id)) {
     		fprintf(stderr, "Failed to look up ubus321 object\n");
+			osal_sem_release(sem_ubus_send);
     		return -1;
     	}
 
@@ -1007,7 +1011,7 @@ int get_audit_data(unsigned int tag,unsigned char* strhex,int strlen,uint8_t *da
     else{
 
         printf("F[%s] L[%d] wl len too long!!!\n", __FILE__, __LINE__);
-        return -1;
+        //return -1;
     }
 	osal_sem_release(sem_ubus_send);
 	return 0 ;
@@ -1088,7 +1092,8 @@ int get_rtc_data(uint8_t *data_rtc)
 
         
     	if (ubus_lookup_id(ctx, "ubus321", &id)) {
-    		fprintf(stderr, "Failed to look up ubus321 object\n");
+    		fprintf(stderr, "Failed to look up ubus321 object\n");			
+			osal_sem_release(sem_ubus_send);
     		return -1;
     	}
 
@@ -1630,6 +1635,8 @@ void * msg_thread_entry(void *parameter)
 
 }
 
+#define  QUEUE_MAX_LIMIT  200 
+int curmgs_max = 0;
 
 osal_status_t ubus_send_queue(msg_manager_t *p_sys, 
                              unsigned int direct, 

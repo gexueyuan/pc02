@@ -310,6 +310,20 @@ int os_queue_delete(mqd_t queue_id)
     return 0;
 }
 
+int os_queue_getcurmsgs(mqd_t queue_id)
+{
+	struct mq_attr attrs;
+
+    if (mq_getattr(queue_id, &attrs) < 0)
+    {
+        printf("get the message queue attribute error\r\n");
+        return -1;
+    }
+
+	return attrs.mq_curmsgs;
+
+}
+
 /* return receive len */
 int os_queue_recv(mqd_t queue_id, void *data, uint32_t size, uint32_t *size_copied)
 {

@@ -44,6 +44,14 @@ osal_status_t osal_queue_delete(osal_queue_t * queue)
     return (ret == OSAL_EOK) ? OSAL_STATUS_SUCCESS: OSAL_STATUS_ERROR_UNDEFINED;
 }
 
+osal_status_t osal_queue_getcurmsgs(osal_queue_t * queue)
+{
+    if (queue == NULL){
+        return OSAL_STATUS_EMPTY;
+    }
+    return  os_queue_getcurmsgs(queue->mq_des);
+}
+
 osal_status_t osal_queue_recv(osal_queue_t *queue, void *data, uint32_t *len, int timeout)
 {
     int ret = 0;
