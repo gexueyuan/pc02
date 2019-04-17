@@ -90,11 +90,3 @@ osal_status_t osal_queue_send(osal_queue_t *queue, void *data, uint32_t len, uin
     }
     return (ret == OSAL_EOK) ? OSAL_STATUS_SUCCESS: OSAL_STATUS_TIMEOUT;
 }
-
-osal_status_t osal_queue_getcurmgs(osal_queue_t *queue)
-{
-
-	return os_queue_getcurmsgs(queue->mq_des);
-
-
-}
