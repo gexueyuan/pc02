@@ -1647,23 +1647,38 @@ osal_status_t ubus_send_queue(msg_manager_t *p_sys,
     int err = OSAL_STATUS_NOMEM;
     ubus_msg_t *p_msg;
     uint32_t len = sizeof(ubus_msg_t);
-    p_msg = (ubus_msg_t *)osal_malloc(len + msg_len);
-    if (p_msg) {
-        p_msg->tag = tag;
-        p_msg->len = msg_len;
-        p_msg->direct = direct;
-        if(msg_argv != NULL)
-            memcpy(p_msg->argv,msg_argv,msg_len);
-        err = osal_queue_send(p_sys->queue_send_ubus, p_msg, len + msg_len, 0, 3000);
-		
-		osal_printf("ubus queue send tag is 0x%X,len is %d\n",p_msg->tag,p_msg->len);
-    }
+	int curmgs = 0;
+	
+	curmgs = osal_queue_getcurmsgs(p_sys->queue_send_ubus);
 
-    if (err != OSAL_STATUS_SUCCESS) {
-        OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_WARN, "%s: failed=[%d], msg=%04x,tg=%d\n",\
-                           __FUNCTION__, err, direct,tag);
-    }
-    osal_free(p_msg);                   
+	if(curmgs_max < curmgs){
+
+		curmgs_max = curmgs;
+		osal_printf("curmgs_max  update,%d\n",curmgs_max);
+
+	}
+
+
+	if(curmgs <= QUEUE_MAX_LIMIT){
+
+	    p_msg = (ubus_msg_t *)osal_malloc(len + msg_len);
+	    if (p_msg) {
+	        p_msg->tag = tag;
+	        p_msg->len = msg_len;
+	        p_msg->direct = direct;
+	        if(msg_argv != NULL)
+	            memcpy(p_msg->argv,msg_argv,msg_len);
+	        err = osal_queue_send(p_sys->queue_send_ubus, p_msg, len + msg_len, 0, 3000);
+
+			osal_printf("ubus queue send tag is 0x%X,len is %d,curmgs is %ld,curmgs_max is %ld\n",p_msg->tag,p_msg->len,curmgs,curmgs_max);
+	    }
+
+	    if (err != OSAL_STATUS_SUCCESS) {
+	        OSAL_MODULE_DBGPRT(MODULE_NAME, OSAL_DEBUG_WARN, "%s: failed=[%d], msg=%04x,tg=%d\n",\
+	                           __FUNCTION__, err, direct,tag);
+	    }
+	    osal_free(p_msg);                   
+	}                  
 
     return err;
 }
