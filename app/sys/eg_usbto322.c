@@ -2164,6 +2164,7 @@ while(1){
                 print_rec(output,ret);
                 ************************TEST**************************/
                 
+				sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_RTC_PUSH,0,p_usb_ccid->ccid322_index - 1,NULL);
                 sys_add_event_queue(&controll_eg.msg_manager,SYS_MSG_SEND_COSVERSION,0,0,NULL);
                 osal_sem_release(p_usb_ccid->sem_state);
                 //p_usb_ccid->usb_state = USB_COMM_STATE_MACKEY;//USB_COMM_STATE_RDCFG;//USB_COMM_STATE_MACKEY;//USB_COMM_STATE_CFG;//USB_COMM_STATE_MACKEY;
@@ -2329,7 +2330,7 @@ while(1){
                     else
                         OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "bad 322-d21 version:");
                 }
-                /**********************************322-d21 version end***********************************************/
+                /**********************************322-d21 version end***********************************************/				
 				/**********************************pr11-d21 version***********************************************/
 				memset(output,0,sizeof(output));
 				OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get pr11-d21 version:");
@@ -2352,7 +2353,7 @@ while(1){
 				}
 			/**********************************pr11-d21 version end***********************************************/
 
-
+				
                 /**********************************pr11 or pr02 version***********************************************/
                 memset(output,0,sizeof(output));
                 OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get pr11 version:");
