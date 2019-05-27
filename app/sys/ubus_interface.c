@@ -338,10 +338,13 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
             
             /* Take the semaphore. */
             printf("\nget base cfg\n");
-            if(osal_sem_take(controll_eg.sem_base_cfg, OSAL_WAITING_FOREVER) != OSAL_EOK)
+            if(osal_sem_take(controll_eg.sem_base_cfg, 2500) != OSAL_EOK)
             {
-               printf("\n Semaphore return failed. \n");
-               return 0;
+               //printf("\n Semaphore return failed. \n");
+              // return 0;
+			   
+			   log_message("BASE_CFG",3,"F[%s] L[%d],Semaphore return failed\n",__func__, __LINE__);
+			   break;
             }
 
             controll_eg.basecfg.data = base_cfg_buffer;
@@ -365,10 +368,12 @@ static int fun2_handler(struct ubus_context *ctx, struct ubus_object *obj,
             
             printf("\nget ctrl cfg\n");
             /* Take the semaphore. */
-            if(osal_sem_take(controll_eg.sem_ctrl_cfg, OSAL_WAITING_FOREVER) != OSAL_EOK)
+            if(osal_sem_take(controll_eg.sem_ctrl_cfg, 2500) != OSAL_EOK)
             {
-               printf("\n Semaphore return failed. \n");
-               return 0;
+               //printf("\n Semaphore return failed. \n");
+			   
+			   log_message("READER_CFG",3,"F[%s] L[%d],Semaphore return failed\n",__func__, __LINE__);
+               break;
             }          
             controll_eg.ctlcfg.data = ctrl_cfg_buffer;
             //printf("\ncontroll_eg.ctlcfg.data address is %02X\n",controll_eg.ctlcfg.data);

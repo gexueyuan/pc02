@@ -136,6 +136,8 @@ const uint8_t ce_pr11[] = {0xFC,0xA0,0x00,0x00,0x05,0x80,0xCA,0xCE,0x53,0x00,};
 const uint8_t serial_pr11[] = {0xFC,0xA0,0x00,0x00,0x05,0x80,0xCA,0xCE,0x0E,0x00,};
 
 const uint8_t ce_322[] = {0x80,0xCA,0xCE,0x42,0x00};
+const uint8_t ce_log[] = {0x80,0xCA,0xCE,0x43,0x00};
+
 const uint8_t pid_322[] = {0x80,0xCA,0xCE,0x45,0x00};
 const uint8_t sn_pr11[] = {0xFC,0xA0,0x00,0x00,0x05,0x80,0xCA,0xCE,0x09,0x00};
 const uint8_t pid_pr11[] = {0xFC,0xA0,0x00,0x00,0x05,0x80,0xCA,0xCE,0x50,0x00};
@@ -169,6 +171,8 @@ const uint8_t reset_322usb[] = {0xF0,0xF0,0x02,0xFF,0x00};
 osal_sem_t *sem_pr11ce;
 
 osal_sem_t *sem_322ce;
+
+osal_sem_t *sem_logce;
 
 osal_sem_t *sem_ctrlinfo;
 
@@ -2464,6 +2468,49 @@ while(1){
                     print_rec(output,ret + 3);
                 }
             }
+
+
+            /*****************************************read logce*************************************************/
+            OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "reading log ce\n");
+            //read 322 ce
+            #ifdef USB_TEST
+            ret = usb_transmit_fix(&context,ce_log,sizeof(ce_log),&output[3],sizeof(output) - 3,&p_usb_ccid);
+			#else			
+            ret = usb_transmit(context,ce_log,sizeof(ce_log),&output[3],sizeof(output) - 3,p_usb_ccid);
+			#endif
+            if(ret <= 0){
+            
+                
+                memset(output, 0, sizeof(output));
+                ret = luareader_pop_value(context, (char *)output, sizeof(output));
+                printf("luareader_pop_value(%p)=%d(%s)\n", context, ret, output);
+                
+                log_message(p_usb_ccid->usb_port,3,"log ce read error\n");
+                //osal_sem_release(p_usb_ccid->sem_state);
+                //break;
+                
+            
+            }else{
+            
+                OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "log ce,len is %d\n",ret - 2);//minus 90 00
+                //print_rec(&output[3],ret);
+                output[0] = p_usb_ccid->ccid322_index;
+                output[1] = (unsigned char)(((ret - 2)&0xFF00)>>8);
+                output[2] = (unsigned char)(((ret - 2)&0x00FF));
+                
+                /* Take the semaphore. */
+                if(osal_sem_take(sem_logce, OSAL_WAITING_FOREVER) != OSAL_EOK){
+                    
+                    printf("Semaphore return failed. \n");
+                    
+                    //osal_sem_release(p_usb_ccid->sem_state);
+                    //break;
+                }else{
+                    writeFile(CEPATH_LOG,output,ret - 2 + 3);
+                    osal_sem_release(sem_logce);
+                    print_rec(output,ret + 3);
+                }
+            }			
         /**********************************************pr11 ce**********************************************************/
         //read pr11 ce
         #if 0
@@ -3841,7 +3888,9 @@ void eg_usbto322_init(void)
 
     sem_322ce = osal_sem_create("sem_322ce", 1);
     osal_assert(sem_322ce != NULL);
-    //printf("\n%p\n",sem_322ce);
+	
+    sem_logce = osal_sem_create("sem_logce", 1);
+    osal_assert(sem_logce != NULL);
 
     sem_ctrlinfo= osal_sem_create("sem_ctrlinfo", 1);
     osal_assert(sem_ctrlinfo != NULL);

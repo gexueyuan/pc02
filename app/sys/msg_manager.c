@@ -1147,7 +1147,7 @@ osal_status_t sys_add_event_queue(msg_manager_t *p_sys,
         p_msg->len = msg_len;
         p_msg->argc = msg_argc;
         p_msg->argv = msg_argv;
-        err = osal_queue_send(p_sys->queue_msg, p_msg, len, 0, 3000);
+        err = osal_queue_send(p_sys->queue_msg, p_msg, len, 0, 2500);
     }
 
     if (err != OSAL_STATUS_SUCCESS) {
