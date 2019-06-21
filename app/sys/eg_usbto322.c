@@ -2357,7 +2357,28 @@ while(1){
 						OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "bad pr11-d21 version:\n");
 				}
 			/**********************************pr11-d21 version end***********************************************/
-
+			/***************************pr02-d21********************************/
+			memset(output,0,sizeof(output));
+			OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "get pr02-d21 version:");
+			#ifdef USB_TEST
+				ret = usb_transmit_fix(&context,v_pr02_d21,sizeof(v_pr02_d21),&output[1],sizeof(output) - 1,&p_usb_ccid);
+			#else
+				ret = usb_transmit(context,v_pr02_d21,sizeof(v_pr02_d21),&output[1],sizeof(output) - 1,p_usb_ccid);
+			#endif
+	#ifdef MULTIVERSION
+			output[0] = p_usb_ccid->ccid322_index + 1 +'0';
+	#else
+			output[0] = 0x04;
+	#endif
+			print_rec(output,ret + 1);
+			if(ret > 0){
+				if(memcmp(confirm,&output[ret - 1],sizeof(confirm)) == 0)//ret~ret +1
+					ubus_client_process(UBUS_CLIENT_SENDVERSION,NULL,output,ret - 1);
+				else
+					OSAL_MODULE_DBGPRT(p_usb_ccid->usb_port, OSAL_DEBUG_INFO, "bad pr02-d21 version:\n");
+			}
+				
+			/***************************pr02-d21*******************************/	
 				
                 /**********************************pr11 or pr02 version***********************************************/
                 memset(output,0,sizeof(output));
