@@ -660,15 +660,17 @@ int ubus_init(void)
 void* ubus_server_thread_entry(void * parameter)
 {
 
-    ubus_init();
-    evloop = event_base_new();
-    add_ubus_event();
-	
-    //Ìí¼Óubus event
-    //add_alarm_timer_event();
-    event_base_dispatch(evloop);
-    ubus_release();
-
+	while(1){
+		
+	    ubus_init();
+	    evloop = event_base_new();
+	    add_ubus_event();
+		
+	    //Ìí¼Óubus event
+	    //add_alarm_timer_event();
+	    event_base_dispatch(evloop);
+	    ubus_release();
+	}
 	return NULL;
 
 }
